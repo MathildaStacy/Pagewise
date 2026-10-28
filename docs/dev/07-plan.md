@@ -59,9 +59,11 @@
 - `services/secrets.ts`（Keychain + 内存实现）、`app/log.ts`（含 `redact`）、`app/errors.ts`、`app/events.ts`、`app/clock.ts`、`app/container.ts`（device / test 两种）。
 
 验收：
-- [ ] 复制过来的 AI 协议、流式测试全部通过；新增测试：三种协议下 `contextBlocks` 的缓存断点位置正确（Anthropic 的 `cache_control` 出现在 system 和 cache=true 的块上，总数 ≤ 4）。
-- [ ] `redact` 测试：Key、Token、Authorization 头、`sk-…`、`mnr_…` 都被抹掉。
-- [ ] `createTestContainer()` 能在 jest 里建出内存库并迁移。
+- [x] 复制过来的 AI 协议、流式测试全部通过；新增测试：三种协议下 `contextBlocks` 的缓存断点位置正确（Anthropic 的 `cache_control` 出现在 system 和 cache=true 的块上，总数 ≤ 4）。
+- [x] `redact` 测试：Key、Token、Authorization 头、`sk-…`、`mnr_…` 都被抹掉。
+- [x] `createTestContainer()` 能在 jest 里建出内存库并迁移。
+
+本地验收（2026-10-29）：`npm run check` 通过（18 suites / 186 tests）；数据基础件行覆盖率 100%，运行时基础件行覆盖率 100%。Android arm64 debug APK 构建成功，原生配置确认 FTS5 enabled。AI 用量与配置的临时适配范围见 Q-10，测试工厂入口见 Q-11；未使用真实 AI Key，协议测试全部基于录制 / 假 fetch。
 
 ### T2 设计系统与两套皮肤
 

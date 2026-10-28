@@ -48,14 +48,14 @@ T0（2026-10-29）已安装 React Native 0.87.1、React 19.2.3、TypeScript 6.0.
 | 框架 | `react-native@0.87.1`、`react@19.2.3`、`typescript@6.0.3` | 同 AShareSim |
 | 导航 | `@react-navigation/native@^7`、`native-stack`、`bottom-tabs`、`react-native-screens`、`react-native-safe-area-context@5.11.0` | safe-area 已于 T0 安装，导航在 T4 引入 |
 | 状态 | `zustand@^5` | 只做缓存和 UI 会话状态，真相在 SQLite |
-| 数据库 | `@op-engineering/op-sqlite@^18` | `package.json` 里开启 `"op-sqlite": { "fts5": true }`；测试用 `node:sqlite` |
-| 密钥 | `react-native-keychain@^10` | Token、Key |
+| 数据库 | `@op-engineering/op-sqlite@18.2.5` | `package.json` 里开启 `"op-sqlite": { "fts5": true }`；测试用 `node:sqlite` |
+| 密钥 | `react-native-keychain@10.0.0` | Token、Key |
 | 图形 | `react-native-svg@^15` | 图标、公式 SVG、进度、封面 |
 | 图标 | `lucide-react-native` | 默认图标集；皮肤可以换图标映射（[02 §4.4](02-skins.md)） |
 | 手势动画 | `react-native-gesture-handler`、`react-native-reanimated@^4`（+ `react-native-worklets`） | 底部浮层、开关滑块、步骤动效 |
 | 底部浮层 | `@gorhom/bottom-sheet@^5` | 只在 kit 的 `Sheet` 实现里用，页面不直接 import |
 | 文件选择 | `@react-native-documents/picker` | `keepLocalCopy` 复制到 App 私有目录 |
-| 上传下载 | `react-native-blob-util` | 大文件 PUT 上传（从文件流式读）、结果包下载到文件 |
+| 上传下载 | `react-native-blob-util@0.25.1` | 大文件 PUT 上传（从文件流式读）、结果包下载到文件 |
 | 解压 | `react-native-zip-archive` | MinerU 结果包、EPUB；导出时打 zip |
 | WebView | `react-native-webview` | 只用于：公式渲染服务（隐藏 WebView）、HTML 表格查看浮层 |
 | XML/HTML | `fast-xml-parser`、`htmlparser2` | EPUB 的 OPF / nav / XHTML |
@@ -167,11 +167,14 @@ export interface Container {
   events: EventBus;
 }
 export function createDeviceContainer(): Promise<Container>;
+// 测试单独从 app/testing.ts 导入，避免 Metro 打包 node:sqlite（Q-11）
 export function createTestContainer(over?: Partial<Container>): Promise<Container>; // node:sqlite 内存库 + fakes
 export function createDemoContainer(): Promise<Container>;  // 内存库 + 演示数据 + 脚本化 AI
 ```
 
 - `App.tsx` 启动：`createDeviceContainer()` → `migrate(db)` → 读设置（皮肤、深浅色）→ 渲染。启动失败显示一个不依赖皮肤的纯文本错误页（含"导出日志"）。
+T1 的 `Container` 先提供 db / secrets / ai / clock / log / events / close；其它能力按对应任务补齐。AI 配置与用量通过 `AiConfiguration` 注入，T3 建表后替换临时内存实现（Q-10）。
+
 - React 侧：`<ContainerProvider value={c}>`，`useContainer()` 只允许在 `features/**` 里用（lint 限制）。
 - 开发菜单（`__DEV__`）里可以切到 Demo 容器，重启 JS 生效。
 
