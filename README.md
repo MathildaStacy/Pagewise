@@ -16,6 +16,7 @@
 | [docs/PRODUCT_DESIGN.md](docs/PRODUCT_DESIGN.md) | 产品目标、核心场景、信息架构、功能清单、技术方案、里程碑、待决定的问题 |
 | [docs/STUDY_ENGINE.md](docs/STUDY_ENGINE.md) | 伴读引擎规格：数据模型、解析流水线、地图构建、讲解协议、上下文组装、工具、岔路状态机、引用校验、复习调度 |
 | [docs/design/prototype.html](docs/design/prototype.html) | 可交互原型，用浏览器直接打开（源文件在 [docs/design/prototype/](docs/design/prototype/)） |
+| [docs/dev/](docs/dev/README.md) | Android 实现规格：架构分层、换肤系统（纸感 / 苹果风）、页面与 ViewModel 契约、数据表、引擎与 AI、导入解析、任务拆分与验收 |
 
 在线看原型：<https://htmlpreview.github.io/?https://github.com/MathildaStacy/Pagewise/blob/main/docs/design/prototype.html>
 
