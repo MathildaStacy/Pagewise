@@ -47,19 +47,19 @@ T0（2026-10-29）已安装 React Native 0.87.1、React 19.2.3、TypeScript 6.0.
 | --- | --- | --- |
 | 框架 | `react-native@0.87.1`、`react@19.2.3`、`typescript@6.0.3` | 同 AShareSim |
 | 导航 | `@react-navigation/native@^7`、`native-stack`、`bottom-tabs`、`react-native-screens`、`react-native-safe-area-context@5.11.0` | safe-area 已于 T0 安装，导航在 T4 引入 |
-| 状态 | `zustand@^5` | 只做缓存和 UI 会话状态，真相在 SQLite |
+| 状态 | `zustand@5.0.16` | 只做缓存和 UI 会话状态，真相在 SQLite |
 | 数据库 | `@op-engineering/op-sqlite@18.2.5` | `package.json` 里开启 `"op-sqlite": { "fts5": true }`；测试用 `node:sqlite` |
 | 密钥 | `react-native-keychain@10.0.0` | Token、Key |
-| 图形 | `react-native-svg@^15` | 图标、公式 SVG、进度、封面 |
-| 图标 | `lucide-react-native` | 默认图标集；皮肤可以换图标映射（[02 §4.4](02-skins.md)） |
-| 手势动画 | `react-native-gesture-handler`、`react-native-reanimated@^4`（+ `react-native-worklets`） | 底部浮层、开关滑块、步骤动效 |
-| 底部浮层 | `@gorhom/bottom-sheet@^5` | 只在 kit 的 `Sheet` 实现里用，页面不直接 import |
+| 图形 | `react-native-svg@15.16.0` | 图标、公式 SVG、进度、封面 |
+| 图标 | `lucide-react-native@1.63.0` | 默认图标集；皮肤可以换图标映射（[02 §4.4](02-skins.md)） |
+| 手势动画 | `react-native-gesture-handler@2.33.1`、`react-native-reanimated@4.7.1`（+ `react-native-worklets@0.13.1`） | 底部浮层、开关滑块、步骤动效 |
+| 底部浮层 | `@gorhom/bottom-sheet@5.2.14` | 只在 kit 的 `Sheet` 实现里用，页面不直接 import |
 | 文件选择 | `@react-native-documents/picker` | `keepLocalCopy` 复制到 App 私有目录 |
 | 上传下载 | `react-native-blob-util@0.25.1` | 大文件 PUT 上传（从文件流式读）、结果包下载到文件 |
 | 解压 | `react-native-zip-archive` | MinerU 结果包、EPUB；导出时打 zip |
 | WebView | `react-native-webview` | 只用于：公式渲染服务（隐藏 WebView）、HTML 表格查看浮层 |
 | XML/HTML | `fast-xml-parser`、`htmlparser2` | EPUB 的 OPF / nav / XHTML |
-| 毛玻璃 | `@react-native-community/blur` | 只在 glass 皮肤的 `Glass` 组件里用；设备不支持或省电模式时退回半透明填充 |
+| 毛玻璃 | `@react-native-community/blur@4.4.1` | 只在 glass 皮肤的 `Glass` 组件里用；设备不支持或省电模式时退回半透明填充 |
 | ID | `ulid` | 书 ID 等 |
 | 测试 | `jest@29.7.0`、`@react-native/jest-preset@0.87.1`、`react-test-renderer@19.2.3` | T0 已安装 |
 | 原生（Gradle） | `com.tom-roush:pdfbox-android`（Apache-2.0） | PDF 书签目录、文字层判断、按页拆分；**渲染**用系统 `android.graphics.pdf.PdfRenderer` |

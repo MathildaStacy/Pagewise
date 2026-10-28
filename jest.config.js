@@ -1,10 +1,13 @@
 module.exports = {
   preset: '@react-native/jest-preset',
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testMatch: [
     '<rootDir>/__tests__/**/*.test.ts',
     '<rootDir>/__tests__/**/*.test.tsx',
   ],
   moduleNameMapper: {
+    '^lucide-react-native$':
+      '<rootDir>/node_modules/lucide-react-native/dist/cjs/lucide-react-native.js',
     '^@core/(.*)$': '<rootDir>/src/core/$1',
     '^@data/(.*)$': '<rootDir>/src/data/$1',
     '^@services/(.*)$': '<rootDir>/src/services/$1',

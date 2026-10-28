@@ -169,6 +169,8 @@ export interface Tokens {
 | example / exampleBg | `#0A9CB5` / `rgba(48,176,199,.11)` | `#5DE0F5` / `rgba(64,200,224,.14)` |
 | glass / glassStrong / glassLine | `rgba(255,255,255,.66)` / `rgba(255,255,255,.9)` / `rgba(255,255,255,.75)` | `rgba(40,40,44,.62)` / `rgba(44,44,48,.92)` / `rgba(255,255,255,.12)` |
 
+T2 对比度实装调整（Q-12）：glass light 的 ink2 改为 `rgba(60,60,67,.72)`，accent / stepDone / stepCur 改为 `#006ADD`，stuck `#C16500`，ok `#248A3D`，bad `#D12720`，derive `#9741C1`，example `#00758B`；glass dark 的 detour 改为 `#9290FF`、bad `#FF5148`，onAccent 使用黑色。上表保留原稿参考值，实际值以 Token 文件为准。ok / stuck 仅用于图标或大字；小字分别使用 ink / stuckInk，引用与主线小字使用 accentInk。paper light 的原型色值全部保留。
+
 缺的（accentInk、stuckBg、okBg、badBg、badInk、stuckInk、stepXxx、pressed、onAccent）按同色 10–14% 透明度做浅底、深色版取更亮一档补齐，T2 时写进文件并跑对比度测试。
 
 其他：

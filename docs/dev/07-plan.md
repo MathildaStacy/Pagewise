@@ -76,11 +76,13 @@
 - 对比度、Token 完整性、组件契约测试（02 §8）。
 
 验收：
-- [ ] SkinGallery 里每个组件在 2 皮肤 × 2 深浅色下都能显示，截图（`adb exec-out screencap`）放进 PR 描述：至少 Button、QuickActions、Composer、StepProgress、Sheet、SelectionMenu、Row 分组、TabBar、AppBar（root / push）。
-- [ ] paper 浅色和原型 `shell.html` 对照：颜色值逐个一致（写一个测试把 shell.html 的 `:root` 变量和 paper light tokens 做对照）。
-- [ ] 对比度测试全过（不过就调 paper 深色和补齐的 glass 值，并在 PR 里列出调整）。
-- [ ] 在 SkinGallery 打开一个 Sheet，切换皮肤 / 深浅色，Sheet 不关闭、内容不丢、样式立即变。
-- [ ] 系统字号 2.0 倍时按钮、行、chips 文字不被截断。
+- [x] SkinGallery 里每个组件在 2 皮肤 × 2 深浅色下都能显示，截图（`adb exec-out screencap`）放进 PR 描述：至少 Button、QuickActions、Composer、StepProgress、Sheet、SelectionMenu、Row 分组、TabBar、AppBar（root / push）。
+- [x] paper 浅色和原型 `shell.html` 对照：颜色值逐个一致（写一个测试把 shell.html 的 `:root` 变量和 paper light tokens 做对照）。
+- [x] 对比度测试全过（不过就调 paper 深色和补齐的 glass 值，并在 PR 里列出调整）。
+- [x] 在 SkinGallery 打开一个 Sheet，切换皮肤 / 深浅色，Sheet 不关闭、内容不丢、样式立即变。
+- [x] 系统字号 2.0 倍时按钮、行、chips 文字不被截断。
+
+本地验收（2026-10-29）：24 suites / 550 tests 通过，Android arm64 APK 构建成功；原生四主题、浮层保留草稿与系统字号2倍截图见 [T2 验收记录](evidence/t2/README.md)。远端 CI 和 PR 图片链接继续随开发分支更新。
 
 ### T3 数据层与 Demo 种子
 
