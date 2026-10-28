@@ -37,9 +37,18 @@
 - 新建 `docs/dev/QUESTIONS.md`（已有初始条目，见文末）。
 
 验收：
-- [ ] `npm run check` 通过；`npm run android` 能在模拟器上跑出空白 App。
-- [ ] 故意在 `src/ui/screens` 写一个 `import '@data/db'` 和一个 `color: '#fff'`，lint 和边界测试都报错（验证后删掉）。
+- [x] `npm run check` 通过；`npm run android` 能在模拟器上跑出空白 App。
+- [x] 故意在 `src/ui/screens` 写一个 `import '@data/db'` 和一个 `color: '#fff'`，lint 和边界测试都报错（验证后删掉）。
 - [ ] CI 在 PR 上跑通，产出 debug APK。
+
+本地验收（2026-10-29）：
+
+- `npm run check`：lint、TypeScript strict、Jest 2 suites / 39 tests 通过。
+- 临时 `src/ui/screens/T0BoundaryProbe.tsx` 注入跨层 import、颜色、字号、圆角；ESLint 拒绝，架构 Jest 实际扫描失败；探针已删除，恢复后检查通过。
+- `./gradlew :app:assembleDebug --no-daemon -PreactNativeArchitectures=arm64-v8a` 构建成功；APK 在 `android/app/build/outputs/apk/debug/app-debug.apk`。
+- `npm run android -- --no-packager --active-arch-only` 在 Pixel_10_Pro（Android 17 / arm64）安装启动；Metro 日志确认 `Running "Pagewise"`、`fabric: true`，已核对空白页面。
+- TypeScript / Babel / Jest 七个路径别名一致，CI YAML 解析通过。GitHub CI 尚未远端运行，上面的 PR 验收项保持未勾选。
+- 当前规格位于 `docs/dev/`，没有正式 `spec/_settings.md`，Full Spec 的 code drift gate 不适用；本次按 01 §2–§4 核对 T0 目录、依赖和边界。
 
 ### T1 移植基础件
 

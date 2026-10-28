@@ -3,3 +3,21 @@
 node_modules/
 __pycache__/
 *.log
+
+# React Native Android
+build/
+.gradle/
+.cxx/
+.kotlin/
+.idea/
+local.properties
+*.iml
+*.hprof
+*.keystore
+!debug.keystore
+.metro-health-check*
+*.jsbundle
+coverage/
+
+# Private book fixtures
+fixtures/private/

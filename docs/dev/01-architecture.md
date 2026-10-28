@@ -26,12 +26,27 @@
 
 ## 2. 依赖清单
 
-版本：与 AShareSim 一致的直接写死；其他取「与 RN 0.87.1 兼容的最新稳定版」，T0 安装后把实际版本写回本表。
+版本：与 AShareSim 一致的直接写死；其他取「与 RN 0.87.1 兼容的最新稳定版」，安装后把实际版本写回本表。
+
+T0（2026-10-29）已安装 React Native 0.87.1、React 19.2.3、TypeScript 6.0.3、safe-area-context 5.11.0；其余运行时依赖按后续任务引入。精确依赖树固定在 `package-lock.json`，项目 `.npmrc` 使用公共 npm registry，避免本机镜像缺包影响 CI。
+
+| T0 工具链 | 实际版本 |
+| --- | --- |
+| Node（`.nvmrc`） | 24.22.0 |
+| React Native CLI / Android CLI | 20.2.0 |
+| RN Babel / Metro / ESLint / Jest / TS 配置 | 0.87.1 |
+| Jest / react-test-renderer | 29.7.0 / 19.2.3 |
+| ESLint / Prettier | 8.57.1 / 2.8.8 |
+| babel-plugin-module-resolver | 5.0.2 |
+| eslint-plugin-import / eslint-import-resolver-typescript | 2.32.0 / 3.10.1（见 Q-8） |
+| Gradle / AGP / Kotlin | 9.4.1 / 9.2.1 / 2.2.0 |
+| Android compile / target / min SDK | 37 / 36 / 24 |
+| Android Build Tools / NDK | 37.0.0 / 27.1.12297006 |
 
 | 用途 | 包 | 说明 |
 | --- | --- | --- |
-| 框架 | `react-native@0.87.1`、`react@19.2.3`、`typescript@^6` | 同 AShareSim |
-| 导航 | `@react-navigation/native@^7`、`native-stack`、`bottom-tabs`、`react-native-screens`、`react-native-safe-area-context` | 同 AShareSim |
+| 框架 | `react-native@0.87.1`、`react@19.2.3`、`typescript@6.0.3` | 同 AShareSim |
+| 导航 | `@react-navigation/native@^7`、`native-stack`、`bottom-tabs`、`react-native-screens`、`react-native-safe-area-context@5.11.0` | safe-area 已于 T0 安装，导航在 T4 引入 |
 | 状态 | `zustand@^5` | 只做缓存和 UI 会话状态，真相在 SQLite |
 | 数据库 | `@op-engineering/op-sqlite@^18` | `package.json` 里开启 `"op-sqlite": { "fts5": true }`；测试用 `node:sqlite` |
 | 密钥 | `react-native-keychain@^10` | Token、Key |
@@ -46,7 +61,7 @@
 | XML/HTML | `fast-xml-parser`、`htmlparser2` | EPUB 的 OPF / nav / XHTML |
 | 毛玻璃 | `@react-native-community/blur` | 只在 glass 皮肤的 `Glass` 组件里用；设备不支持或省电模式时退回半透明填充 |
 | ID | `ulid` | 书 ID 等 |
-| 测试 | `jest`、`@react-native/jest-preset`、`react-test-renderer` | 同 AShareSim |
+| 测试 | `jest@29.7.0`、`@react-native/jest-preset@0.87.1`、`react-test-renderer@19.2.3` | T0 已安装 |
 | 原生（Gradle） | `com.tom-roush:pdfbox-android`（Apache-2.0） | PDF 书签目录、文字层判断、按页拆分；**渲染**用系统 `android.graphics.pdf.PdfRenderer` |
 
 不用：Expo、Redux、styled-components / NativeWind（皮肤系统自己做，见 02）、任何 UI 组件库（Paper、Tamagui 等，会把视觉锁死）。

@@ -11,3 +11,5 @@
 | Q-5 | 「划词」：RN 里做块内任意文字范围选择成本高 | V1 以整块为单位（点段落），范围选择放 M5 | 待确认 |
 | Q-6 | 「我的」里新增「外观」入口（选皮肤、深浅色、正文字号），原型里没有 | 放在第二组第一行（存储与备份之前） | 待确认 |
 | Q-7 | MinerU Token 有效期 API 拿不到 | 更新 Token 时可选填有效期；收到 A0211 时标记过期 | 已采用 |
+| Q-8 | T0 的路径别名和分层 lint 需要额外构建依赖，01 §2 未逐项列出 | 增加开发依赖 `babel-plugin-module-resolver@5.0.2`、`eslint-plugin-import@2.32.0`、`eslint-import-resolver-typescript@3.10.1`，不增加运行时能力；沿用 RN 模板的 Babel/Metro/ESLint/Jest/类型工具链 | T0 已采用 |
+| Q-9 | 01 §3 写页面只能 import kit 和 VM 类型，但 TSX 需要 React / React Native 展示 API | 允许 React / RN 纯展示 API、同目录展示组件；禁止 RN 的存储、网络、原生模块等副作用入口，业务仍通过 VM；页面不得 import 皮肤 | T0 已采用，待确认 |
