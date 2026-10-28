@@ -1,0 +1,1630 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pagewise 可交互原型 · AI 伴读</title>
+<style>
+:root{
+  color-scheme: light;
+  --acc:#2F5AA8; --acc-bg:#EAF0FA; --acc-ink:#1E3F7A;
+  --detour:#7A4FB5; --detour-bg:#F3EEFA;
+  --stuck:#C2610C; --stuck-bg:#FDF1E6;
+  --ok:#2E8B57; --ok-bg:#E8F5EE;
+  --bad:#C8372D; --bad-bg:#FCEBEA;
+  --hl:#FFE89A;
+  --ink:#1F2329; --ink2:#5C626B; --ink3:#9AA0A8; --line:#ECEAE6; --bg:#F4F3F0; --card:#fff; --paper:#FBF8F1;
+  --num: "DIN Alternate","Roboto","Helvetica Neue",Arial,sans-serif;
+  --zh: "PingFang SC","HarmonyOS Sans SC","Noto Sans SC","Microsoft YaHei",system-ui,sans-serif;
+  --serif: "Songti SC","Noto Serif SC","Source Han Serif SC","STSong",serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:var(--zh);color:var(--ink);background:#DCDAD5;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.n{font-family:var(--num);font-variant-numeric:tabular-nums}
+.muted{color:var(--ink3)} .ink2{color:var(--ink2)}
+
+/* ---------- 舞台 ---------- */
+.stage{display:flex;gap:28px;justify-content:center;align-items:flex-start;padding:24px 16px;min-height:100%}
+.phone{width:390px;height:844px;flex:none;background:var(--bg);border-radius:36px;box-shadow:0 0 0 10px #17181A,0 18px 50px rgba(0,0,0,.35);overflow:hidden;position:relative;display:flex;flex-direction:column}
+.sbar{height:30px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:12px;background:#fff;font-weight:600}
+#app{flex:1;display:flex;flex-direction:column;min-height:0;position:relative}
+.nav{height:48px;flex:none;display:flex;align-items:center;background:#fff;border-bottom:1px solid var(--line);padding:0 6px;position:relative;z-index:2}
+.nav h1{font-size:17px;font-weight:600;flex:1;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
+.nav h1 .sub{display:block;font-size:11px;color:var(--ink3);font-weight:400}
+.nav .ib{width:40px;height:40px;display:grid;place-items:center;border-radius:20px;font-size:20px;color:var(--ink2);flex:none}
+.nav .ib:active{background:var(--bg)}
+.nav .tb{height:30px;padding:0 10px;border-radius:15px;font-size:13px;color:var(--acc);flex:none}
+.nav.root h1{text-align:left;padding-left:10px;font-size:20px}
+#view{flex:1;overflow-y:auto;overflow-x:hidden;min-height:0;scrollbar-width:none}
+#view::-webkit-scrollbar{display:none}
+.tabbar{height:58px;flex:none;display:flex;background:#fff;border-top:1px solid var(--line)}
+.tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;color:var(--ink3);position:relative}
+.tabbar svg{width:22px;height:22px}
+.tabbar .on{color:var(--acc)}
+.tabbar .badge{position:absolute;top:6px;left:calc(50% + 6px);background:var(--bad);color:#fff;font-size:10px;line-height:15px;min-width:15px;border-radius:8px;padding:0 4px;font-family:var(--num)}
+
+/* ---------- 通用 ---------- */
+.sec{background:#fff;margin-bottom:8px}
+.sec-h{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 6px;font-weight:600;font-size:15px}
+.sec-h small{font-weight:400;color:var(--ink3);font-size:12px}
+.row{display:flex;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);gap:10px;background:#fff}
+.row:last-child{border-bottom:0}
+.row.tap{cursor:pointer}.row.tap:active{background:#F8F7F5}
+.row .grow{flex:1;min-width:0}
+.row .grow b{font-weight:500}
+.row .grow small{display:block;color:var(--ink3);font-size:12px}
+.chev::after{content:"›";color:var(--ink3);font-size:20px;line-height:1;margin-left:4px}
+.btn{display:inline-flex;align-items:center;justify-content:center;height:42px;padding:0 16px;border-radius:21px;background:var(--bg);font-weight:500;gap:6px}
+.btn.pri{background:var(--acc);color:#fff}
+.btn.dt{background:var(--detour);color:#fff}
+.btn.ghost{background:#fff;border:1px solid var(--line)}
+.btn.sm{height:30px;padding:0 12px;font-size:13px;border-radius:15px}
+.btn.block{display:flex;width:100%}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.note{font-size:12px;color:var(--ink2);background:var(--bg);border-radius:8px;padding:8px 10px;line-height:1.6}
+.note.warn{background:var(--stuck-bg);color:#7A3D06}
+.note.acc{background:var(--acc-bg);color:var(--acc-ink)}
+.note.bad{background:var(--bad-bg);color:#8A231C}
+.tag{display:inline-block;font-size:10px;line-height:15px;padding:0 4px;border-radius:3px;vertical-align:1px;font-weight:500;border:1px solid var(--line);color:var(--ink2)}
+.tag.acc{color:var(--acc);border-color:#C6D5EF}
+.tag.ok{color:var(--ok);border-color:#BFE2CE}
+.tag.stuck{color:var(--stuck);border-color:#F2CDA9}
+.tag.dt{color:var(--detour);border-color:#D9C8F0}
+.empty{padding:40px 20px;text-align:center;color:var(--ink3);font-size:13px}
+.seg{display:flex;background:var(--bg);border-radius:8px;padding:2px;gap:2px}
+.seg button{flex:1;height:30px;border-radius:6px;font-size:13px;color:var(--ink2)}
+.seg button.on{background:#fff;color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.bar{height:6px;border-radius:3px;background:var(--bg);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--acc);transition:width .3s}
+.sw{width:42px;height:24px;border-radius:12px;background:#D5D3CE;position:relative;flex:none;transition:background .15s}
+.sw::after{content:"";position:absolute;left:2px;top:2px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:left .15s}
+.sw.on{background:var(--acc)}.sw.on::after{left:20px}
+.fld{display:block;padding:10px 14px;border-bottom:1px solid var(--line);background:#fff}
+.fld label{display:block;font-size:12px;color:var(--ink3);margin-bottom:4px}
+.fld input,.fld select,.fld textarea{width:100%;border:1px solid #DFDDD8;border-radius:8px;padding:8px 10px;outline:0;background:#fff;font-size:14px}
+.fld textarea{min-height:90px;resize:vertical;line-height:1.6}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:13px;padding:4px 14px 12px}
+.kv span:nth-child(odd){color:var(--ink3)}
+.kv span:nth-child(even){text-align:right}
+.math{font-family:"Times New Roman","STIX Two Math",serif;font-style:italic;font-size:1.06em;white-space:nowrap}
+.math.blk{display:block;text-align:center;margin:10px 0;font-size:1.15em}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex:none;display:inline-block}
+
+/* ---------- 书架 ---------- */
+.cont{margin:12px;border-radius:16px;background:linear-gradient(135deg,#2F5AA8,#24467F);color:#fff;padding:16px;cursor:pointer;box-shadow:0 6px 18px rgba(47,90,168,.25)}
+.cont .k{font-size:12px;opacity:.8}
+.cont .t{font-size:19px;font-weight:600;margin:4px 0 2px}
+.cont .b{font-size:12px;opacity:.85}
+.cont .s{margin-top:10px;font-size:12px;background:rgba(255,255,255,.14);border-radius:8px;padding:7px 9px;line-height:1.55}
+.cont .go{margin-top:12px;display:flex;justify-content:space-between;align-items:center}
+.cont .go .btn{background:#fff;color:var(--acc);height:34px;font-size:13px}
+.cont .pts{display:flex;gap:4px}
+.cont .pts i{width:18px;height:4px;border-radius:2px;background:rgba(255,255,255,.3)}
+.cont .pts i.on{background:#fff}
+.book{display:flex;gap:12px;padding:12px 14px;background:#fff;border-bottom:1px solid var(--line);cursor:pointer}
+.book:active{background:#F8F7F5}
+.cover{width:54px;height:74px;border-radius:4px;flex:none;display:flex;align-items:flex-end;padding:5px;color:#fff;font-size:10px;line-height:1.25;font-weight:600;box-shadow:inset 3px 0 0 rgba(0,0,0,.18),0 1px 3px rgba(0,0,0,.15)}
+.book .grow{flex:1;min-width:0}
+.book .tt{font-weight:600;font-size:15px;line-height:1.35}
+.book .meta{font-size:12px;color:var(--ink3);margin-top:2px}
+.book .st{font-size:12px;margin-top:6px;display:flex;align-items:center;gap:6px}
+.fabi{position:absolute;right:16px;bottom:74px;height:44px;padding:0 16px;border-radius:22px;background:var(--ink);color:#fff;font-weight:600;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.25);z-index:5;display:flex;align-items:center;gap:6px}
+
+/* ---------- 导入 / 解析 ---------- */
+.finfo{display:flex;gap:12px;padding:14px;background:#fff;align-items:center}
+.finfo .ic{width:42px;height:52px;border-radius:5px;background:var(--bad);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700;flex:none}
+.finfo .ic.epub{background:var(--ok)}
+.chips2{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:4px 14px 12px}
+.chips2 div{background:var(--bg);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--ink3)}
+.chips2 b{display:block;color:var(--ink);font-size:14px;font-weight:500}
+.chips2 b.ok{color:var(--ok)}.chips2 b.no{color:var(--stuck)}
+.part{padding:12px 14px;border-bottom:1px solid var(--line);background:#fff}
+.part .l1{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.part .stg{display:flex;gap:4px;margin-top:8px;font-size:11px;color:var(--ink3)}
+.part .stg span{flex:1;text-align:center;padding:3px 0;border-radius:4px;background:var(--bg)}
+.part .stg span.done{background:var(--ok-bg);color:var(--ok)}
+.part .stg span.cur{background:var(--acc-bg);color:var(--acc);font-weight:600}
+.part .stg span.err{background:var(--bad-bg);color:var(--bad);font-weight:600}
+
+/* ---------- 地图 ---------- */
+.chap{background:#fff;border-bottom:1px solid var(--line)}
+.chap .h{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer}
+.chap .h .no{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-family:var(--num);font-weight:700;background:var(--bg);color:var(--ink2);flex:none;font-size:13px}
+.chap.done .h .no{background:var(--ok-bg);color:var(--ok)}
+.chap.cur .h .no{background:var(--acc);color:#fff}
+.chap .h .grow{flex:1;min-width:0}
+.chap .h .grow b{font-weight:600}
+.chap .h .grow small{display:block;font-size:12px;color:var(--ink3)}
+.chap .h .arr{color:var(--ink3);transition:transform .15s}
+.chap.open .h .arr{transform:rotate(90deg)}
+.sct{display:flex;align-items:center;gap:10px;padding:9px 14px 9px 22px;cursor:pointer;font-size:14px}
+.sct:active{background:#F8F7F5}
+.sct.l3{padding-left:52px;font-size:13px}
+.sct .grow{flex:1;min-width:0}
+.sct .pg{font-size:12px;color:var(--ink3);font-family:var(--num)}
+.sst{width:16px;height:16px;border-radius:50%;border:1.5px solid #CFCCC6;flex:none;display:grid;place-items:center;font-size:10px;color:#fff}
+.sst.done{background:var(--ok);border-color:var(--ok)}
+.sst.learning{border-color:var(--acc);background:conic-gradient(var(--acc) 0 50%,#fff 50% 100%)}
+.sct.cur{background:var(--acc-bg)}
+.sct.cur .grow{color:var(--acc-ink);font-weight:600}
+.flag{background:#FFF8E1}
+.mapchk{margin:10px 12px;border-radius:10px;background:#fff;padding:10px 12px;font-size:13px;display:flex;gap:10px;align-items:center}
+
+/* ---------- 伴读 ---------- */
+.stbar{flex:none;background:#fff;border-bottom:1px solid var(--line);padding:6px 12px 8px}
+.stbar .l1{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink3)}
+.stbar .pts{display:flex;gap:3px;flex:1}
+.stbar .pts i{flex:1;height:4px;border-radius:2px;background:var(--bg)}
+.stbar .pts i.done{background:var(--acc)}
+.stbar .pts i.cur{background:#9DB3DC}
+.ctxb{font-size:11px;border:1px solid var(--line);border-radius:10px;padding:1px 8px;color:var(--ink2);background:#fff;white-space:nowrap}
+.dtbar{flex:none;display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--detour-bg);color:var(--detour);font-size:13px;border-bottom:1px solid #E3D8F3}
+.dtbar b{font-weight:600}
+.dtbar .grow{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dtbar button{background:var(--detour);color:#fff;border-radius:14px;height:28px;padding:0 12px;font-size:12px;font-weight:600;flex:none}
+.chat{padding:12px 14px 18px;display:flex;flex-direction:column;gap:12px}
+.m-u{align-self:flex-end;max-width:84%;background:var(--acc);color:#fff;padding:9px 12px;border-radius:16px 16px 4px 16px;font-size:15px;line-height:1.6;white-space:pre-wrap}
+.m-u.dt{background:var(--detour)}
+.m-u .q{display:block;font-size:12px;opacity:.85;border-left:2px solid rgba(255,255,255,.6);padding-left:6px;margin-bottom:4px;white-space:normal}
+.m-a{font-size:16px;line-height:1.78;color:var(--ink)}
+.m-a.dt{border-left:3px solid var(--detour);padding-left:10px}
+.m-a p{margin:0 0 10px}
+.m-a p:last-child{margin-bottom:0}
+.m-a ul,.m-a ol{padding-left:20px;margin:0 0 10px}
+.m-a li{margin:2px 0}
+.m-a b{font-weight:600}
+.m-a .unv{font-size:11px;color:var(--ink3);border:1px dashed #CFCCC6;border-radius:3px;padding:0 3px;margin-left:2px}
+.cite{display:inline-flex;align-items:center;height:19px;padding:0 6px;margin:0 2px;border-radius:10px;background:var(--acc-bg);color:var(--acc);font-size:11px;font-family:var(--num);vertical-align:2px;cursor:pointer;line-height:1}
+.cite:hover{background:#D9E4F6}
+.cite.dt{background:var(--detour-bg);color:var(--detour)}
+.caret{display:inline-block;width:7px;height:16px;background:var(--acc);vertical-align:-2px;margin-left:2px;animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+.fig{margin:10px 0;border:1px solid var(--line);border-radius:10px;background:var(--paper);padding:8px 8px 6px;cursor:pointer}
+.fig svg{display:block;width:100%;height:auto}
+.fig .cap{font-size:12px;color:var(--ink2);margin-top:4px;font-family:var(--serif)}
+.steps{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--ink2)}
+.steps span{display:flex;gap:6px;align-items:flex-start}
+.steps span::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--ink3);margin-top:6px;flex:none}
+.steps.dt span::before{background:var(--detour)}
+.steps span.run{color:var(--ink3)}
+.divd{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink3)}
+.divd::before,.divd::after{content:"";flex:1;height:1px;background:var(--line)}
+.divd.dt{color:var(--detour)}
+.divd.dt::before,.divd.dt::after{background:#E3D8F3}
+.hist{align-self:center;font-size:12px;color:var(--ink2);background:#fff;border:1px solid var(--line);border-radius:14px;padding:4px 12px;cursor:pointer}
+.resume{background:#fff;border-radius:14px;padding:12px 14px;border:1px solid var(--line)}
+.resume .h{font-size:12px;color:var(--ink3);margin-bottom:4px}
+.resume p{font-size:14px;line-height:1.7;margin-bottom:6px}
+.resume .bt{display:flex;gap:8px;margin-top:8px}
+.quiz{background:#fff;border-radius:14px;padding:12px 14px;border:1px solid var(--line)}
+.quiz .h{font-size:12px;color:var(--acc);font-weight:600;margin-bottom:4px}
+.quiz .q{font-weight:600;margin-bottom:10px;font-size:15px;line-height:1.6}
+.quiz .op{display:block;width:100%;text-align:left;border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin-bottom:6px;font-size:14px;line-height:1.5}
+.quiz .op.right{border-color:var(--ok);background:var(--ok-bg)}
+.quiz .op.wrong{border-color:var(--bad);background:var(--bad-bg)}
+.quiz .fb{font-size:13px;line-height:1.7;margin-top:6px;color:var(--ink2)}
+.prop{background:#fff;border-radius:12px;border:1px dashed #C6D5EF;padding:10px 12px;font-size:13px}
+.prop .h{font-weight:600;color:var(--acc);margin-bottom:4px;font-size:12px}
+.qa{flex:none;display:flex;gap:6px;overflow-x:auto;padding:8px 10px 2px;background:#fff;border-top:1px solid var(--line);scrollbar-width:none}
+.qa::-webkit-scrollbar{display:none}
+.qa button{flex:none;border:1px solid var(--line);border-radius:16px;padding:5px 12px;font-size:13px;color:var(--ink2);background:#fff;white-space:nowrap}
+.qa button.pri{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+.qa button.dt{background:var(--detour);border-color:var(--detour);color:#fff;font-weight:600}
+.composer{flex:none;display:flex;gap:8px;padding:8px 10px 10px;background:#fff;align-items:flex-end}
+.composer .in{overflow:hidden;flex:1;min-height:40px;max-height:110px;border:1px solid #DFDDD8;border-radius:20px;padding:9px 14px;outline:0;resize:none;line-height:1.5;font-size:15px}
+.composer .snd{width:40px;height:40px;border-radius:20px;background:var(--acc);color:#fff;font-size:18px;flex:none;display:grid;place-items:center}
+.composer .snd[disabled]{background:#C9C7C2}
+.quote{flex:none;display:flex;gap:8px;align-items:center;padding:6px 12px;background:#FAF9F7;border-top:1px solid var(--line);font-size:12px;color:var(--ink2)}
+.quote .grow{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ---------- 上下文 ---------- */
+.ctxl{padding:4px 16px 12px}
+.ctxl .it{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
+.ctxl .it .grow{flex:1;min-width:0}
+.ctxl .it .grow small{display:block;color:var(--ink3);font-size:11px}
+.ctxl .it .tk{font-family:var(--num);color:var(--ink2);width:52px;text-align:right}
+.ctxl .sq{width:10px;height:10px;border-radius:2px;flex:none}
+.stack{display:flex;height:10px;border-radius:5px;overflow:hidden;margin:6px 16px 4px}
+
+/* ---------- 阅读器 ---------- */
+.rdtool{flex:none;display:flex;align-items:center;gap:10px;padding:8px 12px;background:#fff;border-bottom:1px solid var(--line)}
+.rdtool .seg{width:150px}
+.rdtool .pgi{flex:1;text-align:right;font-size:12px;color:var(--ink3)}
+.reader{padding:14px 12px 30px;display:flex;flex-direction:column;gap:14px}
+.page{background:var(--paper);border-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.12);padding:22px 20px 14px;position:relative;font-family:var(--serif);color:#2A2723}
+.page.orig{font-size:12.5px;line-height:1.85;aspect-ratio:0.72}
+.page.flow{font-size:16.5px;line-height:1.9;padding:18px 16px 14px;box-shadow:none;background:transparent}
+.page .pno{position:absolute;bottom:8px;left:0;right:0;text-align:center;font-family:var(--num);font-size:11px;color:#A8A196}
+.page.flow .pno{position:static;text-align:left;border-top:1px dashed #DDD6C8;padding-top:4px;margin-top:6px}
+.page .run{font-size:10px;color:#A8A196;font-family:var(--zh);display:flex;justify-content:space-between;margin-bottom:10px}
+.page.flow .run{display:none}
+.blk{position:relative;padding:2px 4px;margin:0 -4px 6px;border-radius:3px;cursor:pointer}
+.blk:hover{background:rgba(47,90,168,.05)}
+.blk.title{font-family:var(--zh);font-weight:700;font-size:1.25em;margin-bottom:8px}
+.blk.eq{text-align:center}
+.blk.done::before{content:"";position:absolute;left:-10px;top:3px;bottom:3px;width:2px;border-radius:1px;background:#9DB3DC}
+.blk.curp::before{background:var(--acc);width:3px}
+.blk.hl{background:var(--hl)}
+.blk.flash{animation:flash 1.6s ease-out}
+@keyframes flash{0%{background:#FFD84D;box-shadow:0 0 0 3px #FFD84D}100%{background:var(--hl);box-shadow:0 0 0 0 transparent}}
+.blk.sel{background:rgba(47,90,168,.14)}
+.blk .fig{background:#fff}
+.pph{font-family:var(--zh);color:#B3AC9F;font-size:12px;text-align:center;padding:40px 0}
+.selmenu{position:absolute;z-index:15;background:#1F2329;border-radius:10px;display:flex;padding:3px;box-shadow:0 6px 16px rgba(0,0,0,.3)}
+.selmenu button{color:#fff;font-size:13px;padding:7px 10px;border-radius:7px;white-space:nowrap}
+.selmenu button:hover{background:rgba(255,255,255,.12)}
+
+/* ---------- 小结 ---------- */
+.done-hero{background:var(--ok);color:#fff;padding:16px 16px 18px}
+.done-hero .k{font-size:12px;opacity:.85}
+.done-hero .t{font-size:19px;font-weight:600;margin-top:2px}
+.ck{display:flex;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line);background:#fff;cursor:pointer;align-items:flex-start}
+.ck .bx{width:19px;height:19px;border:1.5px solid #C5C2BC;border-radius:5px;flex:none;margin-top:1px;display:grid;place-items:center;color:#fff;font-size:12px}
+.ck.on .bx{background:var(--acc);border-color:var(--acc)}
+.ck .grow{flex:1;min-width:0;font-size:14px;line-height:1.55}
+.ck .grow small{display:block;color:var(--ink2);font-size:13px;margin-top:2px}
+.edt{width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 10px;line-height:1.7;font-size:14px;min-height:120px;outline:0;resize:vertical;background:#FFFEFB}
+
+/* ---------- 复习 ---------- */
+.rvhero{display:grid;grid-template-columns:1fr 1fr 1fr;background:#fff;padding:16px 8px;text-align:center}
+.rvhero b{display:block;font-size:26px;font-weight:600;font-family:var(--num);line-height:1.2}
+.rvhero span{font-size:12px;color:var(--ink3)}
+.boxes{display:flex;gap:6px;padding:4px 14px 14px;background:#fff}
+.boxes div{flex:1;text-align:center;font-size:11px;color:var(--ink3)}
+.boxes i{display:block;height:44px;border-radius:6px;background:var(--bg);position:relative;margin-bottom:4px;overflow:hidden}
+.boxes i em{position:absolute;left:0;right:0;bottom:0;background:#9DB3DC}
+.boxes i b{position:absolute;inset:0;display:grid;place-items:center;font-style:normal;font-family:var(--num);color:var(--ink);font-size:13px}
+.fcard{margin:16px 14px;min-height:300px;background:#fff;border-radius:18px;box-shadow:0 4px 16px rgba(0,0,0,.08);padding:20px 18px;display:flex;flex-direction:column;cursor:pointer}
+.fcard .src{font-size:12px;color:var(--ink3);display:flex;justify-content:space-between}
+.fcard .front{font-size:19px;font-weight:600;line-height:1.55;margin:26px 0 10px}
+.fcard .back{font-size:15px;line-height:1.8;color:var(--ink2);border-top:1px dashed var(--line);padding-top:12px;margin-top:6px}
+.fcard .tip{margin-top:auto;text-align:center;font-size:12px;color:var(--ink3)}
+.rate{display:flex;gap:8px;padding:0 14px}
+.rate button{flex:1;height:54px;border-radius:12px;background:#fff;border:1px solid var(--line);font-weight:600;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.3}
+.rate button small{font-weight:400;font-size:11px;color:var(--ink3)}
+.rate .a{color:var(--bad)}.rate .h{color:var(--stuck)}.rate .g{color:var(--ok)}
+.stk{display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);background:#fff;align-items:flex-start}
+.stk .ic{width:22px;height:22px;border-radius:50%;background:var(--stuck-bg);color:var(--stuck);display:grid;place-items:center;font-size:12px;font-weight:700;flex:none;margin-top:1px}
+.stk.ok .ic{background:var(--ok-bg);color:var(--ok)}
+.stk.ok .grow b{text-decoration:line-through;color:var(--ink3)}
+.stk .grow{flex:1;min-width:0}
+.stk .grow b{font-weight:500;line-height:1.5;display:block}
+.stk .grow small{color:var(--ink3);font-size:12px}
+.stk .acts{display:flex;gap:6px;margin-top:8px}
+
+/* ---------- 笔记 ---------- */
+.nsec{padding:12px 14px;border-bottom:1px solid var(--line);background:#fff;cursor:pointer}
+.nsec .l1{display:flex;justify-content:space-between;gap:8px}
+.nsec .l1 b{font-weight:500}
+.nsec .sm{font-size:13px;color:var(--ink2);margin-top:3px;line-height:1.55;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.nsec .tg{display:flex;gap:4px;margin-top:6px}
+.nd{background:#fff;padding:4px 14px 14px;margin-bottom:8px}
+.nd h3{font-size:13px;color:var(--ink3);font-weight:500;padding:12px 0 6px}
+.nd p{font-size:14px;line-height:1.75}
+.nd .qi{padding:8px 0;border-bottom:1px dashed var(--line)}
+.nd .qi:last-child{border-bottom:0}
+.nd .qi b{display:block;font-weight:600;font-size:14px;line-height:1.6}
+.nd .qi span{font-size:13px;color:var(--ink2);line-height:1.7;display:block}
+.nd .qi .fr{font-size:11px;color:var(--detour)}
+.nd .hlq{font-family:var(--serif);background:var(--hl);padding:2px 4px;font-size:13px;line-height:1.8;border-radius:2px}
+.tree{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;line-height:1.7;background:var(--bg);border-radius:8px;padding:8px 10px;margin:0 16px 10px;white-space:pre;overflow-x:auto;color:var(--ink2)}
+
+/* ---------- 浮层 ---------- */
+.mask{position:absolute;inset:0;background:rgba(0,0,0,.42);z-index:20;display:flex;align-items:center;justify-content:center;padding:24px}
+.mask.bottom{align-items:flex-end;padding:0}
+.dlg{background:#fff;border-radius:16px;width:100%;max-height:90%;overflow:auto}
+.dlg .dh{padding:18px 16px 4px;font-weight:600;font-size:16px;text-align:center}
+.dlg .db{padding:8px 18px 16px;font-size:14px;line-height:1.65}
+.dlg .df{display:flex;border-top:1px solid var(--line)}
+.dlg .df button{flex:1;height:48px;font-size:15px}
+.dlg .df button+button{border-left:1px solid var(--line)}
+.dlg .df .pri{color:var(--acc);font-weight:600}
+.sheet{background:#fff;border-radius:18px 18px 0 0;width:100%;max-height:82%;overflow:auto;padding-bottom:10px}
+.sheet .grab{width:36px;height:4px;border-radius:2px;background:#DDD;margin:8px auto 0}
+.sheet .sh{padding:10px 16px 6px;font-weight:600;font-size:16px}
+.sheet .sh small{display:block;font-weight:400;font-size:12px;color:var(--ink3)}
+.sheet .sb{padding:4px 16px 8px;font-size:15px;line-height:1.75}
+.sheet .sf{display:flex;gap:8px;padding:8px 16px 4px}
+.sheet .sf .btn{flex:1}
+#toasts{position:absolute;left:0;right:0;top:86px;display:flex;flex-direction:column;align-items:center;gap:6px;z-index:30;pointer-events:none}
+.toast{background:rgba(31,35,41,.92);color:#fff;padding:8px 14px;border-radius:10px;font-size:13px;max-width:330px;animation:tin .18s ease-out}
+.toast.ok{background:rgba(46,139,87,.95)}
+.toast.dt{background:rgba(122,79,181,.95)}
+@keyframes tin{from{opacity:0;transform:translateY(-6px)}}
+@media (prefers-reduced-motion:reduce){.toast,.blk.flash,.caret{animation:none}}
+
+/* ---------- 控制台 ---------- */
+.console{width:340px;flex:none;background:#fff;border-radius:14px;padding:16px;font-size:13px;position:sticky;top:24px;max-height:calc(100vh - 48px);overflow:auto}
+.console h2{font-size:16px;margin-bottom:2px}
+.console .lead{color:var(--ink2);font-size:12px;margin-bottom:10px;line-height:1.6}
+.console h3{font-size:12px;color:var(--ink3);font-weight:500;margin:14px 0 6px}
+.console .jump{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.console .jump button{border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:12px;text-align:left;line-height:1.4}
+.console .jump button:hover{border-color:var(--acc)}
+.console .jump button small{display:block;color:var(--ink3);font-size:11px}
+.console .pages{display:flex;flex-wrap:wrap;gap:4px}
+.console .pages button{font-size:12px;padding:3px 8px;border-radius:5px;background:var(--bg)}
+.console .pages button.on{background:var(--acc);color:#fff}
+.console p{font-size:12px;color:var(--ink2);margin:6px 0;line-height:1.6}
+.console .rst{width:100%;margin-top:12px;border:1px solid var(--line);border-radius:8px;height:34px;font-size:12px;color:var(--ink2)}
+@media (max-width:800px){.stage{flex-direction:column;align-items:center}.console{position:static;width:390px;max-height:none}}
+@media (max-width:430px){.stage{padding:0}.phone{width:100vw;height:100vh;border-radius:0;box-shadow:none}.console{width:100%}}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="phone" id="phone">
+    <div class="sbar"><span class="n" id="sbTime">21:40</span><span>▮▮▮ ◔ 72%</span></div>
+    <div id="app">
+      <div class="nav" id="nav"></div>
+      <div id="top"></div>
+      <div id="view"></div>
+      <div id="bottom"></div>
+      <div class="tabbar" id="tabbar"></div>
+      <div id="toasts"></div>
+      <div id="overlay"></div>
+    </div>
+  </div>
+  <aside class="console" id="console"></aside>
+</div>
+<script>
+/* Pagewise 原型 · 演示数据
+ * 书名、章节编号和标题来自《人工智能：现代方法（第4版）》目录。
+ * 页码、"原文"内容块、讲解、闪卡都是为原型写的示意内容，不是原书文字。 */
+'use strict';
+const CHAPTERS = [
+  ['1', '绪论', 1, 34, ['1.1 什么是人工智能', '1.2 人工智能的基础', '1.3 人工智能的历史', '1.4 目前的先进技术', '1.5 人工智能的风险和收益']],
+  ['2', '智能体', 35, 65, ['2.1 智能体和环境', '2.2 良好行为：理性的概念', '2.3 环境的本质', '2.4 智能体的结构']],
+  ['3', '通过搜索进行问题求解', 66, 127, null],
+  ['4', '复杂环境中的搜索', 128, 160], ['5', '对抗搜索和博弈', 161, 197], ['6', '约束满足问题', 198, 226],
+  ['7', '逻辑智能体', 227, 268], ['8', '一阶逻辑', 269, 296], ['9', '一阶逻辑中的推断', 297, 330],
+  ['10', '知识表示', 331, 362], ['11', '自动规划', 363, 400], ['12', '不确定性的量化', 401, 426],
+  ['13', '概率推理', 427, 470], ['14', '时间上的概率推理', 471, 508], ['15', '概率编程', 509, 534],
+  ['16', '做简单决策', 535, 566], ['17', '做复杂决策', 567, 604], ['18', '多智能体决策', 605, 652],
+  ['19', '样例学习', 653, 712], ['20', '概率模型学习', 713, 740], ['21', '深度学习', 741, 776],
+  ['22', '强化学习', 777, 808], ['23', '自然语言处理', 809, 842], ['24', '自然语言处理中的深度学习', 843, 868],
+  ['25', '计算机视觉', 869, 908], ['26', '机器人学', 909, 962], ['27', '人工智能的哲学、伦理和安全性', 963, 1000],
+  ['28', '人工智能的未来', 1001, 1012], ['A', '数学背景知识', 1013, 1024], ['B', '关于语言与算法的说明', 1025, 1030]
+];
+
+// 第 3 章：[编号, 标题, 起始页, 结束页, 子小节[[编号, 标题, 起, 止, 状态]]]
+const CH3 = [
+  ['3.1', '问题求解智能体', 66, 72, [['3.1.1', '搜索问题和解', 66, 69, 'done'], ['3.1.2', '问题形式化', 69, 72, 'done']]],
+  ['3.2', '问题示例', 72, 78, [['3.2.1', '标准化问题', 72, 76, 'done'], ['3.2.2', '真实世界问题', 76, 78, 'done']]],
+  ['3.3', '搜索算法', 78, 87, [['3.3.1', '最佳优先搜索', 78, 80, 'done'], ['3.3.2', '搜索数据结构', 80, 82, 'done'], ['3.3.3', '冗余路径', 82, 84, 'done'], ['3.3.4', '问题求解性能评估', 84, 87, 'done']]],
+  ['3.4', '无信息搜索策略', 87, 100, [['3.4.1', '广度优先搜索', 87, 90, 'done'], ['3.4.2', 'Dijkstra算法或一致代价搜索', 90, 93, 'done'], ['3.4.3', '深度优先搜索与内存问题', 93, 95, 'done'], ['3.4.4', '深度受限和迭代加深搜索', 95, 97, 'done'], ['3.4.5', '双向搜索', 97, 99, 'done'], ['3.4.6', '无信息搜索算法对比', 99, 100, 'done']]],
+  ['3.5', '有信息（启发式）搜索策略', 100, 116, [['3.5.1', '贪心最佳优先搜索', 100, 102, 'done'], ['3.5.2', 'A*搜索', 102, 106, 'learning'], ['3.5.3', '搜索等值线', 106, 108, 'new'], ['3.5.4', '满意搜索：不可容许的启发式函数与加权A*搜索', 108, 110, 'new'], ['3.5.5', '内存受限搜索', 110, 113, 'new'], ['3.5.6', '双向启发式搜索', 113, 116, 'new']]],
+  ['3.6', '启发式函数', 116, 126, [['3.6.1', '启发式函数的准确性对性能的影响', 116, 118, 'new'], ['3.6.2', '从松弛问题出发生成启发式函数', 118, 120, 'new'], ['3.6.3', '从子问题出发生成启发式函数：模式数据库', 120, 122, 'new'], ['3.6.4', '使用地标生成启发式函数', 122, 123, 'new'], ['3.6.5', '学习以更好地搜索', 123, 124, 'new'], ['3.6.6', '从经验中学习启发式函数', 124, 126, 'new']]]
+];
+
+// 已学小节的摘要（学完时生成并由你确认）
+const SUMMARY = {
+  '1.1': '用"像人一样 / 理性地"和"思考 / 行动"两个维度划出 AI 的四种定义，本书采用"理性地行动"，即理性智能体方法。',
+  '1.2': '哲学、数学、经济学、神经科学、心理学、计算机工程、控制论和语言学分别为 AI 提供了问题和工具。',
+  '1.3': '从 1943 年的神经元模型到深度学习，AI 经历了几轮乐观、寒冬和复兴。',
+  '1.4': '列举了机器人、语音识别、博弈、医疗、气候等领域当前能做到的事。',
+  '1.5': '收益很大，风险包括致命自主武器、监控、偏见、就业冲击和价值对齐问题。',
+  '2.1': '智能体通过传感器感知、通过执行器行动；智能体函数是感知序列到动作的映射，智能体程序是它的实现。',
+  '2.2': '理性指在已有感知和先验知识下，选择期望性能度量最大的动作；用 PEAS 描述任务环境。',
+  '2.3': '任务环境按可观测性、智能体数量、确定性、片段性、静态性、离散性、已知性分类。',
+  '2.4': '四种智能体程序：简单反射、基于模型的反射、基于目标、基于效用，以及学习型智能体。',
+  '3.1.1': '问题求解智能体先确定目标、形式化问题，再搜索出一个动作序列（解），最后执行。',
+  '3.1.2': '搜索问题由状态空间、初始状态、目标、动作、转移模型和动作代价函数组成；抽象要去掉无关细节。',
+  '3.2.1': '网格世界、8 数码、吸尘器世界等标准化问题，用来比较算法。',
+  '3.2.2': '路径规划、旅行商、VLSI 布线、机器人导航等真实世界问题，形式化更复杂。',
+  '3.3.1': '最佳优先搜索每次从边界中取评价函数 f(n) 最小的节点扩展，是后面多种算法的通用框架。',
+  '3.3.2': '节点记录状态、父节点、动作和路径代价；边界用优先队列、FIFO 或 LIFO 队列实现。',
+  '3.3.3': '冗余路径会让搜索重复工作；图搜索用已达状态表去重，树状搜索不检查。',
+  '3.3.4': '从完备性、代价最优性、时间复杂度、空间复杂度四个方面评估搜索算法。',
+  '3.4.1': '广度优先搜索按层扩展，生成时就可以做目标测试；动作代价相同时才是代价最优的。',
+  '3.4.2': '一致代价搜索按路径代价 g(n) 扩展，扩展时才做目标测试，是完备且代价最优的。',
+  '3.4.3': '深度优先搜索内存只要 O(bm)，但不完备也不最优；回溯搜索更省内存。',
+  '3.4.4': '深度受限搜索给深度设上限；迭代加深逐步加大上限，兼有 DFS 的内存和 BFS 的完备性。',
+  '3.4.5': '双向搜索从两端同时搜索，两边相遇即可，复杂度可降到 O(b^{d/2})。',
+  '3.4.6': '对比了六种无信息搜索在完备性、最优性和复杂度上的差异。',
+  '3.5.1': '贪心最佳优先搜索只用 h(n)，常常很快，但不完备、也不保证代价最优。'
+};
+
+// 内容块：与 MinerU 内容块一致的字段（页码、类型、文本），文字为示意
+const BLOCKS = [
+  { id: 'b0900', p: 90, sec: '3.4.2', t: 'title', x: '3.4.2　Dijkstra算法或一致代价搜索' },
+  { id: 'b0901', p: 90, sec: '3.4.2', t: 'text', x: '当动作代价各不相同时，可以使用一致代价搜索：它是以路径代价 $g(n)$ 作为评价函数的最佳优先搜索，每次扩展当前路径代价最小的节点。在计算机科学领域，它也被称为 Dijkstra 算法。', gist: '一致代价搜索 = 只看"已经花了多少" g(n) 的最佳优先搜索；Dijkstra 是它的另一个名字。' },
+  { id: 'b0902', p: 91, sec: '3.4.2', t: 'text', x: '一致代价搜索像水面上的波纹一样，按路径代价一圈一圈向外扩展。它在节点被扩展时才做目标测试，而不是在节点被生成时：先生成的到达目标的路径，不一定是代价最小的那条。', gist: '目标测试放在"扩展"时：生成时就停，可能停在一条贵的路上。' },
+  { id: 'b0903', p: 91, sec: '3.4.2', t: 'image', fig: 'f310', x: '图 3.10（示意）　若在生成时做目标测试，会先返回代价为 11 的路径，而最优路径代价为 4' },
+  { id: 'b0904', p: 92, sec: '3.4.2', t: 'text', x: '一致代价搜索是完备的，也是代价最优的：它第一个扩展的目标节点所在路径的代价，不会大于边界上任何其他节点的路径代价。', gist: '第一个被扩展的目标就是最便宜的，所以一致代价搜索代价最优。' },
+  { id: 'b0905', p: 92, sec: '3.4.2', t: 'text', x: '设最优解代价为 $C^*$，每个动作代价至少为 $ε$，则其最坏情况时间和空间复杂度为 $O(b^{1+⌊C^*/ε⌋})$，可能远大于广度优先搜索的 $b^d$。', gist: '复杂度取决于最优代价和最小动作代价之比，动作代价很小时会很慢。' },
+  { id: 'b1000', p: 100, sec: '3.5.1', t: 'title', x: '3.5.1　贪心最佳优先搜索' },
+  { id: 'b1001', p: 100, sec: '3.5.1', t: 'text', x: '贪心最佳优先搜索每次扩展 $h(n)$ 最小的节点，即看起来离目标最近的节点，评价函数为 $f(n) = h(n)$。它常常很快，但既不保证完备，也不保证代价最优。', gist: '只看估计的剩余距离，快但容易被"看起来近"骗。' },
+  { id: 'b1020', p: 102, sec: '3.5.2', t: 'title', x: '3.5.2　A*搜索' },
+  { id: 'b1021', p: 102, sec: '3.5.2', t: 'text', x: '最常用的有信息搜索算法是 A* 搜索。它是一种最佳优先搜索，评价函数为', gist: 'A* 是一种最佳优先搜索，下面一行就是它的评价函数。' },
+  { id: 'b1022', p: 102, sec: '3.5.2', t: 'eq', x: '$f(n) = g(n) + h(n)$' },
+  { id: 'b1023', p: 102, sec: '3.5.2', t: 'text', x: '其中 $g(n)$ 是从初始状态到节点 $n$ 的路径代价，$h(n)$ 是从 $n$ 到某个目标状态的最短路径的估计代价，因此 $f(n)$ 是经过 $n$ 到达目标的最优路径的估计代价。', gist: 'f(n) 估计的是"如果路线经过 n，全程最少要多少"。' },
+  { id: 'b1024', p: 103, sec: '3.5.2', t: 'image', fig: 'f318', x: '图 3.18（示意）　A* 与贪心搜索在同一问题上的选择，节点旁标注 f = g + h' },
+  { id: 'b1025', p: 103, sec: '3.5.2', t: 'text', x: 'A* 是否代价最优，取决于启发式函数的性质。可容许的（admissible）启发式函数从不高估到达目标的代价，因此是乐观的。使用可容许的启发式函数时，A* 是代价最优的。', gist: '可容许 = 从不高估。只要 h 可容许，A* 返回的就是最便宜的路。' },
+  { id: 'b1026', p: 104, sec: '3.5.2', t: 'text', x: '一个稍强的性质是一致性（consistency）：对每个节点 $n$ 以及它经由动作 $a$ 产生的每个后继 $n′$，都有 $h(n) ≤ c(n, a, n′) + h(n′)$。这是三角不等式的一种形式。', gist: '一致性要求每走一步，估计值的下降不超过这一步的实际代价。' },
+  { id: 'b1027', p: 104, sec: '3.5.2', t: 'text', x: '每个一致的启发式函数都是可容许的，但反过来不一定成立。使用一致的启发式函数时，A* 第一次扩展到某个状态，所走的就是到达该状态的最优路径。', gist: '一致 ⇒ 可容许；一致时状态第一次被扩展就是最优路径，不必回头更新。' },
+  { id: 'b1028', p: 105, sec: '3.5.2', t: 'text', x: '可以用反证法说明：假设 A* 返回的路径代价 $C$ 大于最优代价 $C^*$，那么最优路径上必然存在一个尚未扩展的节点 $n$。由于 $h$ 可容许，$f(n) ≤ C^* < C$，于是 $n$ 应当先于该目标节点被扩展，矛盾。', gist: '反证：最优路径上总有个 f ≤ C* 的节点挡在前面，A* 不可能先停在更贵的目标上。' },
+  { id: 'b1029', p: 106, sec: '3.5.2', t: 'text', x: '在所有从同一初始状态出发、使用同一启发式函数、并保证最优的算法中，A* 扩展的节点数是最少的之一，这一性质称为最优高效（optimally efficient）。', gist: '在同样信息下，A* 几乎不会多扩展不必要的节点。' }
+];
+
+// 3.5.2 的讲解分段：每段对应的内容块
+const PARTS = {
+  '3.5.3': [{ name: '等值线的直觉', blocks: [] }, { name: '单调性与剪枝', blocks: [] }],
+  '3.5.2': [
+    { name: '直觉：f = g + h', blocks: ['b1020', 'b1021', 'b1022', 'b1023'] },
+    { name: '可容许的启发式函数', blocks: ['b1024', 'b1025'] },
+    { name: '一致性', blocks: ['b1026', 'b1027'] },
+    { name: '为什么最优', blocks: ['b1028', 'b1029'] }
+  ]
+};
+
+// 示意图（自绘）
+const FIGS = {
+  f318: { cap: '图 3.18（示意）　从 S 到 G：贪心先去 h 最小的 B，A* 先去 f 最小的 A',
+    svg: '<svg viewBox="0 0 320 150" font-family="PingFang SC,sans-serif" font-size="11"><g stroke="#8C8577" stroke-width="1.4" fill="none"><path d="M50 75 L160 28"/><path d="M50 75 L160 122"/><path d="M160 28 L270 75" stroke="#2F5AA8" stroke-width="2.4"/><path d="M160 122 L270 75" stroke-dasharray="4 3"/><path d="M50 75 L160 28" stroke="#2F5AA8" stroke-width="2.4"/></g><g fill="#5C626B"><text x="96" y="44">1</text><text x="96" y="114">5</text><text x="220" y="44">5</text><text x="220" y="114">6</text></g><g><circle cx="50" cy="75" r="17" fill="#fff" stroke="#1F2329"/><text x="50" y="79" text-anchor="middle" font-weight="700">S</text><circle cx="160" cy="28" r="17" fill="#EAF0FA" stroke="#2F5AA8"/><text x="160" y="32" text-anchor="middle" font-weight="700" fill="#2F5AA8">A</text><circle cx="160" cy="122" r="17" fill="#fff" stroke="#1F2329"/><text x="160" y="126" text-anchor="middle" font-weight="700">B</text><circle cx="270" cy="75" r="17" fill="#fff" stroke="#2E8B57" stroke-width="2"/><text x="270" y="79" text-anchor="middle" font-weight="700" fill="#2E8B57">G</text></g><g font-size="10" fill="#1F2329"><text x="50" y="108" text-anchor="middle">h=5</text><text x="184" y="16">h=4 · f=1+4=5</text><text x="184" y="146">h=2 · f=5+2=7</text><text x="270" y="108" text-anchor="middle">h=0</text></g><g font-size="10"><text x="6" y="14" fill="#2F5AA8">— A*：代价 6</text><text x="6" y="28" fill="#8C8577">- - 贪心：代价 11</text></g></svg>' },
+  f310: { cap: '图 3.10（示意）　生成时测试会先返回 S→A→G（11），扩展时测试才能等到 S→B→G（4）',
+    svg: '<svg viewBox="0 0 320 120" font-family="PingFang SC,sans-serif" font-size="11"><g stroke-width="1.6" fill="none"><path d="M45 60 L160 22" stroke="#8C8577"/><path d="M160 22 L275 60" stroke="#C8372D" stroke-dasharray="4 3"/><path d="M45 60 L160 98" stroke="#2F5AA8" stroke-width="2.4"/><path d="M160 98 L275 60" stroke="#2F5AA8" stroke-width="2.4"/></g><g fill="#5C626B"><text x="96" y="34">1</text><text x="216" y="34">10</text><text x="96" y="94">3</text><text x="220" y="94">1</text></g><circle cx="45" cy="60" r="15" fill="#fff" stroke="#1F2329"/><text x="45" y="64" text-anchor="middle" font-weight="700">S</text><circle cx="160" cy="22" r="15" fill="#fff" stroke="#1F2329"/><text x="160" y="26" text-anchor="middle" font-weight="700">A</text><circle cx="160" cy="98" r="15" fill="#fff" stroke="#1F2329"/><text x="160" y="102" text-anchor="middle" font-weight="700">B</text><circle cx="275" cy="60" r="15" fill="#fff" stroke="#2E8B57" stroke-width="2"/><text x="275" y="64" text-anchor="middle" font-weight="700" fill="#2E8B57">G</text><g font-size="10"><text x="196" y="112" fill="#2F5AA8">扩展时测试：S→B→G = 4</text><text x="190" y="12" fill="#C8372D">生成时测试：S→A→G = 11</text></g></svg>' }
+};
+
+// 讲解脚本（AI 回答为预先写好的演示文本）
+// 标记：**粗体**  $公式$  $$独立公式$$  [[b:块ID]] 引用  {{fig:ID}} 原图  - 列表  1. 有序列表
+const SCRIPT = {
+  '3.5.2': {
+    teach: [
+      '先说直觉。\n\n想象你要从 S 开车去 G。贪心搜索（3.5.1）只看**"离终点还有多远"**，容易被一条看起来近、实际很绕的路骗走；一致代价搜索（3.4.2）只看**"已经开了多远"**，稳妥，但会往四面八方都试一遍。\n\nA* 把两者加起来 [[b:b1021]]：\n\n$$f(n) = g(n) + h(n)$$\n\n- $g(n)$：从起点走到 n 已经花掉的代价\n- $h(n)$：从 n 到终点**估计**还要花的代价\n\n所以 $f(n)$ 就是"如果路线经过 n，全程估计要多少" [[b:b1023]]。A* 每次挑这个值最小的节点扩展。\n\n先停一下：用你自己的话说，为什么只看 g 或只看 h 都不够？',
+      '这一段回答一个问题：**A* 找到的一定是最便宜的路吗？**\n\n答案是取决于 h。书里给的条件叫**可容许的（admissible）**：h 从不高估到终点的真实代价，也就是说它总是"乐观"的 [[b:b1025]]。\n\n看书里这张图 [[b:b1024]]：\n\n{{fig:f318}}\n\n贪心只看 h，先去 h=2 的 B，最后走 S→B→G，代价 11。A* 看 f：A 的 f=1+4=5，比 B 的 f=5+2=7 小，所以先扩展 A，找到代价 6 的 S→A→G。\n\n这里每个 h 都不超过真实剩余代价（比如 A 到 G 实际要 5，h(A)=4），所以它是可容许的。只要 h 可容许，A* 返回的就是代价最优的路 [[b:b1025]]。',
+      '可容许是"不高估终点"。书里还给了一个更强的条件：**一致的（consistent）** [[b:b1026]]。\n\n$$h(n) ≤ c(n, a, n′) + h(n′)$$\n\n读法：从 n 出发的估计，不能比"先走一步到 n′、再从 n′ 估计"更大。这其实就是三角形两边之和不小于第三边。\n\n为什么要这个更强的条件？因为一致时有个很好用的性质：**A* 第一次扩展某个状态时，走的就是到它最便宜的路**，以后不用回头更新 [[b:b1027]]。\n\n两者的关系是单向的：一致 ⇒ 可容许，反过来不一定成立 [[b:b1027]]。',
+      '最后一段讲**为什么**可容许就能保证最优。书里用的是反证法 [[b:b1028]]：\n\n1. 假设 A* 返回了一条代价 $C > C^*$ 的路（$C^*$ 是最优代价）。\n2. 那最优路径上一定还有一个没扩展的节点 n。\n3. h 不高估，所以 $f(n) = g(n) + h(n) ≤ C^* < C$。\n4. A* 总是先扩展 f 最小的，n 应该比那个代价为 C 的目标更早被扩展——矛盾。\n\n再补一个结论：在用同一个 h、保证最优的算法里，A* 扩展的节点数几乎是最少的，这叫**最优高效（optimally efficient）** [[b:b1029]]。\n\n这一节讲完了，来道题检查一下。'
+    ],
+    alt: [
+      '换个说法：把找路想成**估算总价**。g 是已经付的钱，h 是还要付多少的报价。只看已付的钱（g），你会把每条便宜的开头都试一遍；只看报价（h），容易被低报价骗。A* 比的是"已付 + 报价"的总价 [[b:b1023]]。',
+      '换个角度：把 h 当成一个**从不夸大困难的向导**。只要向导说"还有 4 公里"时，真实至少是 4 公里，A* 就不会被吓得放弃那条真正近的路 [[b:b1025]]。\n\n如果向导会夸大，比如把 A 的剩余距离说成 9，A 的 f 就变成 10，比 B 的 7 大，A* 会先走 B 那边，并可能在代价 11 的路上提前停下。',
+      '换个说法：一致性是把"不高估"从"整条剩余路"细化到"每一步" [[b:b1026]]。每走一步，估计值最多只能下降这一步的实际代价，不能"突然便宜一大截"。\n\n所以沿着任何一条路走，f 值只会不减。这就是为什么一个状态第一次被扩展时，就已经是最便宜的到达方式 [[b:b1027]]。',
+      '换个说法：A* 的边界上永远"挡着"一个最优路径上的节点，它的 f 不超过 $C^*$ [[b:b1028]]。只要这个节点还在，任何代价更高的目标都排在它后面，轮不到被扩展。'
+    ],
+    example: [
+      '举个生活里的例子：导航 App 算路时，h 常用两点间的**直线距离**。开车不可能比直线还短，所以它不会高估——这正是下一段要讲的"可容许"。',
+      '用图里的数字验证可容许 [[b:b1024]]：\n\n- h(A)=4，A 到 G 实际 5，4 ≤ 5 ✓\n- h(B)=2，B 到 G 实际 6，2 ≤ 6 ✓\n- h(S)=5，S 到 G 最优 6，5 ≤ 6 ✓\n\n每个都不高估，所以可容许。',
+      '用图里的数字验证一致性 [[b:b1024]]：\n\n- S→A：h(S)=5 ≤ 1 + h(A)=5 ✓\n- S→B：5 ≤ 5 + 2 = 7 ✓\n- A→G：4 ≤ 5 + 0 ✓\n- B→G：2 ≤ 6 + 0 ✓\n\n每条边都满足，所以这个 h 是一致的，也就一定可容许 [[b:b1027]]。',
+      '还是用图里的例子 [[b:b1024]]：最优代价 $C^* = 6$。假如 A* 想先返回 S→B→G（代价 11），边界上还有 A，它的 f=5 ≤ 6 < 11，所以 A 一定先被扩展，接着通过 A 找到代价 6 的路。'
+    ],
+    derive: [
+      null, null,
+      '展开证明"一致 ⇒ 可容许"（书里没有逐步写出，这是补充）：\n\n对一条到目标的最优路径 $n = n_0, n_1, …, n_k = G$，反复用一致性：\n\n$$h(n_0) ≤ c_1 + h(n_1) ≤ c_1 + c_2 + h(n_2) ≤ … ≤ c_1 + … + c_k + h(G)$$\n\n而 $h(G) = 0$，右边就是这条路的真实代价，所以 h 不高估，即可容许。',
+      '把第 3 步写细一点：n 在最优路径上，所以 $g(n)$ 就是到 n 的最优代价；h 可容许，所以 $h(n)$ 不超过从 n 到目标的最优剩余代价。两者相加不超过整条最优路径的代价 $C^*$ [[b:b1028]]。'
+    ],
+    quiz: [
+      { q: '只看 h(n) 的贪心搜索，在图 3.18 里会走哪条路？', ops: ['S→A→G，代价 6', 'S→B→G，代价 11', '两条都会试，最后选便宜的'], ans: 1, fb: '对，贪心先去 h 最小的 B，然后直接到 G，没有回头比较 [[b:b1024]]。' },
+      { q: '如果把 h 设成"直线距离 × 2"，它还是可容许的吗？', ops: ['是，它仍然随距离增大', '不一定，它可能高估真实代价', '是，只要 h ≥ 0 就可容许'], ans: 1, fb: '对。直线距离 × 2 可能超过实际路程，一旦高估就不再可容许，A* 也就不保证最优了 [[b:b1025]]。' },
+      { q: '下面哪个说法正确？', ops: ['可容许 ⇒ 一致', '一致 ⇒ 可容许', '两者等价'], ans: 1, fb: '对。一致更强，一致一定可容许，反过来不一定 [[b:b1027]]。' },
+      { q: '下面哪种情况，A* 一定能找到代价最优的解？', ops: ['h 从不高估真实剩余代价', 'h 总是大于等于真实剩余代价', 'h 等于直线距离乘以最大动作代价'], ans: 0, fb: '对，这就是可容许的定义 [[b:b1025]]。顺便一提：h 恒为 0 也满足这个条件，这时 A* 就退化成了一致代价搜索——想知道为什么，可以直接问我。' }
+    ],
+    after: [
+      '对，这就是 A* 的出发点：既不放弃稳妥，也利用对终点的估计。下一段讲什么样的 h 能保证 A* 找到最便宜的路。'
+    ]
+  }
+};
+
+// 岔路问答（演示）
+const DETOURS = {
+  '3.4.2': {
+    match: /一致代价|UCS|Dijkstra|迪杰斯特拉|3\.4\.2|前面.*(搜索|讲)|有什么关系|有啥关系/i,
+    steps: ['查书的地图和已学摘要：问题涉及「一致代价搜索」，对应 3.4.2（已学）', '读取 3.4.2 Dijkstra算法或一致代价搜索（p.90–93）'],
+    answer: '好问题，这两节其实是同一个框架的两个版本。\n\n**一致代价搜索**是评价函数只用 $g(n)$ 的最佳优先搜索 [[b:b0901]]；**A***用的是 $f(n) = g(n) + h(n)$ [[b:b1021]]。\n\n所以：**当 h(n) 恒等于 0 时，A* 就是一致代价搜索。** h≡0 当然不会高估，是可容许的，所以一致代价搜索的代价最优 [[b:b0904]]，可以看成 A* 最优性的一个特例。\n\n区别在效率：一致代价搜索像水波一样均匀向外扩展 [[b:b0902]]；A* 有了 h，波纹会被"拉"向目标方向，扩展的节点少得多。\n\n另外，你上次在 3.4.2 卡在"为什么扩展时才做目标测试"。A* 也一样，目标在被**扩展**时才判定，原因相同：先生成的到目标的路不一定最便宜 [[b:b0902]]。\n\n要回到 A* 继续吗？',
+    qa: { q: 'A* 和一致代价搜索有什么关系？', a: 'h(n) ≡ 0 时 A* 就是一致代价搜索；h 让扩展偏向目标，节点更少。目标同样在扩展时判定。' }
+  },
+  '3.5.1': {
+    match: /贪心|greedy|3\.5\.1/i,
+    steps: ['查书的地图和已学摘要：问题涉及「贪心最佳优先搜索」，对应 3.5.1（已学）', '读取 3.5.1 贪心最佳优先搜索（p.100–102）'],
+    answer: '贪心最佳优先搜索用 $f(n) = h(n)$，只看估计的剩余距离 [[b:b1001]]。A* 在它的基础上加了 $g(n)$，所以不会只顾眼前"看起来近"的节点。\n\n代价是：贪心通常更快、内存更少，但不保证完备和最优 [[b:b1001]]；A* 在 h 可容许时保证最优。\n\n要回到 A* 继续吗？',
+    qa: { q: '贪心搜索和 A* 的区别？', a: '贪心 f=h，快但不保证最优；A* f=g+h，h 可容许时最优。' }
+  }
+};
+
+// 自由提问的关键词回答（演示）
+const FREE = [
+  { match: /可容许|admissible|高估|乐观/i, a: '可容许就是"乐观"：h(n) 不超过从 n 到目标的真实最小代价 [[b:b1025]]。直线距离是典型例子，因为实际路程不可能比直线还短。' },
+  { match: /一致|consistent|三角/i, a: '一致性要求每条边都满足 $h(n) ≤ c(n, a, n′) + h(n′)$ [[b:b1026]]，即每走一步估计值的下降不超过这一步的代价。它比可容许更强 [[b:b1027]]。' },
+  { match: /最优高效|optimally efficient/i, a: '最优高效是说：在同样的 h 和同样的起点下，保证最优的算法里，A* 扩展的节点几乎最少 [[b:b1029]]。书里没有在这里给证明，我建议先记住结论。' }
+];
+
+// 已有的闪卡（盒子 1–5，due 为距今天数，≤0 表示今天到期）
+const CARDS = [
+  { id: 'c1', sec: '2.1', f: '智能体函数和智能体程序有什么区别？', b: '智能体函数是从感知序列到动作的抽象映射；智能体程序是在具体架构上运行、实现这个映射的代码。', box: 3, due: 0 },
+  { id: 'c2', sec: '2.2', f: 'PEAS 指什么？', b: '性能度量（Performance）、环境（Environment）、执行器（Actuators）、传感器（Sensors），用来描述任务环境。', box: 2, due: 0 },
+  { id: 'c3', sec: '3.1.2', f: '一个搜索问题由哪几部分形式化？', b: '状态空间、初始状态、目标状态集合、动作、转移模型、动作代价函数。', box: 2, due: 0 },
+  { id: 'c4', sec: '3.3.2', f: '边界（frontier）是什么？', b: '已生成但还没扩展的节点集合，它把搜索树分成已扩展的内部和未生成的外部。', box: 1, due: 0 },
+  { id: 'c5', sec: '3.3.3', f: '为什么要记录已达状态（reached）？', b: '避免冗余路径：同一状态通过不同路径到达时，只保留代价最小的那条。', box: 1, due: 0 },
+  { id: 'c6', sec: '3.4.1', f: '广度优先搜索什么时候是代价最优的？', b: '所有动作代价相同时。', box: 2, due: 0 },
+  { id: 'c7', sec: '3.4.2', f: '一致代价搜索为什么在扩展时才做目标测试？', b: '先生成的到达目标的路径不一定最便宜；只有当它作为边界中代价最小的节点被扩展时，才能确定是最优。', box: 1, due: 0 },
+  { id: 'c8', sec: '3.4.4', f: '迭代加深搜索的优点是什么？', b: '兼有深度优先搜索的低内存 O(bd) 和广度优先搜索的完备性（动作代价相同时也最优）。', box: 1, due: 0 },
+  { id: 'c9', sec: '1.1', f: '本书采用 AI 的哪一种定义？', b: '理性地行动：理性智能体方法。', box: 4, due: 6 },
+  { id: 'c10', sec: '2.3', f: '片段式（episodic）环境是什么意思？', b: '每一轮的决策只取决于当前感知，不影响后续轮次。', box: 3, due: 2 },
+  { id: 'c11', sec: '2.4', f: '基于目标和基于效用的智能体区别？', b: '基于目标只区分"达到 / 没达到"，基于效用用效用函数衡量不同状态有多好。', box: 3, due: 4 },
+  { id: 'c12', sec: '3.4.5', f: '双向搜索的复杂度可以降到多少？', b: 'O(b^{d/2})，两边各搜一半深度。', box: 2, due: 1 }
+];
+
+// 卡点
+const STUCK = [
+  { id: 's1', sec: '3.4.2', x: '为什么目标测试要放在扩展时，而不是生成时', ok: false },
+  { id: 's2', sec: '3.3.3', x: '图搜索和树状搜索在冗余路径上的取舍', ok: false },
+  { id: 's3', sec: '3.4.5', x: '双向搜索什么时候停止才能保证最优', ok: false },
+  { id: 's4', sec: '2.2', x: '理性和全知的区别', ok: true }
+];
+
+// 每节笔记中的问答（学过时整理）
+const QA = {
+  '3.4.2': [
+    { q: 'Dijkstra 和一致代价搜索是一个东西吗？', a: '思想相同。Dijkstra 通常对整张已知图求单源最短路；一致代价搜索在隐式的状态空间里，找到一个目标就停。' },
+    { q: '为什么扩展时才做目标测试？', a: '生成时第一个碰到的目标路径不一定最便宜；只有作为边界中代价最小的节点被取出时，才确定它最优。（仍有点模糊，已记为卡点）' }
+  ],
+  '3.3.3': [{ q: '已达状态表会不会很占内存？', a: '会，图搜索的空间开销主要就在这里；树状搜索不记，省内存但可能重复。' }],
+  '3.4.4': [{ q: '迭代加深重复搜索浅层，不浪费吗？', a: '浪费不多：大部分节点在最底层，浅层重复的开销只占常数倍。' }]
+};
+
+const HIGHLIGHTS = { b0902: true, b1025: true };
+
+// 其他书
+const BOOKS = [
+  { id: 'aima', title: '人工智能：现代方法（第4版）', author: 'Stuart Russell, Peter Norvig', fmt: 'PDF', pages: 1136, size: '87.4 MB', color: '#3B4F7A', status: 'ready', model: 'vlm' },
+  { id: 'slm', title: '统计学习方法（第2版）', author: '李航', fmt: 'PDF', pages: 470, size: '42.1 MB', color: '#7A3B3B', status: 'parsing', model: 'vlm', parts: [{ from: 1, to: 470, stage: 2, pct: 61, speed: 0.01 }] },
+  { id: 'ddia', title: 'Designing Data-Intensive Applications', author: 'Martin Kleppmann', fmt: 'EPUB', pages: 0, size: '9.8 MB', color: '#3B7A5C', status: 'ready', chapters: 12 }
+];
+
+const IMPORTABLE = [
+  { name: '深度学习入门：基于Python的理论与实现.pdf', fmt: 'PDF', pages: 285, size: '22.6 MB', text: true, outline: true, color: '#8A5A1E', title: '深度学习入门：基于Python的理论与实现', author: '斋藤康毅',
+    chapters: ['Python入门', '感知机', '神经网络', '神经网络的学习', '误差反向传播法', '与学习相关的技巧', '卷积神经网络', '深度学习'] },
+  { name: '线性代数应该这样学（扫描版）.pdf', fmt: 'PDF', pages: 744, size: '186.0 MB', text: false, outline: false, color: '#4A6A2E', title: '线性代数应该这样学（第3版）', author: 'Sheldon Axler',
+    chapters: ['向量空间', '有限维向量空间', '线性映射', '多项式', '本征值、本征向量和不变子空间', '内积空间', '内积空间上的算子', '复向量空间上的算子', '实向量空间上的算子', '迹与行列式'] },
+  { name: 'Effective Java 3rd Edition.epub', fmt: 'EPUB', pages: 0, size: '4.1 MB', text: true, outline: true, color: '#9A3E2B', title: 'Effective Java（第3版）', author: 'Joshua Bloch',
+    chapters: ['Introduction', 'Creating and Destroying Objects', 'Methods Common to All Objects', 'Classes and Interfaces', 'Generics', 'Enums and Annotations', 'Lambdas and Streams', 'Methods', 'General Programming', 'Exceptions', 'Concurrency', 'Serialization'] }
+];
+
+/* Pagewise 原型 · 状态与引擎（对应 docs/STUDY_ENGINE.md 的简化实现） */
+'use strict';
+const clone = o => JSON.parse(JSON.stringify(o));
+const BLK = Object.fromEntries(BLOCKS.map(b => [b.id, b]));
+const SLM_CH = ['统计学习及监督学习概论', '感知机', 'k近邻法', '朴素贝叶斯法', '决策树', '逻辑斯谛回归与最大熵模型', '支持向量机', '提升方法', 'EM算法及其推广', '隐马尔可夫模型', '条件随机场', '监督学习方法总结', '无监督学习概论', '聚类方法', '奇异值分解', '主成分分析', '潜在语义分析', '概率潜在语义分析', '马尔可夫链蒙特卡罗法', '潜在狄利克雷分配', 'PageRank算法', '无监督学习方法总结'];
+const DDIA_CH = ['Reliable, Scalable, and Maintainable Applications', 'Data Models and Query Languages', 'Storage and Retrieval', 'Encoding and Evolution', 'Replication', 'Partitioning', 'Transactions', 'The Trouble with Distributed Systems', 'Consistency and Consensus', 'Batch Processing', 'Stream Processing', 'The Future of Data Systems'];
+const STAGES = ['上传', '排队', '解析', '下载结果', '建地图'];
+
+let S;
+function buildSections() {
+  // AIMA 的地图：章（level 1）→ 节（level 2）→ 小节（level 3）
+  const m = {}, order = [];
+  const add = s => { m[s.id] = s; order.push(s.id); };
+  CHAPTERS.forEach(([no, t, p0, p1, secs]) => {
+    const chId = 'ch' + no;
+    add({ id: chId, no, title: t, p0, p1, level: 1, status: no === '1' || no === '2' ? 'done' : no === '3' ? 'learning' : 'new', kids: [] });
+    if (secs) secs.forEach(x => { const id = x.split(' ')[0]; add({ id, title: x.slice(id.length + 1), level: 2, parent: chId, status: 'done', summary: SUMMARY[id] }); m[chId].kids.push(id); });
+    if (no === '3') CH3.forEach(([id, title, a, b, subs]) => {
+      add({ id, title, p0: a, p1: b, level: 2, parent: chId, kids: subs.map(s => s[0]), status: subs.every(s => s[4] === 'done') ? 'done' : subs.some(s => s[4] !== 'new') ? 'learning' : 'new' });
+      m[chId].kids.push(id);
+      subs.forEach(([sid, st, sa, sb, ss]) => add({ id: sid, title: st, p0: sa, p1: sb, level: 3, parent: id, status: ss, summary: SUMMARY[sid], flag: sid === '3.5.4' }));
+    });
+  });
+  // 第 1、2 章各节页码按章均分（示意）
+  ['ch1', 'ch2'].forEach(c => { const ch = m[c], n = ch.kids.length, w = (ch.p1 - ch.p0 + 1) / n; ch.kids.forEach((k, i) => { m[k].p0 = Math.round(ch.p0 + i * w); m[k].p1 = Math.round(ch.p0 + (i + 1) * w) - 1; }); });
+  return { m, order };
+}
+
+function reset() {
+  const { m, order } = buildSections();
+  S = {
+    books: clone(BOOKS).map(b => Object.assign(b, b.id === 'slm' ? { chapters: SLM_CH } : b.id === 'ddia' ? { chapters: DDIA_CH } : {})),
+    sec: m, secOrder: order,
+    cards: clone(CARDS), stuck: clone(STUCK),
+    qa: clone(QA), userNote: { '3.4.2': '一致代价搜索 ≈ Dijkstra，但在隐式图上、找到目标就停。' }, hl: clone(HIGHLIGHTS),
+    study: null,
+    readerMode: 'orig',
+    mineru: { token: 'mnr_••••••••••••a3f9', expires: '2026-11-03', used: 412, model: 'vlm', confirm: true, self: '' },
+    ai: {
+      services: [
+        { id: 'a1', name: 'Claude 官方', proto: 'Anthropic Messages', base: 'https://api.anthropic.com', key: 'sk-ant-••••••••7Qa', models: ['claude-sonnet-5-5', 'claude-haiku-5-5', 'claude-opus-5-5'] },
+        { id: 'a2', name: 'OpenAI 兼容（中转）', proto: 'OpenAI Responses', base: 'https://api.example-relay.com/v1', key: 'sk-••••••••K2d', models: ['gpt-5-mini'] }
+      ],
+      teach: 'a1:claude-sonnet-5-5', tidy: 'a1:claude-haiku-5-5'
+    },
+    prefs: { intuition: true, len: '中', askEach: true, quizEnd: true, bilingual: true, recap: true, lang: '中文' },
+    sim: { tokenExpired: false },
+    daysAway: 3,
+    exportFmt: 'md', exportStrip: true
+  };
+  resetStudy();
+}
+
+// ---------- 伴读状态 ----------
+function resetStudy(atPart) {
+  // 默认：3 天前讲完第 1 段，今天打开先看到续学回顾
+  S.study = { sec: '3.5.2', part: 0, n: PARTS['3.5.2'].length, msgs: [], detour: null, phase: 'resume', busy: false, histOpen: false, quizRight: false, stuckCand: [], detourLog: [], quote: null };
+  const st = S.study, sc = SCRIPT['3.5.2'];
+  st.msgs.push({ r: 'hist', label: '3 天前 · 第 1 段 · 3 条消息' });
+  st.msgs.push({ r: 'a', text: sc.teach[0], old: true });
+  st.msgs.push({ r: 'u', text: '只看 g 会到处乱试，只看 h 容易被看起来近的路骗', old: true });
+  st.msgs.push({ r: 'a', text: sc.after[0], old: true });
+  if (atPart == null) { st.msgs.push({ r: 'resume' }); return; }
+  // 直接跳到某一段（控制台用）
+  st.phase = 'teach';
+  for (let i = 1; i <= atPart; i++) {
+    st.msgs.push({ r: 'divd', text: '第 ' + (i + 1) + ' 段 · ' + PARTS['3.5.2'][i].name });
+    st.msgs.push({ r: 'a', text: sc.teach[i] });
+    st.part = i;
+  }
+  if (atPart === st.n - 1) { st.msgs.push({ r: 'quiz', qi: st.n - 1, final: true }); st.phase = 'quiz'; }
+}
+
+// ---------- 查询 ----------
+const secOf = id => S.sec[id];
+const secName = id => { const s = S.sec[id]; return s ? (s.level === 1 ? '第' + s.no + '章 ' + s.title : id + ' ' + s.title) : id; };
+const pagesOf = id => { const s = S.sec[id]; return s && s.p0 ? 'p.' + s.p0 + '–' + s.p1 : ''; };
+const chapterOf = id => { let s = S.sec[id]; while (s && s.level > 1) s = S.sec[s.parent]; return s; };
+const partBlocks = (sec, i) => (PARTS[sec] || [])[i] ? PARTS[sec][i].blocks : [];
+const blocksOfSec = sec => BLOCKS.filter(b => b.sec === sec);
+const leafSecs = () => S.secOrder.map(id => S.sec[id]).filter(s => s.level === 3 || (s.level === 2 && !s.kids));
+const doneCount = () => leafSecs().filter(s => s.status === 'done').length;
+const bookOf = id => S.books.find(b => b.id === id);
+
+// ---------- 复习调度（Leitner 5 盒，规格 §9） ----------
+const BOX_DAYS = [0, 1, 3, 7, 15, 30];
+const dueCards = () => S.cards.filter(c => c.due <= 0);
+function nextBox(c, r) { return r === 'again' ? 1 : r === 'hard' ? c.box : Math.min(5, c.box + 1); }
+function rateCard(c, r) {
+  c.box = nextBox(c, r); c.due = BOX_DAYS[c.box];
+  if (r === 'again' && !S.stuck.some(s => s.x === c.f && !s.ok)) S.stuck.unshift({ id: 's' + Date.now(), sec: c.sec, x: c.f, ok: false, fromCard: true });
+}
+
+// ---------- 上下文估算（规格 §5） ----------
+function ctxLayers() {
+  const st = S.study;
+  const cur = partBlocks(st.sec, st.part).reduce((a, id) => a + (BLK[id].x.length || 0), 0);
+  const conv = st.msgs.filter(m => !m.old && (m.r === 'a' || m.r === 'u')).reduce((a, m) => a + m.text.length, 0);
+  const L = [
+    { k: '讲解规则', d: '讲解顺序、引用规则、讲解偏好', t: 920, c: true, col: '#9DB3DC' },
+    { k: '书的地图', d: '全书 28 章目录 + 已学 ' + doneCount() + ' 个小节的摘要', t: 3380, c: true, col: '#6F8FC8' },
+    { k: '当前原文', d: st.sec + ' 第 ' + (st.part + 1) + '/' + st.n + ' 段 · ' + PARTS[st.sec][st.part].blocks.map(id => 'p.' + BLK[id].p).filter((v, i, a) => a.indexOf(v) === i).join(' '), t: Math.round(cur * 1.4) + 1600, col: '#2F5AA8' },
+    { k: '学习记录', d: '进度、相关卡点 ' + S.stuck.filter(s => !s.ok).length + ' 个、最近问题', t: 640, col: '#C2610C' }
+  ];
+  if (st.detour) L.push({ k: '岔路原文', d: secName(st.detour) + ' · ' + pagesOf(st.detour), t: 2860, col: '#7A4FB5' });
+  L.push({ k: '最近对话', d: '本段的对话；更早的只保留摘要', t: Math.round(conv * 1.3) + 380, col: '#9AA0A8' });
+  return L;
+}
+
+// ---------- 解析模拟 ----------
+let parseTimer = null;
+function startParse(book) {
+  book.status = 'parsing';
+  if (!parseTimer) parseTimer = setInterval(tickParse, 650);
+}
+function tickParse() {
+  let any = false;
+  S.books.forEach(b => {
+    if (b.status !== 'parsing') return;
+    const p = b.parts.find(x => x.stage < STAGES.length);
+    if (!p) { b.status = 'ready'; S.mineru.used += b.pages; showToast('《' + b.title + '》解析完成', 'ok'); return; }
+    any = true;
+    if (p.err) return;
+    if (S.sim.tokenExpired && p.stage === 0) { p.err = 'Token 已过期（A0211），请在「我的 → 解析服务」更新'; return; }
+    p.pct = (p.pct || 0) + (p.stage === 2 ? 9 : 34) * (p.speed || 1);
+    if (p.pct >= 100) { p.stage++; p.pct = 0; if (p.stage === STAGES.length) b.readyTo = p.to; }
+  });
+  const c = cur();
+  if (c && (c.name === 'parse' || c.name === 'shelf')) refresh();
+  if (!any && !S.books.some(b => b.status === 'parsing')) { clearInterval(parseTimer); parseTimer = null; }
+}
+
+/* Pagewise 原型 · UI 基础：路由、浮层、富文本、流式输出 */
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+// 事件处理：把闭包登记到 H，返回可放进 onclick 的字符串
+const H = [];
+const on = fn => 'H[' + (H.push(fn) - 1) + '](event)';
+
+// ---------- 路由 ----------
+const R = { stack: [{ name: 'shelf', p: {} }] };
+const SCREENS = {};
+const TABS = [
+  ['shelf', '书架', '<path d="M4 4h4v16H4zM10 4h4v16h-4z"/><path d="M15 5.5l3.6-1 3 14.6-3.6 1z"/>'],
+  ['review', '复习', '<rect x="4" y="7" width="13" height="13" rx="2"/><path d="M8 4h10a2 2 0 012 2v11"/>'],
+  ['notes', '笔记', '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 12h7M9 16h5"/>'],
+  ['me', '我的', '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/>']
+];
+function cur() { return R.stack[R.stack.length - 1]; }
+function go(name, p) { closeOverlay(); R.stack.push({ name, p: p || {} }); render(true); }
+function back() { closeOverlay(); if (R.stack.length > 1) { R.stack.pop(); render(true); } }
+function tab(name) { closeOverlay(); R.stack = [{ name, p: {} }]; render(true); }
+function replace(name, p) { closeOverlay(); R.stack[R.stack.length - 1] = { name, p: p || {} }; render(true); }
+function render(resetScroll) {
+  const c = cur(), sc = SCREENS[c.name];
+  const view = $('#view'), st = view.scrollTop;
+  const title = typeof sc.title === 'function' ? sc.title(c.p) : sc.title;
+  const root = !!sc.root;
+  $('#nav').className = 'nav' + (root ? ' root' : '');
+  $('#nav').innerHTML = (root ? '' : '<button class="ib" onclick="back()" aria-label="返回">‹</button>') +
+    '<h1>' + title + '</h1>' + (sc.navRight ? sc.navRight(c.p) : (root ? '' : '<span style="width:40px"></span>'));
+  $('#top').innerHTML = sc.top ? sc.top(c.p) : '';
+  view.innerHTML = sc.render(c.p);
+  $('#bottom').innerHTML = sc.bottom ? sc.bottom(c.p) : '';
+  const fab = $('#app > .fabi'); if (fab) fab.remove();
+  const rootName = R.stack[0].name;
+  $('#tabbar').style.display = root ? '' : 'none';
+  const due = dueCards().length;
+  $('#tabbar').innerHTML = TABS.map(([k, l, ic]) => '<button class="' + (k === rootName ? 'on' : '') + '" onclick="tab(\'' + k + '\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round">' + ic + '</svg>' + l + (k === 'review' && due ? '<span class="badge">' + due + '</span>' : '') + '</button>').join('');
+  view.scrollTop = resetScroll ? 0 : st;
+  if (sc.after) sc.after(c.p, resetScroll);
+  renderConsole();
+}
+function refresh() { render(false); }
+
+// ---------- 浮层 ----------
+function closeOverlay() { $('#overlay').innerHTML = ''; const m = $('#app .selmenu'); if (m) m.remove(); }
+function modal(o) {
+  // o: {title, body, ok, cancel, onOk, onCancel}
+  const btns = [];
+  if (o.cancel !== false) btns.push('<button onclick="' + on(() => { closeOverlay(); o.onCancel && o.onCancel(); }) + '">' + (o.cancel || '取消') + '</button>');
+  btns.push('<button class="pri" onclick="' + on(() => { const r = o.onOk && o.onOk(); if (r !== false) closeOverlay(); }) + '">' + (o.ok || '确定') + '</button>');
+  $('#overlay').innerHTML = '<div class="mask" onclick="if(event.target===this)closeOverlay()"><div class="dlg" role="dialog"><div class="dh">' + o.title + '</div><div class="db">' + o.body + '</div><div class="df">' + btns.join('') + '</div></div></div>';
+}
+function sheet(title, html, sub) {
+  $('#overlay').innerHTML = '<div class="mask bottom" onclick="if(event.target===this)closeOverlay()"><div class="sheet" role="dialog"><div class="grab"></div><div class="sh">' + title + (sub ? '<small>' + sub + '</small>' : '') + '</div>' + html + '</div></div>';
+}
+function showToast(msg, kind) {
+  const el = document.createElement('div');
+  el.className = 'toast ' + (kind || '');
+  el.textContent = msg;
+  $('#toasts').appendChild(el);
+  setTimeout(() => el.remove(), 2600);
+}
+
+// ---------- 富文本 ----------
+// 标记：**粗体** $公式$ $$独立公式$$ [[b:块ID]] {{fig:ID}} 「- 」列表 「1. 」有序列表
+function figHtml(id, blockId) {
+  const f = FIGS[id];
+  const tap = blockId ? ' onclick="' + on(() => openCite(blockId)) + '"' : '';
+  return '<div class="fig"' + tap + '>' + f.svg + '<div class="cap">' + esc(f.cap) + '</div></div>';
+}
+function citeHtml(id, allowed) {
+  const b = BLK[id];
+  if (!b || (allowed && !allowed.includes(id))) return '<span class="unv">未核实</span>';
+  const dt = S.study && b.sec !== S.study.sec;
+  return '<span class="cite' + (dt ? ' dt' : '') + '" role="button" title="' + esc(secName(b.sec)) + '" onclick="' + on(() => openCite(id)) + '">p.' + b.p + '</span>';
+}
+function inline(s, allowed) {
+  return esc(s)
+    .replace(/\$\$([^$]+)\$\$/g, (_, m) => '<span class="math blk">' + m + '</span>')
+    .replace(/\$([^$]+)\$/g, (_, m) => '<span class="math">' + m + '</span>')
+    .replace(/\*\*([^\n]+?)\*\*/g, '<b>$1</b>')
+    .replace(/\[\[b:([\w]+)\]\]/g, (_, id) => citeHtml(id, allowed))
+    .replace(/\{\{fig:(\w+)\}\}/g, (_, id) => figHtml(id));
+}
+function md(text, allowed) {
+  return text.split(/\n\n+/).map(par => {
+    const lines = par.split('\n');
+    if (lines.every(l => /^- /.test(l))) return '<ul>' + lines.map(l => '<li>' + inline(l.slice(2), allowed) + '</li>').join('') + '</ul>';
+    if (lines.every(l => /^\d+\. /.test(l))) return '<ol>' + lines.map(l => '<li>' + inline(l.replace(/^\d+\. /, ''), allowed) + '</li>').join('') + '</ol>';
+    const h = inline(par, allowed).replace(/\n/g, '<br>');
+    return /^(\{\{fig|\$\$)/.test(par.trim()) ? h : '<p>' + h + '</p>';
+  }).join('');
+}
+// 流式输出按"原子"切分：公式、粗体、引用、图都不会被切开
+const atoms = text => text.match(/\$\$[^$]*\$\$|\$[^$]*\$|\*\*[^\n]+?\*\*|\[\[b:\w+\]\]|\{\{fig:\w+\}\}|[\s\S]/g) || [];
+
+/* Pagewise 原型 · 书架、导入、解析 */
+'use strict';
+const statusTag = s => s === 'done' ? '<span class="tag ok">已学</span>' : s === 'learning' ? '<span class="tag acc">在学</span>' : '';
+const sstIcon = s => '<span class="sst ' + s + '">' + (s === 'done' ? '✓' : '') + '</span>';
+function cover(b) { return '<div class="cover" style="background:' + b.color + '">' + esc(b.title.replace(/[（(].*$/, '').slice(0, 12)) + '</div>'; }
+
+SCREENS.shelf = {
+  title: 'Pagewise', root: true,
+  navRight: () => '<button class="ib" aria-label="搜索书架" onclick="' + on(() => showToast('按书名、作者搜索（原型未实现）')) + '">⌕</button>',
+  render() {
+    const st = S.study, part = PARTS['3.5.2'];
+    const stuck = S.stuck.find(s => !s.ok && s.sec === '3.4.2');
+    const inSec = st.sec === '3.5.2';
+    const doneParts = !inSec ? 0 : st.phase === 'resume' ? 1 : st.part + (st.quizRight ? 1 : 0);
+    let h = '<div class="cont" onclick="openStudy()">' +
+      '<div class="k">继续学习 · 人工智能：现代方法（第4版）</div>' +
+      '<div class="t">' + esc(secName(st.sec)) + '</div>' +
+      '<div class="b">第 3 章 通过搜索进行问题求解 · ' + pagesOf(st.sec) + '</div>' +
+      (S.daysAway && stuck && inSec ? '<div class="s">上次 ' + S.daysAway + ' 天前，讲完了第 1 段。卡点：' + esc(stuck.x) + '</div>' : '') +
+      '<div class="go"><div class="pts">' + (inSec ? part.map((_, i) => '<i class="' + (i < doneParts ? 'on' : '') + '"></i>').join('') + '<span style="font-size:12px;margin-left:6px;opacity:.85">第 ' + Math.min(doneParts + 1, part.length) + '/' + part.length + ' 段</span>' : '<span style="font-size:12px;opacity:.85">新的一节</span>') + '</div><span class="btn">继续 ›</span></div></div>';
+    h += '<div class="sec"><div class="sec-h">我的书 <small>' + S.books.length + ' 本</small></div>';
+    S.books.forEach(b => {
+      let stt;
+      if (b.id === 'aima') stt = '<span class="dot" style="color:var(--acc)"></span><span>在学 ' + esc(st.sec) + ' · 已学 ' + doneCount() + '/' + leafSecs().length + ' 个小节</span>';
+      else if (b.status === 'parsing') {
+        const err = b.parts.find(x => x.err);
+        const p = b.parts.find(x => x.stage < STAGES.length) || b.parts[b.parts.length - 1];
+        const pct = Math.round((b.parts.reduce((a, x) => a + Math.min(x.stage, STAGES.length) * 20 + (x.stage < STAGES.length ? (x.pct || 0) / 5 : 0), 0)) / b.parts.length);
+        stt = err ? '<span class="dot" style="color:var(--bad)"></span><span style="color:var(--bad)">解析暂停：Token 已过期</span>'
+          : '<span class="dot" style="color:var(--stuck)"></span><span>解析中 · ' + STAGES[Math.min(p.stage, 4)] + ' · <span class="n">' + pct + '%</span>' + (b.readyTo ? ' · p.1–' + b.readyTo + ' 可学' : '') + '</span>';
+      } else stt = '<span class="dot" style="color:var(--ink3)"></span><span>' + (b.fmt === 'EPUB' ? 'EPUB · 本地解析 · ' : '') + '已就绪 · 未开始</span>';
+      h += '<div class="book" onclick="' + on(() => openBook(b.id)) + '">' + cover(b) + '<div class="grow"><div class="tt">' + esc(b.title) + '</div><div class="meta">' + esc(b.author) + ' · ' + b.fmt + (b.pages ? ' · ' + b.pages + ' 页' : ' · ' + b.chapters.length + ' 章') + '</div><div class="st">' + stt + '</div></div></div>';
+    });
+    h += '</div><div style="height:70px"></div>';
+    return h;
+  },
+  after() { $('#app').insertAdjacentHTML('beforeend', '<button class="fabi" onclick="openImport()">＋ 导入</button>'); }
+};
+function openBook(id) {
+  const b = bookOf(id);
+  if (id === 'aima') return go('map', { book: id });
+  if (b.status === 'parsing') return go('parse', { book: id });
+  go('map', { book: id });
+}
+
+// ---------- 导入 ----------
+function openImport() {
+  sheet('导入一本书', '<div class="sec-h" style="padding-top:2px"><small>最近 · 下载</small></div>' +
+    IMPORTABLE.map((f, i) => '<div class="row tap" onclick="' + on(() => go('importSet', { i })) + '"><div class="finfo" style="padding:0;background:none"><div class="ic' + (f.fmt === 'EPUB' ? ' epub' : '') + '">' + f.fmt + '</div></div><div class="grow"><b>' + esc(f.name) + '</b><small>' + f.size + (f.pages ? ' · ' + f.pages + ' 页' : '') + '</small></div></div>').join('') +
+    '<div class="row tap" onclick="' + on(() => showToast('打开系统文件选择器（原型未实现）')) + '"><div class="grow" style="text-align:center;color:var(--acc)">从其他位置选择…</div></div>' +
+    '<div class="sb"><div class="note">支持 PDF 和 EPUB。也可以在其他 App 里把文件"分享到 Pagewise"。同一本书按文件内容识别，不会重复解析。</div></div>');
+}
+
+SCREENS.importSet = {
+  title: '解析设置',
+  render(p) {
+    const f = IMPORTABLE[p.i];
+    if (!p.o) p.o = { model: 'vlm', ocr: !f.text, from: 1 };
+    const o = p.o;
+    let h = '<div class="sec"><div class="finfo"><div class="ic' + (f.fmt === 'EPUB' ? ' epub' : '') + '">' + f.fmt + '</div><div class="grow"><b style="font-weight:600">' + esc(f.title) + '</b><div class="muted" style="font-size:12px">' + esc(f.author) + ' · ' + esc(f.name) + '</div></div></div>' +
+      '<div class="chips2"><div>' + (f.pages ? '页数<b class="n">' + f.pages + '</b>' : '章节<b class="n">' + f.chapters.length + '</b>') + '</div><div>大小<b class="n">' + f.size + '</b></div>' +
+      (f.fmt === 'PDF' ? '<div>文字层<b class="' + (f.text ? 'ok' : 'no') + '">' + (f.text ? '有' : '没有 · 扫描版') + '</b></div><div>书签目录<b class="' + (f.outline ? 'ok' : 'no') + '">' + (f.outline ? '有 · 用来核对地图' : '没有') + '</b></div>' : '<div>目录<b class="ok">有</b></div><div>解析位置<b>本机</b></div>') + '</div></div>';
+    if (f.fmt === 'EPUB') {
+      return h + '<div class="sec"><div style="padding:14px"><div class="note acc">EPUB 本身是结构化的，直接在本机解析目录和章节，不上传、不占 MinerU 额度。</div></div></div>' +
+        '<div style="padding:4px 14px 20px"><button class="btn pri block" onclick="' + on(() => doImport(p.i, o)) + '">导入</button></div>';
+    }
+    const parts = [];
+    for (let a = 1; a <= f.pages; a += 600) parts.push([a, Math.min(f.pages, a + 599)]);
+    const after = S.mineru.used + f.pages;
+    h += '<div class="sec"><div class="sec-h">解析方式 <small>MinerU 精准解析 API</small></div>' +
+      '<div style="padding:4px 14px 6px"><div class="seg">' + [['vlm', 'vlm（推荐）'], ['pipeline', 'pipeline']].map(([k, l]) => '<button class="' + (o.model === k ? 'on' : '') + '" onclick="' + on(() => { o.model = k; refresh(); }) + '">' + l + '</button>').join('') + '</div>' +
+      '<div class="muted" style="font-size:12px;margin-top:6px;line-height:1.6">' + (o.model === 'vlm' ? '公式、表格、复杂排版效果更好，速度稍慢。' : '速度更快；公式密集的书效果会差一些。') + '</div></div>' +
+      '<div class="row"><div class="grow">OCR 文字识别<small>' + (f.text ? '书有文字层，一般不需要' : '扫描版，已自动打开') + '</small></div><span class="sw' + (o.ocr ? ' on' : '') + '" role="switch" onclick="' + on(() => { o.ocr = !o.ocr; refresh(); }) + '"></span></div>' +
+      '<div class="row"><div class="grow">从第几页开始解析<small>先解析你要读的部分，就绪的章节马上能学</small></div><input class="n" style="width:64px;border:1px solid #DFDDD8;border-radius:6px;height:32px;text-align:center" value="' + o.from + '" oninput="' + on(e => { o.from = +e.target.value || 1; }) + '"></div>' +
+      '<div class="row"><div class="grow">分片<small>' + (parts.length > 1 ? '单个文件最多 600 页，拆成 ' + parts.length + ' 片，合并后保持原书页码' : '600 页以内，一次上传') + '</small></div><span class="n ink2" style="font-size:13px">' + parts.map(x => 'p.' + x[0] + '–' + x[1]).join('、') + '</span></div>' +
+      '<div class="row"><div class="grow">今日额度<small>' + (after > 2000 ? '超出高优先级额度的部分会排队变慢，不会被拦截' : '每天 2000 页高优先级') + '</small></div><span class="n" style="font-size:13px;color:' + (after > 2000 ? 'var(--stuck)' : 'var(--ink2)') + '">' + S.mineru.used + ' → ' + after + ' / 2000</span></div></div>' +
+      '<div style="padding:4px 14px 6px"><div class="note">整本书会上传到 MinerU 服务器解析；解析结果（Markdown、内容块、图片）下载后保存在本机，之后阅读和讲解都不用再联网解析。</div></div>' +
+      '<div style="padding:10px 14px 20px"><button class="btn pri block" onclick="' + on(() => confirmUpload(p.i, o, parts)) + '">开始解析</button></div>';
+    return h;
+  }
+};
+function confirmUpload(i, o, parts) {
+  const f = IMPORTABLE[i];
+  if (!S.mineru.confirm) return doImport(i, o, parts);
+  modal({ title: '上传到 MinerU？', body: '《' + esc(f.title) + '》（' + f.size + '，' + f.pages + ' 页）会上传到 MinerU 官方服务器解析，使用你在「我的 → 解析服务」里配置的 Token。', ok: '上传并解析', onOk: () => { setTimeout(() => doImport(i, o, parts), 0); } });
+}
+function doImport(i, o, parts) {
+  const f = IMPORTABLE[i];
+  if (S.books.some(b => b.src === i)) { showToast('这本书已经在书架上了'); return tab('shelf'); }
+  const b = { id: 'imp' + i, src: i, title: f.title, author: f.author, fmt: f.fmt, pages: f.pages, size: f.size, color: f.color, chapters: f.chapters, model: o.model };
+  S.books.push(b);
+  if (f.fmt === 'EPUB') { b.status = 'ready'; showToast('已导入，地图已建好', 'ok'); R.stack = [{ name: 'shelf', p: {} }]; return go('map', { book: b.id }); }
+  b.parts = parts.map(([from, to]) => ({ from, to, stage: 0, pct: 0 }));
+  startParse(b);
+  R.stack = [{ name: 'shelf', p: {} }];
+  go('parse', { book: b.id });
+}
+
+SCREENS.parse = {
+  title: '解析进度',
+  render(p) {
+    const b = bookOf(p.book);
+    let h = '<div class="sec"><div class="book" style="cursor:default">' + cover(b) + '<div class="grow"><div class="tt">' + esc(b.title) + '</div><div class="meta">' + b.pages + ' 页 · MinerU · ' + b.model + '</div></div></div></div><div class="sec">';
+    b.parts.forEach((x, k) => {
+      const done = x.stage >= STAGES.length;
+      h += '<div class="part"><div class="l1"><b style="font-weight:500">第 ' + (k + 1) + ' 片 · p.' + x.from + '–' + x.to + '</b><span class="n" style="font-size:12px;color:' + (x.err ? 'var(--bad)' : done ? 'var(--ok)' : 'var(--ink2)') + '">' + (x.err ? '已暂停' : done ? '完成' : STAGES[x.stage] + ' ' + Math.round(x.pct || 0) + '%') + '</span></div>' +
+        '<div class="bar"><i style="width:' + (done ? 100 : x.stage * 20 + (x.pct || 0) / 5) + '%;' + (x.err ? 'background:var(--bad)' : done ? 'background:var(--ok)' : '') + '"></i></div>' +
+        '<div class="stg">' + STAGES.map((s, j) => '<span class="' + (j < x.stage ? 'done' : j === x.stage ? (x.err ? 'err' : 'cur') : '') + '">' + s + '</span>').join('') + '</div>' +
+        (x.err ? '<div class="note bad" style="margin-top:8px">' + esc(x.err) + '</div><div style="display:flex;gap:8px;margin-top:8px"><button class="btn sm pri" onclick="go(&quot;meMineru&quot;)">去更新 Token</button><button class="btn sm ghost" onclick="' + on(() => { if (S.sim.tokenExpired) return showToast('Token 仍然无效，请先更新'); x.err = null; startParse(b); refresh(); }) + '">重试这一片</button></div>' : '') + '</div>';
+    });
+    h += '</div>';
+    if (b.readyTo || b.status === 'ready') h += '<div style="padding:4px 14px"><div class="note acc">' + (b.status === 'ready' ? '全书已解析完成，书的地图已和书签核对。' : 'p.1–' + b.readyTo + ' 已就绪，这部分的章节现在就能学。') + '</div><button class="btn pri block" style="margin-top:10px" onclick="' + on(() => replace('map', { book: b.id })) + '">查看书的地图</button></div>';
+    else h += '<div style="padding:4px 14px"><div class="note">解析在后台进行，可以离开这个页面。每片完成后，那部分的章节就能开始学。</div></div>';
+    return h;
+  }
+};
+
+/* Pagewise 原型 · 书的地图、小节详情、全书搜索 */
+'use strict';
+const mapOpen = { ch3: true, '3.5': true, '3.4': false };
+
+SCREENS.map = {
+  title: p => { const b = bookOf(p.book); return esc(b.title.replace(/（.*$/, '')) + '<span class="sub">书的地图</span>'; },
+  navRight: p => '<button class="ib" aria-label="全书搜索" onclick="' + on(() => openSearch(p.book)) + '">⌕</button>',
+  render(p) {
+    const b = bookOf(p.book);
+    if (p.book !== 'aima') return genericMap(b);
+    const flags = S.secOrder.filter(id => S.sec[id].flag);
+    let h = '<div class="mapchk"><span class="sst done">✓</span><div class="grow" style="flex:1">已和 PDF 书签核对：28 章 + 2 个附录一致' + (flags.length ? '<div style="color:var(--stuck);font-size:12px">' + flags.length + ' 处需要你确认 · ' + flags.map(id => id).join('、') + '</div>' : '<div class="muted" style="font-size:12px">没有需要确认的地方</div>') + '</div></div>';
+    S.secOrder.filter(id => S.sec[id].level === 1).forEach(cid => {
+      const c = S.sec[cid], open = !!mapOpen[cid];
+      const isCur = cid === chapterOf(S.study.sec).id;
+      const kids = c.kids;
+      h += '<div class="chap' + (c.status === 'done' ? ' done' : '') + (isCur ? ' cur' : '') + (open ? ' open' : '') + '"><div class="h" onclick="' + on(() => { if (!kids.length) return showToast('原型只展开了第 1–3 章'); mapOpen[cid] = !open; refresh(); }) + '"><span class="no">' + c.no + '</span><div class="grow"><b>' + esc(c.title) + '</b><small>p.' + c.p0 + '–' + c.p1 + (kids.length ? ' · ' + kids.length + ' 节' : '') + (c.status === 'done' ? ' · 已学完' : isCur ? ' · 在学 ' + S.study.sec : '') + '</small></div><span class="arr">›</span></div>';
+      if (open) kids.forEach(sid => {
+        const s = S.sec[sid];
+        if (!s.kids) { h += secRow(s); return; }
+        const so = mapOpen[sid] !== false;
+        h += '<div class="sct" onclick="' + on(() => { mapOpen[sid] = !so; refresh(); }) + '">' + sstIcon(s.status) + '<div class="grow">' + sid + ' ' + esc(s.title) + '</div><span class="pg">' + s.kids.filter(k => S.sec[k].status === 'done').length + '/' + s.kids.length + ' ' + (so ? '▾' : '▸') + '</span></div>';
+        if (so) s.kids.forEach(k => { h += secRow(S.sec[k]); });
+      });
+      h += '</div>';
+    });
+    return h + '<div style="height:16px"></div>';
+  },
+  after(p, reset) { const el = $('#view .sct.cur'), v = $('#view'); if (el && reset) v.scrollTop += el.getBoundingClientRect().top - v.getBoundingClientRect().top - v.clientHeight / 2; }
+};
+function secRow(s) {
+  const isCur = s.id === S.study.sec;
+  return '<div class="sct' + (s.level === 3 ? ' l3' : '') + (isCur ? ' cur' : '') + (s.flag ? ' flag' : '') + '" onclick="' + on(() => openSec(s.id)) + '">' + sstIcon(s.status) + '<div class="grow">' + s.id + ' ' + esc(s.title) + (s.flag ? ' <span class="tag stuck">需确认</span>' : '') + (S.stuck.some(x => x.sec === s.id && !x.ok) ? ' <span class="tag stuck">卡点</span>' : '') + '</div><span class="pg">p.' + s.p0 + '</span></div>';
+}
+function genericMap(b) {
+  let h = '<div class="mapchk"><span class="sst done">✓</span><div class="grow" style="flex:1">' + (b.fmt === 'EPUB' ? '从 EPUB 目录建立：' + b.chapters.length + ' 章' : (b.status === 'ready' ? '已和 PDF 书签核对：' + b.chapters.length + ' 章一致' : '解析中，已就绪的章节可以先学')) + '</div></div><div class="sec">';
+  b.chapters.forEach((t, i) => {
+    h += '<div class="chap"><div class="h" onclick="' + on(() => sheet('第 ' + (i + 1) + ' 章 ' + esc(t), '<div class="sb"><div class="note">原型只为《人工智能：现代方法》准备了讲解脚本。实际 App 里，从这里开始讲，AI 会拿着这一章第一个小节的原文开始。</div></div><div class="sf"><button class="btn pri" onclick="' + on(() => { closeOverlay(); showToast('原型只为 AIMA 第 3 章准备了讲解'); }) + '">从这里开始讲</button></div>')) + '"><span class="no">' + (i + 1) + '</span><div class="grow"><b>' + esc(t) + '</b><small>未开始</small></div><span class="arr">›</span></div></div>';
+  });
+  return h + '</div>';
+}
+function openSec(id) {
+  const s = S.sec[id];
+  if (s.flag) return modal({ title: '确认 ' + id + ' 的标题', body: '这个标题在书里跨了两行，解析时被识别成「' + id + ' 满意搜索：不可容许的启发式函数与」和「加权A*搜索」两个标题。<br><br>已按 PDF 书签合并为一个小节：<b>' + esc(s.title) + '</b>（p.' + s.p0 + '–' + s.p1 + '）。', ok: '保持合并', cancel: '拆成两个', onOk: () => { s.flag = false; showToast('已确认', 'ok'); refresh(); }, onCancel: () => showToast('原型里不演示拆分') });
+  const qa = (S.qa[id] || []).length, stk = S.stuck.filter(x => x.sec === id && !x.ok);
+  const hasBlocks = blocksOfSec(id).length > 0;
+  const isCur = id === S.study.sec;
+  sheet(id + ' ' + esc(s.title), '<div class="kv"><span>页码</span><span class="n">p.' + s.p0 + '–' + s.p1 + '</span><span>状态</span><span>' + (s.status === 'done' ? '已学' : s.status === 'learning' ? '在学 · 第 ' + (S.study.part + 1) + '/' + S.study.n + ' 段' : '未学') + '</span>' + (qa ? '<span>问答</span><span>' + qa + ' 条</span>' : '') + '</div>' +
+    (s.summary ? '<div class="sb"><div class="note acc"><b>摘要</b>　' + esc(s.summary) + '</div></div>' : '') +
+    (stk.length ? '<div class="sb">' + stk.map(x => '<div class="note warn" style="margin-bottom:6px">卡点：' + esc(x.x) + '</div>').join('') + '</div>' : '') +
+    '<div class="sf">' + (hasBlocks ? '<button class="btn ghost" onclick="' + on(() => go('reader', { sec: id })) + '">看原文</button>' : '') +
+    ((S.qa[id] || s.summary) ? '<button class="btn ghost" onclick="' + on(() => go('noteDetail', { sec: id })) + '">看笔记</button>' : '') +
+    '<button class="btn pri" onclick="' + on(() => startAt(id)) + '">' + (isCur ? '继续讲' : s.status === 'done' ? '再讲一遍' : '从这里开始讲') + '</button></div>', s.parent ? secName(s.parent) : '');
+}
+function startAt(id) {
+  if (id === S.study.sec) return openStudy();
+  closeOverlay();
+  showToast('原型只为 ' + S.study.sec + ' 准备了讲解脚本');
+}
+
+// ---------- 全书搜索（本地 FTS 兜底） ----------
+function openSearch(book) {
+  if (book !== 'aima') return showToast('原型只有 AIMA 的示意内容可搜');
+  sheet('全书搜索', '<div style="padding:4px 16px 8px"><input id="sq" placeholder="例如：一致代价、可容许、三角不等式" style="width:100%;height:40px;border:1px solid #DFDDD8;border-radius:20px;padding:0 14px;outline:0" oninput="' + on(e => searchRun(e.target.value)) + '"></div><div id="sres"><div class="empty" style="padding:20px">在已解析的正文、标题和图注里搜索</div></div>');
+  setTimeout(() => $('#sq') && $('#sq').focus(), 50);
+}
+function searchRun(qs) {
+  const k = qs.trim();
+  const box = $('#sres'); if (!box) return;
+  if (!k) { box.innerHTML = '<div class="empty" style="padding:20px">在已解析的正文、标题和图注里搜索</div>'; return; }
+  const hits = BLOCKS.filter(b => b.x.toLowerCase().includes(k.toLowerCase())).slice(0, 8);
+  box.innerHTML = hits.length ? hits.map(b => {
+    const i = b.x.toLowerCase().indexOf(k.toLowerCase());
+    const snip = esc(b.x.slice(Math.max(0, i - 18), i)) + '<b style="background:var(--hl)">' + esc(b.x.substr(i, k.length)) + '</b>' + esc(b.x.slice(i + k.length, i + k.length + 30));
+    return '<div class="row tap" onclick="' + on(() => go('reader', { block: b.id })) + '"><div class="grow"><b style="font-size:13px">' + esc(secName(b.sec)) + '</b><small style="font-family:var(--serif);font-size:13px;color:var(--ink2)">…' + snip.replace(/\$/g, '') + '…</small></div><span class="n muted" style="font-size:12px">p.' + b.p + '</span></div>';
+  }).join('') : '<div class="empty" style="padding:20px">没有找到「' + esc(k) + '」</div>';
+}
+
+/* Pagewise 原型 · 伴读（一）：流式输出与讲解流程 */
+'use strict';
+const REVIEW_342 = {
+  steps: ['读取卡点和上次的问答（3.4.2）', '读取 3.4.2 Dijkstra算法或一致代价搜索（p.90–93）'],
+  answer: [
+    '上次卡在：**为什么目标测试要放在扩展时，而不是生成时。**用书里这张图说明 [[b:b0903]]：',
+    '{{fig:f310}}',
+    '1. 扩展 S，生成 A（g=1）和 B（g=3）。\n2. 扩展代价最小的 A，生成 G，此时 g(G)=11。\n3. 如果**生成时**就测试，这里就返回了代价 11 的路。\n4. 但边界里还有 B（g=3）。继续扩展 B，会发现经 B 到 G 只要 4。',
+    '所以一致代价搜索要等到 G 作为边界里代价最小的节点被**取出扩展**时才测试 [[b:b0902]]，这时它一定是最便宜的 [[b:b0904]]。',
+    '这回清楚了吗？'
+  ].join('\n\n'),
+  again: [
+    '换个比喻：**生成**像是看到一块写着「终点」的路牌，**扩展**像是真的开到了终点，并且确认没有更近的路。看到第一块路牌就停车，那块路牌可能就在一条绕远的路上 [[b:b0902]]。',
+    '图里 A→G 那条边代价 10，就是那条「绕远的路」 [[b:b0903]]。'
+  ].join('\n\n')
+};
+const GENERIC = [
+  '（原型演示）实际 App 会把你的问题连同 3.5.2 当前段的原文一起发给 AI，回答里依赖书的说法都带页码，比如 [[b:b1025]]。如果引用了本轮没有读取的原文，会显示成这样 [[b:b0905]]。',
+  '可以试着问「这跟前面的一致代价搜索有什么关系？」体验岔路。'
+].join('\n\n');
+
+const ST = () => S.study;
+function openStudy() { if (cur().name !== 'study') go('study'); }
+function allowedNow() {
+  const st = ST();
+  return blocksOfSec(st.sec).map(b => b.id).concat(st.detour ? blocksOfSec(st.detour).map(b => b.id) : []);
+}
+function studyRefresh() {
+  if (cur().name !== 'study') return;
+  refresh();
+  const v = $('#view'); v.scrollTop = v.scrollHeight;
+}
+function updateStream(m) {
+  const el = document.getElementById('m' + ST().msgs.indexOf(m));
+  if (!el) return;
+  el.innerHTML = md(m._at.slice(0, m.shown).join(''), m.allowed) + '<span class="caret"></span>';
+  const v = $('#view'); v.scrollTop = v.scrollHeight;
+}
+async function say(text, extra) {
+  const st = ST();
+  const m = Object.assign({ r: 'a', text, dt: !!st.detour, allowed: allowedNow(), shown: 0, _at: atoms(text) }, extra || {});
+  st.msgs.push(m); st.busy = true; studyRefresh();
+  for (let i = 0; i <= m._at.length; i += 4) { m.shown = i; updateStream(m); await sleep(18); }
+  m.shown = null; st.busy = false; studyRefresh();
+}
+async function steps(items) {
+  const st = ST();
+  const m = { r: 'steps', items, n: 0, dt: !!st.detour };
+  st.msgs.push(m); st.busy = true;
+  for (let i = 0; i < items.length; i++) { m.n = i + 1; studyRefresh(); await sleep(520); }
+  st.busy = false;
+}
+function user(text, extra) { const st = ST(); st.msgs.push(Object.assign({ r: 'u', text, dt: !!st.detour }, extra || {})); studyRefresh(); }
+function partPages(sec, i) { return partBlocks(sec, i).map(id => 'p.' + BLK[id].p).filter((v, k, a) => a.indexOf(v) === k).join('、'); }
+
+// ---------- 讲解流程 ----------
+async function teachPart(i) {
+  const st = ST(), sc = SCRIPT[st.sec];
+  st.phase = 'teach'; st.part = i;
+  st.msgs.push({ r: 'divd', text: '第 ' + (i + 1) + ' 段 · ' + PARTS[st.sec][i].name });
+  if (!sc) {
+    await steps(['读取 ' + st.sec + ' 第 ' + (i + 1) + '/' + st.n + ' 段原文（' + pagesOf(st.sec) + '）']);
+    return say('开始 ' + secName(st.sec) + '。\n\n（原型演示：讲解脚本只写到 3.5.2。实际 App 在这里会按同样的规则讲新的一节：先直觉，再定义和公式，再举书里的例子，最后用一个问题确认你懂了。）');
+  }
+  await steps(['读取 ' + st.sec + ' 第 ' + (i + 1) + '/' + st.n + ' 段原文（' + partPages(st.sec, i) + '）']);
+  await say(sc.teach[i]);
+  if (i === st.n - 1) { st.msgs.push({ r: 'quiz', qi: i, final: true }); st.phase = 'quiz'; studyRefresh(); }
+}
+function guard() { const st = ST(); if (st.busy) { showToast('正在回答…'); return false; } return true; }
+function actNext() {
+  if (!guard()) return;
+  const st = ST();
+  if (!SCRIPT[st.sec]) return showToast('原型的讲解脚本只写到 3.5.2');
+  user('懂了，继续');
+  if (st.part < st.n - 1) teachPart(st.part + 1);
+}
+function actAlt() {
+  if (!guard()) return;
+  const st = ST(), sc = SCRIPT[st.sec]; if (!sc) return showToast('原型的讲解脚本只写到 3.5.2');
+  user('换个说法');
+  addCand(st.part);
+  say(sc.alt[st.part]);
+}
+function actExample() {
+  if (!guard()) return;
+  const st = ST(), sc = SCRIPT[st.sec]; if (!sc) return showToast('原型的讲解脚本只写到 3.5.2');
+  user('举个例子'); say(sc.example[st.part]);
+}
+function actDerive() {
+  if (!guard()) return;
+  const st = ST(), sc = SCRIPT[st.sec]; if (!sc) return showToast('原型的讲解脚本只写到 3.5.2');
+  user('展开推导');
+  say(sc.derive[st.part] || '这一段没有需要推导的地方：书里只给了定义 [[b:' + partBlocks(st.sec, st.part).slice(-1)[0] + ']]。下一段的一致性会有一个小推导。');
+}
+function actQuiz() {
+  if (!guard()) return;
+  const st = ST(); if (!SCRIPT[st.sec]) return showToast('原型的讲解脚本只写到 3.5.2');
+  user('考考我');
+  st.msgs.push({ r: 'quiz', qi: st.part }); studyRefresh();
+}
+const CAND = ['只看 g 或只看 h 的局限', '可容许的含义：为什么「不高估」就能保证最优', '一致性和可容许的区别', '可容许保证最优的反证法'];
+function addCand(i) { const st = ST(); if (!st.stuckCand.includes(CAND[i])) st.stuckCand.push(CAND[i]); }
+async function answerQuiz(m, k) {
+  const st = ST();
+  if (m.pick != null || st.busy) return;
+  const qz = SCRIPT[st.sec].quiz[m.qi];
+  m.pick = k; studyRefresh();
+  if (k === qz.ans) {
+    await say(qz.fb);
+    if (m.final) { st.quizRight = true; st.phase = 'ready'; studyRefresh(); }
+  } else {
+    addCand(m.qi);
+    await say('不太对，正确答案是「' + qz.ops[qz.ans] + '」。我换个角度再讲一次。\n\n' + SCRIPT[st.sec].alt[m.qi]);
+    st.msgs.push({ r: 'prop', kind: 'stuck', x: CAND[m.qi], sec: st.sec }); studyRefresh();
+    if (m.final) { st.quizRight = true; st.phase = 'ready'; studyRefresh(); }
+  }
+}
+
+// ---------- 续学 ----------
+async function resumeGo() {
+  const st = ST(); if (st.busy) return;
+  const r = st.msgs.find(m => m.r === 'resume'); if (r) r.done = 'go';
+  await teachPart(1);
+}
+async function resumeReview() {
+  const st = ST(); if (st.busy) return;
+  const r = st.msgs.find(m => m.r === 'resume'); if (r) r.done = 'review';
+  user('先复习卡点');
+  st.detour = '3.4.2'; st.reviewing = true;
+  st.msgs.push({ r: 'divd', text: '岔路 · ' + secName('3.4.2'), dt: true });
+  await steps(REVIEW_342.steps);
+  await say(REVIEW_342.answer);
+}
+async function reviewAgain() { if (!guard()) return; user('还是不太懂'); await say(REVIEW_342.again); }
+function reviewOk() {
+  if (!guard()) return;
+  const s = S.stuck.find(x => x.id === 's1'); if (s) s.ok = true;
+  user('清楚了，继续 A*');
+  showToast('卡点「' + s.x.slice(0, 10) + '…」已标为掌握', 'ok');
+  backMain(true);
+}
+
+// ---------- 岔路 ----------
+async function enterDetour(sec, qText) {
+  const st = ST(), D = DETOURS[sec];
+  st.detour = sec;
+  st.msgs.push({ r: 'divd', text: '岔路 · ' + secName(sec), dt: true });
+  await steps(D.steps);
+  await say(D.answer);
+  (S.qa[sec] = S.qa[sec] || []).push(Object.assign({ from: st.sec }, D.qa));
+  st.detourLog.push({ sec, q: qText || D.qa.q });
+  showToast('这段问答已记入 ' + sec + ' 的学习记录', 'dt');
+}
+async function backMain(silent) {
+  const st = ST();
+  if (!silent) { if (!guard()) return; user('回到主线'); }
+  const from = st.detour;
+  st.detour = null; st.reviewing = false;
+  st.msgs.push({ r: 'divd', text: '回到主线 · ' + secName(st.sec) });
+  const r = st.msgs.find(m => m.r === 'resume');
+  if (st.phase === 'resume' || (r && r.done === 'review' && st.part === 0)) return teachPart(1);
+  if (!SCRIPT[st.sec]) return say('回到 ' + st.sec + '，我们接着来。');
+  const name = PARTS[st.sec][st.part].name;
+  await say('回到 A*：刚才讲到第 ' + (st.part + 1) + ' 段「' + name + '」。' + (from === '3.4.2' ? '记住刚才的结论，h≡0 时 A* 就是一致代价搜索，' : '') + (st.phase === 'ready' ? '这一节已经讲完，可以进入下一节了。' : '准备好了就点「懂了，继续」。'));
+}
+
+// ---------- 自由提问 ----------
+async function sendText() {
+  const st = ST();
+  const ta = $('#cin'); const text = (ta.value || '').trim();
+  if (!text || !guard()) return;
+  const quote = st.quote; st.quote = null;
+  user(text, quote ? { quote } : null);
+  const qb = quote ? BLK[quote] : null;
+  if (st.detour && /回|主线|继续/.test(text)) return backMain(true);
+  if (st.reviewing && /清楚|懂了|明白/.test(text)) return reviewOk();
+  const dsec = qb && DETOURS[qb.sec] && qb.sec !== st.sec ? qb.sec : Object.keys(DETOURS).find(k => k !== st.detour && DETOURS[k].match.test(text));
+  if (dsec && dsec !== st.sec) return enterDetour(dsec, text);
+  const hit = FREE.find(f => f.match.test(text + (qb ? qb.x : '')));
+  if (hit) return say(hit.a);
+  if (qb) return say('这段在说：' + qb.gist + ' [[b:' + qb.id + ']]\n\n（原型演示：实际回答会结合你的问题和这一段的上下文。）');
+  say(GENERIC);
+}
+
+/* Pagewise 原型 · 伴读（二）：界面、上下文面板、本节小结 */
+'use strict';
+function openCite(id) { go('reader', { block: id }); }
+
+SCREENS.study = {
+  title: () => { const st = ST(); return esc(secName(st.sec)) + '<span class="sub">人工智能：现代方法 · ' + pagesOf(st.sec) + '</span>'; },
+  navRight: () => '<button class="tb" onclick="' + on(() => go('reader', { sec: ST().detour || ST().sec })) + '">原文</button><button class="ib" aria-label="更多" onclick="studyMenu()">⋯</button>',
+  top() {
+    const st = ST();
+    const doneN = st.phase === 'resume' ? 1 : st.part + (st.phase === 'ready' ? 1 : 0);
+    let h = '<div class="stbar"><div class="l1"><span>第 ' + (st.part + 1) + '/' + st.n + ' 段</span><div class="pts">' + PARTS[st.sec].map((_, i) => '<i class="' + (i < doneN ? 'done' : i === st.part && st.phase !== 'resume' ? 'cur' : '') + '"></i>').join('') + '</div><button class="ctxb" onclick="openCtx()">AI 看到的内容 ›</button></div></div>';
+    if (st.detour) h += '<div class="dtbar"><span class="dot"></span><div class="grow"><b>岔路</b> · ' + esc(secName(st.detour)) + '</div><button onclick="' + on(() => backMain()) + '">回到主线 ' + st.sec + '</button></div>';
+    return h;
+  },
+  render() {
+    const st = ST(), sc = SCRIPT[st.sec];
+    let h = '<div class="chat">';
+    st.msgs.forEach((m, i) => {
+      if (m.old && !st.histOpen) return;
+      if (m.r === 'hist') { h += '<button class="hist" onclick="' + on(() => { st.histOpen = !st.histOpen; refresh(); }) + '">' + m.label + (st.histOpen ? ' ▴' : ' ▾') + '</button>'; return; }
+      if (m.r === 'a') { h += '<div class="m-a' + (m.dt ? ' dt' : '') + '" id="m' + i + '">' + (m.shown != null ? md(m._at.slice(0, m.shown).join(''), m.allowed) + '<span class="caret"></span>' : md(m.text, m.allowed)) + '</div>'; return; }
+      if (m.r === 'u') { h += '<div class="m-u' + (m.dt ? ' dt' : '') + '">' + (m.quote ? '<span class="q">p.' + BLK[m.quote].p + ' · ' + esc(BLK[m.quote].x.replace(/\$/g, '').slice(0, 40)) + '…</span>' : '') + esc(m.text) + '</div>'; return; }
+      if (m.r === 'steps') { h += '<div class="steps' + (m.dt ? ' dt' : '') + '">' + m.items.slice(0, m.n).map((x, k) => '<span class="' + (k === m.n - 1 && st.busy && i === st.msgs.length - 1 ? 'run' : '') + '">' + esc(x) + '</span>').join('') + '</div>'; return; }
+      if (m.r === 'divd') { h += '<div class="divd' + (m.dt ? ' dt' : '') + '">' + esc(m.text) + '</div>'; return; }
+      if (m.r === 'resume') {
+        const sk = S.stuck.find(x => x.id === 's1');
+        h += '<div class="resume"><div class="h">续学 · 距上次 ' + S.daysAway + ' 天</div><p>上次讲完了 A* 的第 1 段：<b>f(n) = g(n) + h(n)</b> 的直觉。</p>' + (sk && !sk.ok ? '<p>你在 3.4.2 有一个卡点还没解决：「' + esc(sk.x) + '」。A* 也会用到它。</p>' : '') + '<p>要先花两分钟复习这个卡点吗？</p>' +
+          (st.phase === 'resume' && !m.done ? '<div class="bt"><button class="btn sm pri" onclick="resumeGo()">直接继续第 2 段</button>' + (sk && !sk.ok ? '<button class="btn sm ghost" onclick="resumeReview()">先复习卡点</button>' : '') + '</div>' : '') + '</div>';
+        return;
+      }
+      if (m.r === 'quiz') {
+        const qz = sc.quiz[m.qi];
+        h += '<div class="quiz"><div class="h">' + (m.final ? '本节小测' : '检查一下 · 第 ' + (m.qi + 1) + ' 段') + '</div><div class="q">' + esc(qz.q) + '</div>' +
+          qz.ops.map((o, k) => '<button class="op ' + (m.pick == null ? '' : k === qz.ans ? 'right' : k === m.pick ? 'wrong' : '') + '" onclick="' + on(() => answerQuiz(m, k)) + '">' + 'ABC'[k] + '. ' + esc(o) + '</button>').join('') + '</div>';
+        return;
+      }
+      if (m.r === 'prop') {
+        h += '<div class="prop"><div class="h">AI 建议 · 记为卡点</div>「' + esc(m.x) + '」<div style="display:flex;gap:8px;margin-top:8px">' + (m.done ? '<span class="muted" style="font-size:12px">' + (m.done === 'yes' ? '已记下，会出现在复习的卡点清单里' : '已忽略') + '</span>' :
+          '<button class="btn sm pri" onclick="' + on(() => { m.done = 'yes'; S.stuck.unshift({ id: 's' + Date.now(), sec: m.sec, x: m.x, ok: false }); refresh(); }) + '">记下</button><button class="btn sm ghost" onclick="' + on(() => { m.done = 'no'; ST().stuckCand = ST().stuckCand.filter(x => x !== m.x); refresh(); }) + '">不用</button>') + '</div></div>';
+      }
+    });
+    return h + '</div>';
+  },
+  bottom() {
+    const st = ST(), sc = SCRIPT[st.sec];
+    let chips = [];
+    if (st.reviewing) chips = [['清楚了，继续 A*', 'reviewOk()', 'dt'], ['还是不太懂', 'reviewAgain()']];
+    else if (st.detour) chips = [['回到主线 ' + st.sec, 'backMain()', 'dt'], ['看 ' + st.detour + ' 原文', 'goReaderDetour()']];
+    else if (st.phase === 'teach') {
+      chips = [['懂了，继续', 'actNext()', 'pri'], ['换个说法', 'actAlt()'], ['举个例子', 'actExample()']];
+      if (sc && sc.derive[st.part]) chips.push(['展开推导', 'actDerive()']);
+      chips.push(['考考我', 'actQuiz()'], ['看原文', 'goReaderPart()']);
+    } else if (st.phase === 'quiz') chips = [['换个说法', 'actAlt()'], ['举个例子', 'actExample()'], ['看原文', 'goReaderPart()']];
+    else if (st.phase === 'ready') chips = [['懂了，下一节', 'finishSection()', 'pri'], ['再讲一遍这一节', 'showToast(\'原型里不演示重讲\')'], ['看原文', 'goReaderPart()']];
+    const qb = st.quote ? BLK[st.quote] : null;
+    return (chips.length ? '<div class="qa">' + chips.map(([l, f, c]) => '<button class="' + (c || '') + '" onclick="' + f + '">' + l + '</button>').join('') + '</div>' : '') +
+      (qb ? '<div class="quote"><span>引用</span><div class="grow">p.' + qb.p + ' · ' + esc(qb.x.replace(/\$/g, '')) + '</div><button class="ib" style="width:24px;height:24px;font-size:14px" onclick="' + on(() => { st.quote = null; refresh(); }) + '">✕</button></div>' : '') +
+      '<div class="composer"' + (chips.length ? '' : ' style="border-top:1px solid var(--line)"') + '><textarea id="cin" class="in" rows="1" placeholder="' + (st.detour ? '在岔路里继续问，或说「回到主线」' : '不懂就问…') + '" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendText()}"></textarea><button class="snd" aria-label="发送" onclick="sendText()">↑</button></div>';
+  },
+  after(p, reset) {
+    const v = $('#view'); if (reset) v.scrollTop = v.scrollHeight;
+    if (ST().quote && reset) { const t = $('#cin'); if (t) t.focus(); }
+  }
+};
+function goReaderPart() { const st = ST(); const b = partBlocks(st.sec, st.part)[0]; go('reader', b ? { block: b, part: true } : { sec: st.sec }); }
+function goReaderDetour() { go('reader', { sec: ST().detour }); }
+function studyMenu() {
+  const st = ST();
+  sheet('伴读', '<div class="row tap" onclick="' + on(() => go('map', { book: 'aima' })) + '"><div class="grow">书的地图<small>全书目录、进度和每节状态</small></div><span class="chev"></span></div>' +
+    '<div class="row tap" onclick="' + on(() => go('noteDetail', { sec: st.sec })) + '"><div class="grow">本节笔记<small>摘要、问答、卡点、高亮</small></div><span class="chev"></span></div>' +
+    '<div class="row tap" onclick="' + on(() => { closeOverlay(); openCtx(); }) + '"><div class="grow">AI 看到的内容<small>本轮上下文和 token</small></div><span class="chev"></span></div>' +
+    '<div class="row tap" onclick="' + on(() => { closeOverlay(); if (!SCRIPT[st.sec]) return showToast('原型的讲解脚本只写到 3.5.2'); finishSection(); }) + '"><div class="grow">结束本节<small>生成摘要、卡点和闪卡草稿</small></div><span class="chev"></span></div>');
+}
+
+// ---------- AI 看到的内容 ----------
+function openCtx() {
+  const L = ctxLayers(), tot = L.reduce((a, x) => a + x.t, 0), cached = L.filter(x => x.c).reduce((a, x) => a + x.t, 0);
+  const svc = S.ai.services.find(s => s.id === S.ai.teach.split(':')[0]);
+  sheet('AI 看到的内容', '<div class="stack">' + L.map(x => '<i style="flex:' + x.t + ';background:' + x.col + '"></i>').join('') + '</div>' +
+    '<div class="ctxl">' + L.map(x => '<div class="it"><span class="sq" style="background:' + x.col + '"></span><div class="grow">' + x.k + (x.c ? ' <span class="tag acc">缓存</span>' : '') + '<small>' + esc(x.d) + '</small></div><span class="tk">' + (x.t / 1000).toFixed(1) + 'k</span></div>').join('') +
+    '<div class="it" style="border:0;font-weight:600"><span class="sq"></span><div class="grow">合计<small>其中 ' + (cached / 1000).toFixed(1) + 'k 命中缓存 · ' + esc(svc.name) + ' · ' + S.ai.teach.split(':')[1] + '</small></div><span class="tk">' + (tot / 1000).toFixed(1) + 'k</span></div></div>' +
+    '<div class="sb"><div class="note">AI 只能引用这里列出的原文。你问到别的小节时，它会先读取那一节，再回答。</div></div>', '本轮请求 · 预计输入 token');
+}
+
+// ---------- 本节小结 ----------
+function finishSection() { if (!guard()) return; go('done'); }
+const DRAFT = {
+  summary: 'A* 用 f(n) = g(n) + h(n) 选择扩展节点；h 可容许（从不高估）时 A* 代价最优。一致性是更强的条件（三角不等式），一致时状态第一次被扩展就是最优路径。在同样的信息下，A* 是最优高效的。',
+  cards: [
+    { f: 'A* 的评价函数是什么？各项含义？', b: 'f(n) = g(n) + h(n)：g 是从起点到 n 的已走代价，h 是从 n 到目标的估计代价。' },
+    { f: '什么是可容许的启发式函数？', b: '从不高估到达目标的真实代价（乐观）。h 可容许时，A* 代价最优。' },
+    { f: '一致性的定义？和可容许的关系？', b: 'h(n) ≤ c(n, a, n′) + h(n′)。一致 ⇒ 可容许，反之不一定。' },
+    { f: 'h(n) ≡ 0 时 A* 变成什么？', b: '一致代价搜索（Dijkstra 算法）。', detour: true },
+    { f: '最优高效（optimally efficient）指什么？', b: '在同一启发式、保证最优的算法中，A* 扩展的节点数几乎最少。' }
+  ]
+};
+SCREENS.done = {
+  title: '本节小结',
+  render(p) {
+    const st = ST();
+    if (!p.d) {
+      const dt = st.detourLog.length > 0;
+      p.d = { summary: DRAFT.summary, cards: DRAFT.cards.map(c => Object.assign({ on: !c.detour || dt }, c)).filter(c => !c.detour || dt).slice(0, 5), stuck: st.stuckCand.filter(x => !S.stuck.some(y => y.x === x && !y.ok)).map(x => ({ x, on: true })) };
+      if (!p.d.stuck.length) p.d.stuck.push({ x: '可容许和一致性的区别', on: false });
+    }
+    const d = p.d;
+    let h = '<div class="done-hero"><div class="k">' + esc(secName(chapterOf(st.sec).id)) + '</div><div class="t">' + esc(secName(st.sec)) + ' · 讲完了</div><div style="font-size:12px;opacity:.85;margin-top:4px">' + st.n + ' 段 · ' + st.msgs.filter(m => m.r === 'u' && !m.old).length + ' 次提问 · 岔路 ' + st.detourLog.length + ' 次</div></div>';
+    h += '<div class="sec"><div class="sec-h">摘要 <small>AI 起草，可以改</small></div><div style="padding:0 14px 12px"><textarea class="edt" oninput="' + on(e => { d.summary = e.target.value; }) + '">' + esc(d.summary) + '</textarea></div></div>';
+    h += '<div class="sec"><div class="sec-h">卡点 <small>没完全掌握的地方</small></div>' + d.stuck.map(s => '<div class="ck' + (s.on ? ' on' : '') + '" onclick="' + on(() => { s.on = !s.on; refresh(); }) + '"><span class="bx">' + (s.on ? '✓' : '') + '</span><div class="grow">' + esc(s.x) + '</div></div>').join('') + '</div>';
+    h += '<div class="sec"><div class="sec-h">闪卡 <small>勾选的会加入复习</small></div>' + d.cards.map(c => '<div class="ck' + (c.on ? ' on' : '') + '" onclick="' + on(() => { c.on = !c.on; refresh(); }) + '"><span class="bx">' + (c.on ? '✓' : '') + '</span><div class="grow">' + esc(c.f) + (c.detour ? ' <span class="tag dt">来自岔路</span>' : '') + '<small>' + esc(c.b) + '</small></div></div>').join('') + '</div>';
+    if (st.detourLog.length) h += '<div class="sec"><div class="sec-h">岔路记录</div>' + st.detourLog.map(x => '<div class="row"><div class="grow"><b>' + esc(x.q) + '</b><small>已记入 ' + esc(secName(x.sec)) + ' 的笔记</small></div></div>').join('') + '</div>';
+    const nx = '3.5.3';
+    h += '<div style="padding:6px 14px 22px"><button class="btn pri block" onclick="' + on(() => saveSection(d, nx)) + '">保存，开始 ' + nx + ' ' + esc(S.sec[nx].title) + '</button><div class="muted" style="font-size:12px;text-align:center;margin-top:8px">保存后主线进度移到 ' + nx + '</div></div>';
+    return h;
+  }
+};
+function saveSection(d, nx) {
+  const st = ST(), s = S.sec[st.sec];
+  s.status = 'done'; s.summary = d.summary;
+  const cards = d.cards.filter(c => c.on), stuck = d.stuck.filter(x => x.on);
+  cards.forEach((c, i) => S.cards.push({ id: 'n' + Date.now() + i, sec: st.sec, f: c.f, b: c.b, box: 1, due: 1 }));
+  stuck.forEach((x, i) => { if (!S.stuck.some(y => y.x === x.x && !y.ok)) S.stuck.unshift({ id: 'sn' + Date.now() + i, sec: st.sec, x: x.x, ok: false }); });
+  S.sec[nx].status = 'learning';
+  S.study = { sec: nx, part: 0, n: PARTS[nx].length, msgs: [{ r: 'divd', text: st.sec + ' 已学完 · 新增 ' + cards.length + ' 张闪卡' + (stuck.length ? '、' + stuck.length + ' 个卡点' : '') }], detour: null, phase: 'teach', busy: false, quizRight: false, stuckCand: [], detourLog: [], quote: null };
+  S.daysAway = 0;
+  showToast('已保存，进度移到 ' + nx, 'ok');
+  replace('study');
+  teachPart(0);
+}
+
+/* Pagewise 原型 · 阅读器：原版 / 重排、讲过的段落、划词菜单 */
+'use strict';
+SCREENS.reader = {
+  title: p => { const sec = readerSec(p); return '原文 · ' + esc(secName(sec)) + '<span class="sub">' + pagesOf(sec) + '</span>'; },
+  navRight: () => '<button class="tb" onclick="' + on(() => { if (R.stack.length > 1 && R.stack[R.stack.length - 2].name === 'study') back(); else go('study'); }) + '">伴读</button>',
+  top: p => {
+    const sec = readerSec(p);
+    return '<div class="rdtool"><div class="seg">' + [['orig', '原版'], ['flow', '重排']].map(([k, l]) => '<button class="' + (S.readerMode === k ? 'on' : '') + '" onclick="' + on(() => { S.readerMode = k; refresh(); }) + '">' + l + '</button>').join('') + '</div><span class="pgi">' + (S.sec[sec].status === 'done' ? '已学' : sec === S.study.sec ? '讲到第 ' + (S.study.part + 1) + ' 段' : '') + '　点段落可解释、提问</span></div>';
+  },
+  render(p) {
+    const sec = readerSec(p), s = S.sec[sec];
+    const ch = chapterOf(sec), par = S.sec[s.parent];
+    const st = S.study;
+    const taught = new Set(), curp = new Set();
+    if (s.status === 'done') blocksOfSec(sec).forEach(b => taught.add(b.id));
+    if (sec === st.sec && PARTS[sec]) {
+      const lim = st.phase === 'resume' ? 0 : st.part;
+      PARTS[sec].forEach((pt, i) => { if (i < lim || (i === lim && st.phase === 'ready')) pt.blocks.forEach(id => taught.add(id)); if (i === lim && st.phase !== 'resume') pt.blocks.forEach(id => curp.add(id)); });
+      if (st.phase === 'resume') PARTS[sec][0].blocks.forEach(id => taught.add(id));
+    }
+    const flow = S.readerMode === 'flow';
+    let h = '<div class="reader">';
+    for (let pg = s.p0; pg <= s.p1; pg++) {
+      const bs = BLOCKS.filter(b => b.p === pg);
+      h += '<div class="page ' + (flow ? 'flow' : 'orig') + '" id="pg' + pg + '"><div class="run"><span>' + esc(secName(ch.id)) + '</span><span>' + esc(par ? secName(par.id) : '') + '</span></div>';
+      if (!bs.length) h += '<div class="pph">这一页的正文没有放进原型<br>（原型只为 3.4.2、3.5.1、3.5.2 写了示意内容）</div>';
+      bs.forEach(b => {
+        const cl = 'blk ' + (b.t === 'title' ? 'title' : b.t === 'eq' ? 'eq' : '') + (taught.has(b.id) ? ' done' : '') + (curp.has(b.id) ? ' curp' : '') + (S.hl[b.id] ? ' hl' : '') + (p.block === b.id ? ' flash' : '');
+        const body = b.t === 'image' ? figHtml(b.fig) : b.t === 'eq' ? '<span class="math blk">' + esc(b.x.replace(/\$/g, '')) + '</span>' : inline(b.x);
+        h += '<div class="' + cl + '" id="' + b.id + '" onclick="' + on(e => selBlock(e, b.id)) + '">' + body + '</div>';
+      });
+      h += '<div class="pno">' + pg + '</div></div>';
+    }
+    return h + '</div><div class="muted" style="text-align:center;font-size:11px;padding:0 0 20px">示意内容，不是原书文字 · 左侧细线 = 伴读已讲过</div>';
+  },
+  after(p, reset) {
+    if (!reset) return;
+    const el = p.block ? document.getElementById(p.block) : null;
+    if (el) { const v = $('#view'); v.scrollTop += el.getBoundingClientRect().top - v.getBoundingClientRect().top - 90; }
+  }
+};
+function readerSec(p) { return p.block ? BLK[p.block].sec : (p.sec || S.study.sec); }
+
+function selBlock(e, id) {
+  e.stopPropagation();
+  closeOverlay();
+  document.querySelectorAll('.blk.sel').forEach(x => x.classList.remove('sel'));
+  const el = document.getElementById(id); el.classList.add('sel');
+  const app = $('#app').getBoundingClientRect(), r = el.getBoundingClientRect();
+  const m = document.createElement('div');
+  m.className = 'selmenu';
+  m.innerHTML = [['解释', () => explainBlock(id)], ['翻译', () => translateBlock(id)], ['问 AI', () => askBlock(id)], [S.hl[id] ? '取消高亮' : '高亮', () => { S.hl[id] = !S.hl[id]; closeOverlay(); refresh(); showToast(S.hl[id] ? '已高亮，可在笔记里查看' : '已取消高亮'); }], ['笔记', () => noteBlock(id)]]
+    .map(([l, f]) => '<button onclick="' + on(ev => { ev.stopPropagation(); m.remove(); f(); }) + '">' + l + '</button>').join('');
+  $('#app').appendChild(m);
+  const top = Math.max(60, r.top - app.top - 46);
+  m.style.top = top + 'px';
+  m.style.left = Math.max(8, Math.min(app.width - m.offsetWidth - 8, r.left - app.left + r.width / 2 - m.offsetWidth / 2)) + 'px';
+  setTimeout(() => document.addEventListener('click', function off() { const x = $('#app .selmenu'); if (x) x.remove(); document.querySelectorAll('.blk.sel').forEach(y => y.classList.remove('sel')); document.removeEventListener('click', off); }), 0);
+}
+function quoteHtml(b) { return '<div style="font-family:var(--serif);font-size:13px;line-height:1.8;color:var(--ink2);border-left:3px solid var(--hl);padding:2px 0 2px 10px;margin-bottom:10px">' + inline(b.x) + '</div>'; }
+function explainBlock(id) {
+  const b = BLK[id];
+  sheet('解释', '<div class="sb">' + quoteHtml(b) + md((b.gist || '这一段是图或标题，没有需要解释的地方。') + (b.gist ? ' [[b:' + id + ']]' : ''), [id]) + '</div>' +
+    '<div class="sf"><button class="btn ghost" onclick="' + on(() => { S.stuck.unshift({ id: 'sx' + Date.now(), sec: b.sec, x: (b.gist || b.x).replace(/\$/g, '').slice(0, 30), ok: false }); closeOverlay(); showToast('已记为卡点'); }) + '">记为卡点</button><button class="btn pri" onclick="' + on(() => askBlock(id)) + '">带到伴读里继续问</button></div>', 'p.' + b.p + ' · ' + secName(b.sec) + ' · 整理模型');
+}
+function translateBlock(id) {
+  const b = BLK[id];
+  sheet('翻译', '<div class="sb">' + quoteHtml(b) + '<div class="note">原型没有准备翻译内容。实际 App 会用整理模型把这一段译成英文（或把英文书译成中文），术语和书的地图里的译名保持一致。</div></div>', 'p.' + b.p);
+}
+function askBlock(id) {
+  closeOverlay();
+  S.study.quote = id;
+  if (R.stack.length > 1 && R.stack[R.stack.length - 2].name === 'study') back(); else replace('study');
+  setTimeout(() => { const t = $('#cin'); if (t) t.focus(); }, 30);
+}
+function noteBlock(id) {
+  const b = BLK[id];
+  modal({ title: '记笔记 · p.' + b.p, body: quoteHtml(b) + '<textarea id="nb" class="edt" placeholder="写下你的理解"></textarea>', ok: '保存', onOk: () => {
+    const v = ($('#nb').value || '').trim(); if (!v) return false;
+    S.userNote[b.sec] = (S.userNote[b.sec] ? S.userNote[b.sec] + '\n' : '') + 'p.' + b.p + '：' + v;
+    showToast('已保存到 ' + b.sec + ' 的笔记', 'ok');
+  } });
+}
+
+/* Pagewise 原型 · 复习（闪卡、卡点）与笔记（按节、导出） */
+'use strict';
+SCREENS.review = {
+  title: '复习', root: true,
+  render() {
+    const due = dueCards(), open = S.stuck.filter(s => !s.ok);
+    const boxes = [1, 2, 3, 4, 5].map(k => S.cards.filter(c => c.box === k).length), mx = Math.max(...boxes, 1);
+    let h = '<div class="rvhero"><div><b>' + due.length + '</b><span>今日待复习</span></div><div><b>' + open.length + '</b><span>卡点</span></div><div><b>' + S.cards.length + '</b><span>闪卡总数</span></div></div>' +
+      '<div class="boxes">' + boxes.map((n, i) => '<div><i><em style="height:' + Math.round(n / mx * 100) + '%"></em><b>' + n + '</b></i>盒 ' + (i + 1) + ' · ' + BOX_DAYS[i + 1] + ' 天</div>').join('') + '</div>' +
+      '<div style="background:#fff;padding:0 14px 14px;margin-bottom:8px"><button class="btn pri block"' + (due.length ? '' : ' disabled') + ' onclick="' + on(() => go('rv', {})) + '">' + (due.length ? '开始复习 ' + due.length + ' 张' : '今天没有要复习的卡片') + '</button></div>';
+    h += '<div class="sec"><div class="sec-h">卡点清单 <small>没完全掌握的地方</small></div>';
+    S.stuck.forEach(s => {
+      h += '<div class="stk' + (s.ok ? ' ok' : '') + '"><span class="ic">' + (s.ok ? '✓' : '!') + '</span><div class="grow"><b>' + esc(s.x) + '</b><small>' + esc(secName(s.sec)) + (s.fromCard ? ' · 复习时答错' : '') + '</small>' +
+        (s.ok ? '' : '<div class="acts"><button class="btn sm ghost" onclick="' + on(() => reteach(s)) + '">让 AI 重讲</button><button class="btn sm ghost" onclick="' + on(() => { s.ok = true; refresh(); showToast('已标为掌握', 'ok'); }) + '">已掌握</button></div>') + '</div></div>';
+    });
+    return h + '</div>';
+  }
+};
+function reteach(s) {
+  if (s.id !== 's1') return showToast('原型只为「' + S.stuck[0].x.slice(0, 8) + '…」这类 3.4.2 的卡点准备了重讲');
+  if (S.study.sec !== '3.5.2' || S.study.detour) return showToast('先回到伴读的主线再试');
+  tab('shelf'); go('study');
+  if (S.study.phase === 'resume') return resumeReview();
+  setTimeout(async () => { const st = ST(); user('重讲这个卡点：' + s.x); st.detour = '3.4.2'; st.reviewing = true; st.msgs.push({ r: 'divd', text: '岔路 · ' + secName('3.4.2'), dt: true }); await steps(REVIEW_342.steps); await say(REVIEW_342.answer); }, 50);
+}
+
+SCREENS.rv = {
+  title: p => '复习 <span class="n" style="font-weight:400;color:var(--ink3)">' + Math.min((p.i || 0) + 1, (p.list || dueCards()).length) + '/' + (p.list || dueCards()).length + '</span>',
+  render(p) {
+    if (!p.list) { p.list = dueCards().map(c => c.id); p.i = 0; p.res = { again: 0, hard: 0, good: 0 }; }
+    if (p.i >= p.list.length) {
+      return '<div class="empty" style="padding-top:80px"><div style="font-size:40px">✓</div><div style="font-size:17px;color:var(--ink);font-weight:600;margin:8px 0">今天复习完了</div>记得 ' + p.res.good + ' · 模糊 ' + p.res.hard + ' · 忘了 ' + p.res.again + (p.res.again ? '<br>忘了的已加入卡点清单' : '') + '</div><div style="padding:0 30px"><button class="btn pri block" onclick="tab(&quot;review&quot;)">完成</button></div>';
+    }
+    const c = S.cards.find(x => x.id === p.list[p.i]);
+    const hasSrc = blocksOfSec(c.sec).length > 0;
+    let h = '<div class="fcard" onclick="' + on(() => { p.flip = true; refresh(); }) + '"><div class="src"><span>' + esc(secName(c.sec)) + '</span><span>盒 ' + c.box + '</span></div><div class="front">' + esc(c.f) + '</div>' +
+      (p.flip ? '<div class="back">' + esc(c.b) + '</div><div style="display:flex;gap:8px;margin-top:14px">' + (hasSrc ? '<button class="btn sm ghost" onclick="' + on(e => { e.stopPropagation(); go('reader', { sec: c.sec }); }) + '">回到原文</button>' : '') + '<button class="btn sm ghost" onclick="' + on(e => { e.stopPropagation(); showToast('会带着这张卡和 ' + c.sec + ' 的原文去问 AI（原型未实现）'); }) + '">问 AI</button></div>' : '<div class="tip">先在心里回答，再点卡片看答案</div>') + '</div>';
+    if (p.flip) h += '<div class="rate">' + [['again', '忘了', 'a'], ['hard', '模糊', 'h'], ['good', '记得', 'g']].map(([r, l, k]) => { const nb = nextBox(c, r); return '<button class="' + k + '" onclick="' + on(() => { rateCard(c, r); p.res[r]++; p.i++; p.flip = false; refresh(); }) + '">' + l + '<small>' + BOX_DAYS[nb] + ' 天后</small></button>'; }).join('') + '</div>';
+    return h;
+  }
+};
+
+// ---------- 笔记 ----------
+const noteSecs = () => S.secOrder.filter(id => { const s = S.sec[id]; return (s.summary && s.status === 'done') || S.qa[id] || S.userNote[id]; });
+SCREENS.notes = {
+  title: '笔记', root: true,
+  render() {
+    let h = '<div class="sec">';
+    S.books.forEach(b => {
+      const n = b.id === 'aima' ? noteSecs().length : 0;
+      h += '<div class="book" onclick="' + on(() => { if (!n) return showToast('这本书还没有笔记'); go('notesBook', { book: b.id }); }) + '">' + cover(b) + '<div class="grow"><div class="tt">' + esc(b.title) + '</div><div class="meta">' + (n ? n + ' 节有笔记 · ' + Object.values(S.qa).reduce((a, x) => a + x.length, 0) + ' 条问答 · ' + Object.values(S.hl).filter(Boolean).length + ' 处高亮' : '还没有笔记') + '</div></div></div>';
+    });
+    return h + '</div>';
+  }
+};
+SCREENS.notesBook = {
+  title: '人工智能：现代方法<span class="sub">笔记</span>',
+  navRight: () => '<button class="tb" onclick="openExport()">导出</button>',
+  render() {
+    let h = '', lastCh = '';
+    noteSecs().forEach(id => {
+      const s = S.sec[id], ch = chapterOf(id);
+      if (ch.id !== lastCh) { h += (lastCh ? '</div>' : '') + '<div class="sec"><div class="sec-h">' + esc(secName(ch.id)) + '</div>'; lastCh = ch.id; }
+      const qa = (S.qa[id] || []).length, sk = S.stuck.filter(x => x.sec === id && !x.ok).length, hl = blocksOfSec(id).filter(b => S.hl[b.id]).length;
+      h += '<div class="nsec" onclick="' + on(() => go('noteDetail', { sec: id })) + '"><div class="l1"><b>' + id + ' ' + esc(s.title) + '</b>' + statusTag(s.status) + '</div>' + (s.summary ? '<div class="sm">' + esc(s.summary) + '</div>' : '') +
+        '<div class="tg">' + (qa ? '<span class="tag">问答 ' + qa + '</span>' : '') + (sk ? '<span class="tag stuck">卡点 ' + sk + '</span>' : '') + (hl ? '<span class="tag">高亮 ' + hl + '</span>' : '') + ((S.qa[id] || []).some(x => x.from) ? '<span class="tag dt">岔路</span>' : '') + '</div></div>';
+    });
+    return h + '</div>';
+  }
+};
+SCREENS.noteDetail = {
+  title: p => esc(secName(p.sec)) + '<span class="sub">笔记 · ' + pagesOf(p.sec) + '</span>',
+  navRight: p => blocksOfSec(p.sec).length ? '<button class="tb" onclick="' + on(() => go('reader', { sec: p.sec })) + '">原文</button>' : '<span style="width:40px"></span>',
+  render(p) {
+    const id = p.sec, s = S.sec[id];
+    const qa = S.qa[id] || [], sk = S.stuck.filter(x => x.sec === id), hls = blocksOfSec(id).filter(b => S.hl[b.id]);
+    let h = '<div class="nd"><h3>摘要</h3><p>' + (s.summary ? esc(s.summary) : '<span class="muted">学完这一节后生成</span>') + '</p>';
+    const main = qa.filter(x => !x.from), det = qa.filter(x => x.from);
+    if (main.length) h += '<h3>问答</h3>' + main.map(x => '<div class="qi"><b>' + esc(x.q) + '</b><span>' + esc(x.a) + '</span></div>').join('');
+    if (det.length) h += '<h3>岔路记录</h3>' + det.map(x => '<div class="qi"><span class="fr">学 ' + esc(x.from) + ' 时回来问的</span><b>' + esc(x.q) + '</b><span>' + esc(x.a) + '</span></div>').join('');
+    if (sk.length) h += '<h3>卡点</h3>' + sk.map(x => '<div class="qi"><b style="font-weight:500' + (x.ok ? ';text-decoration:line-through;color:var(--ink3)' : '') + '">' + esc(x.x) + '</b></div>').join('');
+    if (hls.length) h += '<h3>高亮</h3>' + hls.map(b => '<div class="qi" style="cursor:pointer" onclick="' + on(() => go('reader', { block: b.id })) + '"><span class="hlq">' + esc(b.x.replace(/\$/g, '')) + '</span><span class="muted" style="font-size:11px">p.' + b.p + '</span></div>').join('');
+    h += '<h3>我的笔记</h3><textarea class="edt" placeholder="写点自己的理解…" oninput="' + on(e => { S.userNote[id] = e.target.value; }) + '">' + esc(S.userNote[id] || '') + '</textarea></div>';
+    return h;
+  }
+};
+function openExport() {
+  const n = noteSecs().length;
+  const tree = S.exportFmt === 'md'
+    ? 'Pagewise导出/人工智能：现代方法/\n  README.md          目录 + 进度\n  第01章/\n    1.1-什么是人工智能.md\n    …\n  第03章/\n    3.4.2-Dijkstra算法或一致代价搜索.md\n    3.5.2-A*搜索.md\n    …'
+    : 'Pagewise导出/人工智能：现代方法-闪卡.csv\n  正面,背面,标签\n  "A* 的评价函数是什么？…","f(n) = g(n) + h(n)…","AIMA::3.5.2"';
+  sheet('导出笔记', '<div style="padding:4px 16px 10px"><div class="seg">' + [['md', 'Markdown'], ['anki', 'Anki CSV']].map(([k, l]) => '<button class="' + (S.exportFmt === k ? 'on' : '') + '" onclick="' + on(() => { S.exportFmt = k; openExport(); }) + '">' + l + '</button>').join('') + '</div></div>' +
+    '<div class="tree">' + esc(tree) + '</div>' +
+    (S.exportFmt === 'md' ? '<div class="sb" style="font-size:13px;color:var(--ink2);padding-bottom:0">每节一个文件，目录结构和 aima4e-markdown 的「课程讲义」一致：摘要、问答、岔路记录、卡点、高亮、我的笔记。</div>' : '<div class="sb" style="font-size:13px;color:var(--ink2);padding-bottom:0">' + S.cards.length + ' 张闪卡，标签按「书::小节」组织。</div>') +
+    '<div class="row"><div class="grow">去掉大段原文引用<small>高亮只保留前 30 字，方便分享</small></div><span class="sw' + (S.exportStrip ? ' on' : '') + '" onclick="' + on(() => { S.exportStrip = !S.exportStrip; openExport(); }) + '"></span></div>' +
+    '<div class="sf"><button class="btn pri" onclick="' + on(() => { closeOverlay(); showToast('已导出 ' + (S.exportFmt === 'md' ? n + ' 个文件' : S.cards.length + ' 张闪卡') + ' 到 下载/Pagewise导出（原型不会真的写文件）', 'ok'); }) + '">导出到「下载」</button></div>', '人工智能：现代方法 · ' + n + ' 节');
+}
+
+/* Pagewise 原型 · 我的（解析服务、AI 服务、讲解偏好、存储）、原型控制台、启动 */
+'use strict';
+const sw = (v, fn) => '<span class="sw' + (v ? ' on' : '') + '" role="switch" aria-checked="' + !!v + '" onclick="' + on(fn) + '"></span>';
+const daysLeft = d => Math.round((new Date(d + 'T00:00:00') - new Date('2026-10-28T00:00:00')) / 864e5);
+const modelLabel = v => { const [sid, m] = v.split(':'); const s = S.ai.services.find(x => x.id === sid); return (s ? s.name : '') + ' · ' + m; };
+
+SCREENS.me = {
+  title: '我的', root: true,
+  render() {
+    const left = S.sim.tokenExpired ? -1 : daysLeft(S.mineru.expires);
+    const row = (t, d, fn, warn) => '<div class="row tap" onclick="' + on(fn) + '"><div class="grow"><b>' + t + '</b><small' + (warn ? ' style="color:var(--stuck)"' : '') + '>' + d + '</small></div><span class="chev"></span></div>';
+    return '<div class="sec">' +
+      row('解析服务', 'MinerU 官方 API · ' + (left < 0 ? 'Token 已过期' : '今日 ' + S.mineru.used + '/2000 页' + (left <= 7 ? ' · Token ' + left + ' 天后过期' : '')), () => go('meMineru'), left <= 7) +
+      row('AI 服务', S.ai.services.length + ' 个服务 · 讲解用 ' + S.ai.teach.split(':')[1], () => go('meAI')) +
+      row('讲解偏好', (S.prefs.intuition ? '先直觉后公式' : '先定义后直觉') + ' · 每段' + S.prefs.len + ' · ' + (S.prefs.bilingual ? '术语中英对照' : '只用中文术语'), () => go('mePrefs')) +
+      '</div><div class="sec">' +
+      row('存储与备份', S.books.length + ' 本书 · 本机 612 MB', () => go('meStorage')) +
+      row('关于 Pagewise', '版本 0.1 原型 · GPL-3.0', () => go('about')) + '</div>';
+  }
+};
+
+SCREENS.meMineru = {
+  title: '解析服务',
+  render() {
+    const m = S.mineru, left = S.sim.tokenExpired ? -1 : daysLeft(m.expires);
+    return '<div class="sec"><div class="sec-h">MinerU 官方精准解析 API</div>' +
+      '<div class="fld"><label>Token（保存在 Android Keystore）</label><input value="' + esc(m.token) + '" readonly></div>' +
+      '<div class="row"><div class="grow">有效期<small' + (left <= 7 ? ' style="color:' + (left < 0 ? 'var(--bad)' : 'var(--stuck)') + '"' : '') + '>' + (left < 0 ? '已过期，解析会暂停' : m.expires + ' · 还有 ' + left + ' 天') + '</small></div><button class="btn sm pri" onclick="' + on(() => { S.sim.tokenExpired = false; m.token = 'mnr_••••••••••••c71e'; m.expires = '2027-01-26'; S.books.forEach(b => (b.parts || []).forEach(x => { if (x.err) { x.err = null; startParse(b); } })); refresh(); showToast('Token 已更新，暂停的解析会继续', 'ok'); }) + '">更新 Token</button></div>' +
+      '<div class="row"><div class="grow">今日额度<small>每天 2000 页高优先级，超出后排队变慢，不会被拦截</small><div class="bar" style="margin-top:6px"><i style="width:' + Math.min(100, m.used / 20) + '%"></i></div></div><span class="n ink2">' + m.used + '/2000</span></div>' +
+      '<div class="row"><div class="grow">默认解析模型<small>' + (m.model === 'vlm' ? '公式和复杂排版更好' : '速度更快') + '</small></div><div class="seg" style="width:150px">' + ['vlm', 'pipeline'].map(k => '<button class="' + (m.model === k ? 'on' : '') + '" onclick="' + on(() => { m.model = k; refresh(); }) + '">' + k + '</button>').join('') + '</div></div>' +
+      '<div class="row"><div class="grow">上传前确认<small>每次上传书之前弹窗确认</small></div>' + sw(m.confirm, () => { m.confirm = !m.confirm; refresh(); }) + '</div>' +
+      '<div class="row tap" onclick="' + on(() => showToast('连接正常 · 延迟 182 ms', 'ok')) + '"><div class="grow" style="color:var(--acc)">测试连接</div></div></div>' +
+      '<div class="sec"><div class="sec-h">自建 MinerU 服务 <small>V1.1</small></div><div class="fld"><label>服务地址（例如局域网里 Mac 上的 mineru-api）</label><input placeholder="http://192.168.1.20:8000" disabled></div><div style="padding:8px 14px 12px"><div class="note">用自建服务时，书不离开你的网络，也不占官方额度。</div></div></div>';
+  }
+};
+
+SCREENS.meAI = {
+  title: 'AI 服务',
+  render() {
+    const opts = S.ai.services.flatMap(s => s.models.map(m => [s.id + ':' + m, s.name + ' · ' + m]));
+    const sel = (k, d) => '<div class="fld"><label>' + d + '</label><select onchange="' + on(e => { S.ai[k] = e.target.value; refresh(); }) + '">' + opts.map(([v, l]) => '<option value="' + v + '"' + (S.ai[k] === v ? ' selected' : '') + '>' + esc(l) + '</option>').join('') + '</select></div>';
+    return '<div class="sec"><div class="sec-h">服务 <small>Key 保存在 Android Keystore</small></div>' +
+      S.ai.services.map(s => '<div class="row tap" onclick="' + on(() => go('meAIEdit', { id: s.id })) + '"><div class="grow"><b>' + esc(s.name) + '</b><small>' + esc(s.proto) + ' · ' + esc(s.base.replace(/^https:[/][/]/, '')) + '</small></div><span class="chev"></span></div>').join('') +
+      '<div class="row tap" onclick="' + on(() => go('meAIEdit', {})) + '"><div class="grow" style="color:var(--acc)">＋ 添加服务</div></div></div>' +
+      '<div class="sec"><div class="sec-h">模型分配</div>' + sel('teach', '讲解模型（伴读、岔路、解释）') + sel('tidy', '整理模型（摘要、闪卡草稿、续学回顾、翻译）') + '<div style="padding:8px 14px 12px"><div class="note">讲解用强一点的模型，整理用便宜的模型。讲解规则和书的地图走 prompt caching。</div></div></div>' +
+      '<div class="sec"><div class="sec-h">用量 <small>本机统计</small></div><div class="kv"><span>人工智能：现代方法</span><span class="n">1.24M tokens · 缓存命中 71%</span><span>本月合计</span><span class="n">1.31M tokens</span></div></div>';
+  }
+};
+SCREENS.meAIEdit = {
+  title: p => p.id ? '编辑服务' : '添加服务',
+  render(p) {
+    const s = S.ai.services.find(x => x.id === p.id) || { name: '', proto: 'Anthropic Messages', base: '', key: '', models: [] };
+    return '<div class="sec"><div class="fld"><label>名称</label><input value="' + esc(s.name) + '" placeholder="例如：Claude 官方"></div>' +
+      '<div class="fld"><label>协议</label><select>' + ['Anthropic Messages', 'OpenAI Responses'].map(x => '<option' + (x === s.proto ? ' selected' : '') + '>' + x + '</option>').join('') + '</select></div>' +
+      '<div class="fld"><label>Base URL</label><input value="' + esc(s.base) + '" placeholder="https://api.anthropic.com"></div>' +
+      '<div class="fld"><label>API Key</label><input value="' + esc(s.key) + '" placeholder="sk-…" type="text"></div>' +
+      '<div class="fld"><label>模型（逗号分隔）</label><input value="' + esc(s.models.join(', ')) + '"></div></div>' +
+      '<div style="padding:6px 14px;display:flex;gap:8px"><button class="btn ghost" style="flex:1" onclick="' + on(() => showToast('连接正常 · 模型列表已读取', 'ok')) + '">测试连接</button><button class="btn pri" style="flex:1" onclick="' + on(() => { showToast('已保存（原型不改数据）'); back(); }) + '">保存</button></div>';
+  }
+};
+
+SCREENS.mePrefs = {
+  title: '讲解偏好',
+  render() {
+    const P = S.prefs, t = (k, l, d) => '<div class="row"><div class="grow">' + l + '<small>' + d + '</small></div>' + sw(P[k], () => { P[k] = !P[k]; refresh(); }) + '</div>';
+    return '<div class="sec">' + t('intuition', '先讲直觉，再讲公式', '关掉后先给定义和公式') +
+      '<div class="row"><div class="grow">每段讲解长度<small>短：半屏 · 中：一屏半以内 · 长：完整展开</small></div><div class="seg" style="width:130px">' + ['短', '中', '长'].map(k => '<button class="' + (P.len === k ? 'on' : '') + '" onclick="' + on(() => { P.len = k; refresh(); }) + '">' + k + '</button>').join('') + '</div></div>' +
+      t('askEach', '每段结尾提一个问题', '确认你懂了再往下讲') + t('quizEnd', '一节讲完做小测', '答错会换个角度再讲一次') +
+      t('bilingual', '术语中英对照', '例如：可容许的（admissible）') + t('recap', '续学回顾', '隔天打开时先用三句话回顾上次的进度和卡点') + '</div>' +
+      '<div class="sec"><div class="fld"><label>补充要求（会写进讲解规则）</label><textarea placeholder="例如：多用编程里的类比；伪代码用 Python">多用编程里的类比，我是后端工程师。</textarea></div></div>';
+  }
+};
+SCREENS.meStorage = {
+  title: '存储与备份',
+  render() {
+    const sz = { aima: '418 MB', slm: '126 MB', ddia: '12 MB' };
+    return '<div class="sec"><div class="sec-h">每本书</div>' + S.books.map(b => '<div class="row"><div class="grow">' + esc(b.title) + '<small>原文件 ' + b.size + ' · 解析结果 ' + (sz[b.id] || '—') + '</small></div><button class="btn sm ghost" onclick="' + on(() => modal({ title: '清理解析缓存？', body: '会删除《' + esc(b.title) + '》的解析结果（Markdown、内容块、图片），<b>保留学习记录、笔记和闪卡</b>。以后再打开需要重新解析。', ok: '清理', onOk: () => showToast('原型里不真的删除') })) + '">清理</button></div>').join('') + '</div>' +
+      '<div class="sec"><div class="row tap" onclick="' + on(() => showToast('已导出 pagewise-backup-2026-10-28.zip 到「下载」（不含 Key）', 'ok')) + '"><div class="grow">导出备份<small>整库：书的地图、学习记录、笔记、闪卡、设置；不含 API Key 和 Token</small></div><span class="chev"></span></div>' +
+      '<div class="row tap" onclick="' + on(() => showToast('选择备份文件（原型未实现）')) + '"><div class="grow">从备份恢复</div><span class="chev"></span></div></div>';
+  }
+};
+SCREENS.about = {
+  title: '关于',
+  render: () => '<div class="sec" style="padding:24px 16px;text-align:center"><div style="font-size:22px;font-weight:700;color:var(--acc)">Pagewise</div><div class="muted" style="font-size:12px;margin:4px 0 14px">带着整本书的 AI 伴读 · 0.1 原型</div><div class="note" style="text-align:left">本地优先，没有后端：书和学习记录只存在手机上。书只在两种情况下离开手机：上传给 MinerU 解析（你确认后），以及当前讲解需要的小节原文发给你配置的 AI 服务。</div></div>'
+};
+
+// ---------- 原型控制台 ----------
+const PAGES = [['shelf', '书架'], ['map', '书的地图', { book: 'aima' }], ['study', '伴读'], ['reader', '原文', { block: 'b1025' }], ['done', '本节小结'], ['importSet', '解析设置', { i: 1 }], ['review', '复习'], ['rv', '复习闪卡'], ['notes', '笔记'], ['notesBook', '笔记·按节'], ['noteDetail', '笔记·3.4.2', { sec: '3.4.2' }], ['me', '我的'], ['meMineru', '解析服务'], ['meAI', 'AI 服务'], ['mePrefs', '讲解偏好']];
+function openPage(name, p) { const roots = ['shelf', 'review', 'notes', 'me']; if (roots.includes(name)) return tab(name); R.stack = [{ name: name.startsWith('me') ? 'me' : name === 'rv' ? 'review' : name.startsWith('note') ? 'notes' : 'shelf', p: {} }]; go(name, p ? clone(p) : {}); }
+const SCEN = [
+  ['续学', '隔 3 天打开，先回顾卡点', () => { resetStudy(); S.daysAway = 3; openPage('study'); }],
+  ['岔路', '讲 A* 时问一致代价搜索', () => { resetStudy(1); openPage('study'); setTimeout(() => { $('#cin').value = '这跟前面的一致代价搜索有什么关系？'; sendText(); }, 200); }],
+  ['小测', '讲到最后一段，做本节小测', () => { resetStudy(3); openPage('study'); }],
+  ['学完一节', '摘要、卡点、闪卡草稿', () => { resetStudy(3); S.study.quizRight = true; S.study.phase = 'ready'; openPage('done'); }],
+  ['点引用看原文', 'p.103 段落高亮', () => openPage('reader', { block: 'b1025' })],
+  ['划词解释', '在原文里点一段', () => { openPage('reader', { block: 'b1026' }); setTimeout(() => explainBlock('b1026'), 300); }],
+  ['导入新书', '扫描版 744 页，分 2 片', () => { tab('shelf'); openImport(); }],
+  ['解析失败', 'Token 过期，解析暂停', () => { S.sim.tokenExpired = true; tab('shelf'); go('importSet', { i: 0 }); showToast('已模拟 Token 过期，点「开始解析」看看'); }],
+  ['复习闪卡', '今天到期的卡片', () => openPage('rv')],
+  ['导出笔记', 'Markdown / Anki', () => { openPage('notesBook'); setTimeout(openExport, 100); }]
+];
+function renderConsole() {
+  const c = cur();
+  $('#console').innerHTML = '<h2>Pagewise 原型控制台</h2><div class="lead">左边是手机界面，可以直接点。这里可以跳到某个场景或页面。</div>' +
+    '<h3>场景</h3><div class="jump">' + SCEN.map(([t, d, f], i) => '<button onclick="SCEN[' + i + '][2]()">' + t + '<small>' + d + '</small></button>').join('') + '</div>' +
+    '<h3>页面</h3><div class="pages">' + PAGES.map(([k, l, p], i) => '<button class="' + (c.name === k ? 'on' : '') + '" onclick="openPage(PAGES[' + i + '][0], PAGES[' + i + '][2])">' + l + '</button>').join('') + '</div>' +
+    '<h3>试试这些</h3><p>· 伴读里输入「这跟前面的一致代价搜索有什么关系？」或「和贪心搜索有啥区别」，会走岔路。</p><p>· 点回答里的 <span class="cite">p.103</span> 跳到原文；原文里点任意段落可解释、问 AI、高亮。</p><p>· 顶部「AI 看到的内容」显示本轮上下文和 token。</p>' +
+    '<h3>说明</h3><p>书名和章节目录来自《人工智能：现代方法（第4版）》；页码、「原文」、讲解和闪卡都是为原型写的示意内容，不是原书文字。AI 回答是预先写好的脚本，耗时是模拟的。</p>' +
+    '<button class="rst" onclick="reset();tab(&quot;shelf&quot;)">重置原型</button>';
+}
+
+// ---------- 启动 ----------
+reset();
+startParse(bookOf('slm'));
+(function boot() {
+  const want = decodeURIComponent(location.hash.slice(1));
+  const pg = PAGES.find(x => x[1] === want || x[0] === want);
+  if (pg) openPage(pg[0], pg[2]); else render(true);
+})();
+
+</script>
+</body>
+</html>
