@@ -2,7 +2,7 @@
 'use strict';
 SCREENS.reader = {
   title: p => { const sec = readerSec(p); return '原文 · ' + esc(secName(sec)) + '<span class="sub">' + pagesOf(sec) + '</span>'; },
-  navRight: () => '<button class="tb" onclick="' + on(() => { if (R.stack.length > 1 && R.stack[R.stack.length - 2].name === 'study') back(); else go('study'); }) + '">伴读</button>',
+  navRight: () => modeSwitch('reader', () => { if (R.stack.length > 1 && R.stack[R.stack.length - 2].name === 'study') back(); else go('study'); }) + '<span style="width:40px;flex:none"></span>',
   top: p => {
     const sec = readerSec(p);
     return '<div class="rdtool"><div class="seg">' + [['orig', '原版'], ['flow', '重排']].map(([k, l]) => '<button class="' + (S.readerMode === k ? 'on' : '') + '" onclick="' + on(() => { S.readerMode = k; refresh(); }) + '">' + l + '</button>').join('') + '</div><span class="pgi">' + (S.sec[sec].status === 'done' ? '已学' : sec === S.study.sec ? '讲到第 ' + (S.study.part + 1) + ' 段' : '') + '　点段落可解释、提问</span></div>';

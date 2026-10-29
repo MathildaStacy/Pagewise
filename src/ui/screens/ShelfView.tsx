@@ -1,0 +1,565 @@
+import { Pressable, Text, TextInput, View } from 'react-native';
+import {
+  AppBar,
+  Button,
+  Cover,
+  Empty,
+  Fab,
+  Icon,
+  IconButton,
+  ListSection,
+  Note,
+  Screen,
+  Sheet,
+  StatusDot,
+  ToastHost,
+  useTokens,
+  usePresentation,
+  makeStyles,
+} from '@ui/kit';
+import type { ShelfIntents, ShelfState } from '@features/library/types';
+export function ShelfView({
+  state,
+  intents,
+}: {
+  state: ShelfState;
+  intents: ShelfIntents;
+}) {
+  const t = useTokens();
+  const { groupedLists } = usePresentation();
+  const s = useStyles();
+  return (
+    <View style={s.root}>
+      <Screen scroll edges={['top', 'left', 'right']}>
+        <AppBar
+          title="Pagewise"
+          variant="root"
+          right={
+            <IconButton
+              icon="search"
+              label="搜索书架"
+              onPress={intents.openSearch}
+            />
+          }
+        />
+        {state.error ? (
+          <View style={s.errorPanel}>
+            <Note tone="bad">{state.error}</Note>
+            <Button variant="secondary" onPress={intents.refresh}>
+              重新加载
+            </Button>
+          </View>
+        ) : null}
+        {state.loading ? <Empty body="正在读取书架…" /> : null}
+        {state.continueCard ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`继续学习 ${state.continueCard.title}`}
+            onPress={intents.openContinue}
+            style={({ pressed }) => [s.continueCard, pressed && s.pressed]}
+          >
+            <Text style={s.continueKicker}>{state.continueCard.kicker}</Text>
+            <Text style={s.continueTitle}>{state.continueCard.title}</Text>
+            <Text style={s.continueMeta}>{state.continueCard.meta}</Text>
+            {state.continueCard.recap ? (
+              <Text style={s.continueRecap}>
+                {groupedLists
+                  ? state.continueCard.recap
+                  : state.continueCard.recap.replace(/步/gu, '段')}
+              </Text>
+            ) : null}
+            <View style={s.continueFooter}>
+              <View style={s.stepDots}>
+                {state.continueCard.steps.map((step, i) => (
+                  <View
+                    key={i}
+                    style={[
+                      s.stepDot,
+                      {
+                        opacity: step.done ? s.done.opacity : s.todo.opacity,
+                      },
+                    ]}
+                  />
+                ))}
+                <Text style={s.stepLabel}>
+                  {groupedLists
+                    ? state.continueCard.stepLabel
+                    : state.continueCard.stepLabel.replace(/步/gu, '段')}
+                </Text>
+              </View>
+              <View style={s.continueButton}>
+                <Text style={s.continueAction}>
+                  {groupedLists ? '继续' : '继续 ›'}
+                </Text>
+                {groupedLists ? (
+                  <Icon name="chev" size={16} color={t.color.accent} />
+                ) : null}
+              </View>
+            </View>
+          </Pressable>
+        ) : null}
+        {!state.loading && state.empty ? (
+          <Empty
+            title="导入第一本书"
+            body="带着整本书，一节一节读懂。支持 PDF 和 EPUB。"
+            action={
+              <Button icon="add" onPress={intents.openImport}>
+                导入一本书
+              </Button>
+            }
+          />
+        ) : null}
+        {state.books.length ? (
+          <View style={s.shelfSection}>
+            <View style={s.shelfHeading}>
+              <Text style={s.shelfTitle} accessibilityRole="header">
+                我的书
+              </Text>
+              <Text style={s.shelfCount}>{state.books.length} 本</Text>
+            </View>
+            <ListSection>
+              {state.books.map((book, index) => (
+                <Pressable
+                  key={book.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={`打开 ${book.title}`}
+                  onPress={() => intents.openBook(book.id)}
+                  style={({ pressed }) => [s.book, pressed && s.rowPressed]}
+                >
+                  {groupedLists && index > 0 ? (
+                    <View style={s.bookDivider} />
+                  ) : null}
+                  <Cover {...book.cover} size="md" />
+                  <View style={s.bookContent}>
+                    <Text style={s.bookTitle}>{book.title}</Text>
+                    <Text style={s.bookMeta}>{book.meta}</Text>
+                    <View style={s.bookStatus}>
+                      <StatusDot tone={book.status.tone} />
+                      <Text
+                        style={[
+                          s.statusLabel,
+                          {
+                            color:
+                              book.status.tone === 'bad'
+                                ? groupedLists
+                                  ? t.color.badInk
+                                  : t.color.bad
+                                : groupedLists
+                                ? t.color.ink2
+                                : t.color.ink,
+                          },
+                        ]}
+                      >
+                        {book.status.text}
+                      </Text>
+                    </View>
+                  </View>
+                  {groupedLists ? (
+                    <Icon name="chev" size={20} color={t.color.ink3} />
+                  ) : null}
+                </Pressable>
+              ))}
+            </ListSection>
+          </View>
+        ) : null}
+        <View style={s.fabSpace} />
+        <Sheet
+          visible={state.overlay?.kind === 'import'}
+          title="导入一本书"
+          onClose={intents.closeOverlay}
+        >
+          {state.overlay?.kind === 'import' ? (
+            <View style={s.importBody}>
+              <Text style={s.importHeading}>
+                {state.demo ? '演示文件' : '最近 · 下载'}
+              </Text>
+              <View style={s.importList}>
+                {state.overlay.recent.map((file, index) => (
+                  <Pressable
+                    key={file.key}
+                    accessibilityRole="button"
+                    accessibilityLabel={`导入 ${file.name}`}
+                    style={({ pressed }) => [
+                      s.importFile,
+                      pressed && s.rowPressed,
+                    ]}
+                    onPress={() => intents.pickRecent(file.key)}
+                  >
+                    {index > 0 ? <View style={s.importDivider} /> : null}
+                    <View
+                      style={[
+                        s.fileBadge,
+                        file.format === 'EPUB' && s.epubBadge,
+                      ]}
+                    >
+                      <Text style={s.formatLabel}>{file.format}</Text>
+                    </View>
+                    <View style={s.importFileContent}>
+                      <Text style={s.importFileName}>{file.name}</Text>
+                      <Text style={s.importFileMeta}>{file.meta}</Text>
+                    </View>
+                  </Pressable>
+                ))}
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={intents.pickOther}
+                  style={({ pressed }) => [
+                    s.chooseOther,
+                    pressed && s.rowPressed,
+                  ]}
+                >
+                  <View style={s.importDivider} />
+                  <Text style={s.chooseOtherLabel}>从其他位置选择…</Text>
+                </Pressable>
+              </View>
+              <View style={s.importNote}>
+                <Note tone="neutral">{state.overlay.note}</Note>
+              </View>
+            </View>
+          ) : null}
+        </Sheet>
+        <Sheet
+          visible={state.overlay?.kind === 'search'}
+          title="搜索书架"
+          onClose={intents.closeOverlay}
+        >
+          {state.overlay?.kind === 'search' ? (
+            <View style={s.importBody}>
+              <View style={s.searchField}>
+                <View style={s.searchBox}>
+                  {groupedLists ? (
+                    <Icon name="search" size={18} color={t.color.ink2} />
+                  ) : null}
+                  <TextInput
+                    accessibilityLabel="书名或作者"
+                    value={state.overlay.query}
+                    onChangeText={intents.setSearch}
+                    placeholder="书名、作者"
+                    placeholderTextColor={t.color.ink3}
+                    style={s.searchInput}
+                  />
+                </View>
+              </View>
+              <View style={s.searchResults}>
+                {state.overlay.results.map((book, index) => (
+                  <Pressable
+                    key={book.id}
+                    accessibilityRole="button"
+                    accessibilityLabel={`打开 ${book.title}`}
+                    style={({ pressed }) => [s.book, pressed && s.rowPressed]}
+                    onPress={() => {
+                      intents.closeOverlay();
+                      intents.openBook(book.id);
+                    }}
+                  >
+                    {groupedLists && index > 0 ? (
+                      <View style={s.bookDivider} />
+                    ) : null}
+                    <Cover
+                      {...(state.books.find(value => value.id === book.id)
+                        ?.cover ?? {
+                        title: book.title,
+                        color: t.color.accent,
+                      })}
+                    />
+                    <View style={s.bookContent}>
+                      <Text style={s.bookTitle}>{book.title}</Text>
+                      <Text style={s.bookMeta}>
+                        {state.books.find(value => value.id === book.id)
+                          ?.author ?? book.meta}
+                      </Text>
+                    </View>
+                  </Pressable>
+                ))}
+              </View>
+              {state.overlay.results.length === 0 ? (
+                <Empty body={`书架上没有「${state.overlay.query}」`} />
+              ) : null}
+            </View>
+          ) : null}
+        </Sheet>
+      </Screen>
+      <View style={s.fab}>
+        <Fab icon="add" label="导入" onPress={intents.openImport} />
+      </View>
+      <ToastHost
+        toast={
+          state.toast
+            ? {
+                message: state.toast,
+              }
+            : null
+        }
+      />
+    </View>
+  );
+}
+const useStyles = makeStyles(t => ({
+  root: {
+    flex: 1,
+  },
+  errorPanel: {
+    padding: t.space.pageX,
+    gap: t.space.gap,
+  },
+  continueCard: {
+    marginHorizontal: t.layout.groupedLists ? 16 : 12,
+    marginTop: t.layout.groupedLists ? 0 : 12,
+    marginBottom: t.layout.groupedLists ? 26 : 12,
+    paddingHorizontal: t.layout.groupedLists ? 18 : 16,
+    paddingTop: t.layout.groupedLists ? 18 : 16,
+    paddingBottom: 16,
+    borderRadius: t.layout.groupedLists ? t.shape.lg + 2 : t.shape.lg,
+    backgroundColor: t.color.continueStart,
+    backgroundImage: t.layout.groupedLists
+      ? `linear-gradient(140deg, ${t.color.continueStart} 0%, ${t.color.continueMid} 45%, ${t.color.continueEnd} 100%)`
+      : `linear-gradient(135deg, ${t.color.continueStart}, ${t.color.continueEnd})`,
+    boxShadow: t.layout.groupedLists
+      ? `0 14px 34px ${
+          t.scheme === 'dark'
+            ? `${String(t.elevation.pop.shadowColor)}80`
+            : `${t.color.continueMid}47`
+        }`
+      : `0 6px 18px ${t.color.continueStart}40`,
+  },
+  pressed: { opacity: 0.88 },
+  rowPressed: { backgroundColor: t.color.pressed },
+  continueKicker: {
+    ...t.type.caption,
+    color: t.color.continueInk,
+    opacity: t.layout.groupedLists ? 0.85 : 0.8,
+    fontWeight: t.layout.groupedLists ? '500' : '400',
+  },
+  continueTitle: {
+    ...t.type.continueTitle,
+    color: t.color.continueInk,
+    marginTop: 4,
+    marginBottom: 2,
+  },
+  continueMeta: {
+    ...t.type.caption,
+    color: t.color.continueInk,
+    opacity: 0.85,
+  },
+  continueRecap: {
+    ...t.type.caption,
+    color: t.color.continueInk,
+    backgroundColor: t.color.continueOverlay,
+    paddingVertical: t.layout.groupedLists ? 9 : 7,
+    paddingHorizontal: t.layout.groupedLists ? 12 : 9,
+    marginTop: t.layout.groupedLists ? 12 : 10,
+    borderRadius: t.layout.groupedLists ? t.shape.sm + 4 : t.shape.sm,
+    lineHeight: t.type.caption.fontSize * (t.layout.groupedLists ? 1.5 : 1.55),
+  },
+  continueFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: t.space.gap,
+    marginTop: t.layout.groupedLists ? 14 : 12,
+  },
+  stepDots: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: t.layout.groupedLists ? 5 : 4,
+    flexWrap: 'wrap',
+  },
+  stepLabel: {
+    ...t.type.caption,
+    color: t.color.continueInk,
+    opacity: t.layout.groupedLists ? 0.9 : 0.85,
+    marginLeft: 6,
+  },
+  continueButton: {
+    backgroundColor: t.color.continueInk,
+    borderRadius: t.shape.pill,
+    paddingHorizontal: 16,
+    height: t.layout.groupedLists ? 36 : 34,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    justifyContent: 'center',
+  },
+  continueAction: {
+    ...t.type.label,
+    color: t.color.accent,
+  },
+  shelfSection: {
+    backgroundColor: t.layout.groupedLists ? undefined : t.color.surface,
+  },
+  shelfHeading: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    paddingHorizontal: t.layout.groupedLists ? 20 : t.space.pageX,
+    paddingTop: t.layout.groupedLists ? 0 : 12,
+    paddingBottom: t.layout.groupedLists ? 8 : 6,
+  },
+  shelfTitle: {
+    ...(t.layout.groupedLists ? t.type.fileTitle : t.type.headline),
+    color: t.color.ink,
+  },
+  shelfCount: {
+    ...t.type.caption,
+    color: t.layout.groupedLists ? t.color.ink2 : t.color.ink3,
+  },
+  book: {
+    flexDirection: 'row',
+    gap: t.layout.groupedLists ? 14 : 12,
+    paddingHorizontal: t.space.pageX,
+    paddingVertical: 12,
+    alignItems: t.layout.groupedLists ? 'center' : 'flex-start',
+    borderBottomWidth: t.layout.groupedLists ? 0 : 1,
+    borderBottomColor: t.color.line,
+    backgroundColor: t.color.surface,
+  },
+  bookDivider: {
+    position: 'absolute',
+    left: 84,
+    right: 0,
+    top: 0,
+    height: 0.5,
+    backgroundColor: t.color.line,
+  },
+  bookContent: {
+    flex: 1,
+  },
+  bookTitle: {
+    ...t.type.bookTitle,
+    color: t.color.ink,
+  },
+  bookMeta: {
+    ...t.type.caption,
+    color: t.layout.groupedLists ? t.color.ink2 : t.color.ink3,
+    marginTop: t.layout.groupedLists ? 1 : 2,
+  },
+  bookStatus: {
+    flexDirection: 'row',
+    gap: 6,
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  fabSpace: {
+    height: t.layout.groupedLists ? 26 : 70,
+  },
+  importBody: { marginHorizontal: t.layout.groupedLists ? 0 : -t.space.pageX },
+  importHeading: {
+    ...t.type.caption,
+    color: t.layout.groupedLists ? t.color.ink2 : t.color.ink3,
+    fontWeight: t.layout.groupedLists ? '600' : '400',
+    marginTop: t.layout.groupedLists ? 12 : 0,
+    marginHorizontal: t.layout.groupedLists ? 4 : 0,
+    marginBottom: t.layout.groupedLists ? 6 : 0,
+    paddingTop: t.layout.groupedLists ? 0 : 2,
+    paddingHorizontal: t.layout.groupedLists ? 0 : t.space.pageX,
+    paddingBottom: t.layout.groupedLists ? 0 : 6,
+  },
+  importList: {
+    borderRadius: t.layout.groupedLists ? t.shape.md : 0,
+    overflow: 'hidden',
+    backgroundColor: t.color.surface,
+  },
+  importFile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: t.space.pageX,
+    paddingVertical: t.layout.groupedLists ? 11 : 12,
+    backgroundColor: t.color.surface,
+  },
+  importDivider: {
+    position: 'absolute',
+    left: t.layout.groupedLists ? 68 : 0,
+    right: 0,
+    top: 0,
+    height: t.layout.groupedLists ? 0.5 : 1,
+    backgroundColor: t.color.line,
+  },
+  fileBadge: {
+    width: t.layout.groupedLists ? 40 : 42,
+    height: t.layout.groupedLists ? 50 : 52,
+    borderRadius: t.layout.groupedLists ? t.shape.sm - 1 : t.shape.xs + 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: t.color.bad,
+  },
+  epubBadge: { backgroundColor: t.color.ok },
+  importFileContent: { flex: 1 },
+  importFileName: {
+    ...(t.layout.groupedLists ? t.type.label : t.type.body),
+    fontWeight: t.layout.groupedLists ? '400' : '500',
+    color: t.color.ink,
+  },
+  importFileMeta: {
+    ...t.type.caption,
+    color: t.layout.groupedLists ? t.color.ink2 : t.color.ink3,
+    marginTop: t.layout.groupedLists ? 2 : 0,
+  },
+  chooseOther: {
+    minHeight: t.layout.groupedLists ? 50 : 45,
+    paddingHorizontal: t.space.pageX,
+    paddingVertical: t.layout.groupedLists ? 11 : 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: t.color.surface,
+  },
+  chooseOtherLabel: { ...t.type.body, color: t.color.accent },
+  formatLabel: {
+    ...t.type.micro,
+    fontSize: t.type.micro.fontSize * (t.layout.groupedLists ? 11 / 12 : 1),
+    fontWeight: '700',
+    color: t.color.continueInk,
+  },
+  importNote: {
+    paddingHorizontal: t.layout.groupedLists ? 0 : t.space.pageX,
+    paddingTop: t.layout.groupedLists ? 12 : 10,
+    paddingBottom: t.layout.groupedLists ? 4 : 12,
+  },
+  searchField: {
+    paddingHorizontal: t.layout.groupedLists ? 2 : 16,
+    paddingTop: t.layout.groupedLists ? 0 : 4,
+    paddingBottom: t.layout.groupedLists ? 10 : 8,
+  },
+  searchBox: {
+    height: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: t.layout.groupedLists ? t.shape.sm + 2 : t.shape.pill,
+    paddingHorizontal: t.layout.groupedLists ? 10 : 14,
+    backgroundColor: t.layout.groupedLists
+      ? t.color.surfaceAlt
+      : t.color.surface,
+    borderWidth: t.layout.groupedLists ? 0 : 1,
+    borderColor: t.color.line,
+  },
+  searchInput: {
+    ...t.type.body,
+    color: t.color.ink,
+    flex: 1,
+    paddingVertical: 0,
+    height: '100%',
+  },
+  searchResults: {
+    borderRadius: t.layout.groupedLists ? t.shape.md : 0,
+    overflow: 'hidden',
+  },
+  fab: {
+    position: 'absolute',
+    right: t.layout.groupedLists ? 22 : 16,
+    bottom: t.layout.groupedLists ? 104 : 16,
+  },
+  done: { opacity: 1 },
+  todo: { opacity: 0.3 },
+  stepDot: {
+    width: t.layout.groupedLists ? 22 : 18,
+    height: t.layout.groupedLists ? 6 : 4,
+    borderRadius: t.shape.pill,
+    backgroundColor: t.color.continueInk,
+  },
+  statusLabel: {
+    ...t.type.caption,
+    flex: 1,
+    color: t.layout.groupedLists ? t.color.ink2 : t.color.ink,
+  },
+}));

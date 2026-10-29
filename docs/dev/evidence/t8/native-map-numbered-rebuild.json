@@ -1,0 +1,162 @@
+{
+  "version": 1,
+  "sections": 1342,
+  "numberedChapters": 27,
+  "chapterPages": [
+    [
+      "1",
+      42
+    ],
+    [
+      "2",
+      62
+    ],
+    [
+      "3",
+      88
+    ],
+    [
+      "4",
+      116
+    ],
+    [
+      "5",
+      138
+    ],
+    [
+      "6",
+      164
+    ],
+    [
+      "7",
+      188
+    ],
+    [
+      "8",
+      216
+    ],
+    [
+      "9",
+      242
+    ],
+    [
+      "10",
+      268
+    ],
+    [
+      "11",
+      292
+    ],
+    [
+      "12",
+      328
+    ],
+    [
+      "13",
+      356
+    ],
+    [
+      "14",
+      388
+    ],
+    [
+      "15",
+      422
+    ],
+    [
+      "16",
+      452
+    ],
+    [
+      "17",
+      488
+    ],
+    [
+      "18",
+      524
+    ],
+    [
+      "19",
+      554
+    ],
+    [
+      "20",
+      582
+    ],
+    [
+      "21",
+      620
+    ],
+    [
+      "22",
+      650
+    ],
+    [
+      "23",
+      676
+    ],
+    [
+      "24",
+      700
+    ],
+    [
+      "25",
+      736
+    ],
+    [
+      "26",
+      764
+    ],
+    [
+      "27",
+      786
+    ]
+  ],
+  "learningRecords": {
+    "message": {
+      "count": 87,
+      "unchanged": true
+    },
+    "qa": {
+      "count": 0,
+      "unchanged": true
+    },
+    "card": {
+      "count": 15,
+      "unchanged": true
+    },
+    "highlight": {
+      "count": 0,
+      "unchanged": true
+    },
+    "pin": {
+      "count": 0,
+      "unchanged": true
+    },
+    "study_state": {
+      "count": 1,
+      "unchanged": true
+    },
+    "section_note": {
+      "count": 0,
+      "unchanged": true
+    },
+    "stuck": {
+      "count": 2,
+      "unchanged": true
+    },
+    "detour": {
+      "count": 0,
+      "unchanged": true
+    },
+    "lesson_plan": {
+      "count": 4,
+      "unchanged": true
+    },
+    "book_part": {
+      "count": 5,
+      "unchanged": true
+    }
+  },
+  "falseChapterAfter": 0
+}

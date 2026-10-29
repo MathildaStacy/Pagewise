@@ -1,0 +1,429 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-10-29T02:40:48.118Z",
+  "book": {
+    "userSelection": "ML Trading",
+    "format": "pdf",
+    "pdfPages": 827
+  },
+  "snapshot": {
+    "bookStatus": "ready",
+    "readyToPdfPage": 827,
+    "parts": [
+      {
+        "number": 1,
+        "pdfFrom": 1,
+        "pdfTo": 200,
+        "stage": "done"
+      },
+      {
+        "number": 2,
+        "pdfFrom": 201,
+        "pdfTo": 400,
+        "stage": "done"
+      },
+      {
+        "number": 3,
+        "pdfFrom": 401,
+        "pdfTo": 600,
+        "stage": "done"
+      },
+      {
+        "number": 4,
+        "pdfFrom": 601,
+        "pdfTo": 800,
+        "stage": "done"
+      },
+      {
+        "number": 5,
+        "pdfFrom": 801,
+        "pdfTo": 827,
+        "stage": "done"
+      }
+    ],
+    "blocks": 8859,
+    "sections": 1343,
+    "maxContentPdfPage": 825
+  },
+  "pagination": {
+    "storedOffset": 41,
+    "labelCount": 827,
+    "numericLabelCount": 786,
+    "firstArabicPdfPage": 42,
+    "firstArabicPrintedPage": 1,
+    "distinctArabicOffsets": [
+      41
+    ],
+    "nativeLabelsConsistent": true,
+    "offsetReliable": true,
+    "displayCheck": {
+      "pdfRange": [
+        88,
+        115
+      ],
+      "printedRange": [
+        47,
+        74
+      ],
+      "fix": "Library map rows, chapter ranges, section sheets and continue cards now use core pageLabel with original labels; stored PDF pages and navigation are unchanged."
+    }
+  },
+  "outlineReconciliation": {
+    "outlineEntries": 1030,
+    "outlineLevels": {
+      "1": 36,
+      "2": 212,
+      "3": 782
+    },
+    "matchRule": "Normalized title similarity >= 0.8, PDF start page delta <= 1, same matched level.",
+    "matchedTitleAndLevel": 1021,
+    "unmatched": [
+      {
+        "outlineIndex": 4,
+        "level": 1,
+        "pdfPage": 5
+      },
+      {
+        "outlineIndex": 91,
+        "level": 3,
+        "pdfPage": 105
+      },
+      {
+        "outlineIndex": 209,
+        "level": 3,
+        "pdfPage": 203
+      },
+      {
+        "outlineIndex": 248,
+        "level": 3,
+        "pdfPage": 244
+      },
+      {
+        "outlineIndex": 282,
+        "level": 3,
+        "pdfPage": 270
+      },
+      {
+        "outlineIndex": 425,
+        "level": 2,
+        "pdfPage": 390
+      },
+      {
+        "outlineIndex": 426,
+        "level": 3,
+        "pdfPage": 390
+      },
+      {
+        "outlineIndex": 719,
+        "level": 3,
+        "pdfPage": 607
+      },
+      {
+        "outlineIndex": 812,
+        "level": 3,
+        "pdfPage": 671
+      }
+    ],
+    "bodyChapterCount": 27,
+    "exactBodyChapterStartMatches": 27,
+    "bodyChapterPages": [
+      {
+        "number": 1,
+        "outlinePdfPage": 42,
+        "mapPdfFrom": 42,
+        "mapPdfTo": 61,
+        "startDelta": 0
+      },
+      {
+        "number": 2,
+        "outlinePdfPage": 62,
+        "mapPdfFrom": 62,
+        "mapPdfTo": 86,
+        "startDelta": 0
+      },
+      {
+        "number": 3,
+        "outlinePdfPage": 88,
+        "mapPdfFrom": 88,
+        "mapPdfTo": 115,
+        "startDelta": 0
+      },
+      {
+        "number": 4,
+        "outlinePdfPage": 116,
+        "mapPdfFrom": 116,
+        "mapPdfTo": 136,
+        "startDelta": 0
+      },
+      {
+        "number": 5,
+        "outlinePdfPage": 138,
+        "mapPdfFrom": 138,
+        "mapPdfTo": 162,
+        "startDelta": 0
+      },
+      {
+        "number": 6,
+        "outlinePdfPage": 164,
+        "mapPdfFrom": 164,
+        "mapPdfTo": 186,
+        "startDelta": 0
+      },
+      {
+        "number": 7,
+        "outlinePdfPage": 188,
+        "mapPdfFrom": 188,
+        "mapPdfTo": 214,
+        "startDelta": 0
+      },
+      {
+        "number": 8,
+        "outlinePdfPage": 216,
+        "mapPdfFrom": 216,
+        "mapPdfTo": 241,
+        "startDelta": 0
+      },
+      {
+        "number": 9,
+        "outlinePdfPage": 242,
+        "mapPdfFrom": 242,
+        "mapPdfTo": 268,
+        "startDelta": 0
+      },
+      {
+        "number": 10,
+        "outlinePdfPage": 268,
+        "mapPdfFrom": 268,
+        "mapPdfTo": 291,
+        "startDelta": 0
+      },
+      {
+        "number": 11,
+        "outlinePdfPage": 292,
+        "mapPdfFrom": 292,
+        "mapPdfTo": 326,
+        "startDelta": 0
+      },
+      {
+        "number": 12,
+        "outlinePdfPage": 328,
+        "mapPdfFrom": 328,
+        "mapPdfTo": 355,
+        "startDelta": 0
+      },
+      {
+        "number": 13,
+        "outlinePdfPage": 356,
+        "mapPdfFrom": 356,
+        "mapPdfTo": 386,
+        "startDelta": 0
+      },
+      {
+        "number": 14,
+        "outlinePdfPage": 388,
+        "mapPdfFrom": 388,
+        "mapPdfTo": 420,
+        "startDelta": 0
+      },
+      {
+        "number": 15,
+        "outlinePdfPage": 422,
+        "mapPdfFrom": 422,
+        "mapPdfTo": 451,
+        "startDelta": 0
+      },
+      {
+        "number": 16,
+        "outlinePdfPage": 452,
+        "mapPdfFrom": 452,
+        "mapPdfTo": 487,
+        "startDelta": 0
+      },
+      {
+        "number": 17,
+        "outlinePdfPage": 488,
+        "mapPdfFrom": 488,
+        "mapPdfTo": 522,
+        "startDelta": 0
+      },
+      {
+        "number": 18,
+        "outlinePdfPage": 524,
+        "mapPdfFrom": 524,
+        "mapPdfTo": 552,
+        "startDelta": 0
+      },
+      {
+        "number": 19,
+        "outlinePdfPage": 554,
+        "mapPdfFrom": 554,
+        "mapPdfTo": 581,
+        "startDelta": 0
+      },
+      {
+        "number": 20,
+        "outlinePdfPage": 582,
+        "mapPdfFrom": 582,
+        "mapPdfTo": 618,
+        "startDelta": 0
+      },
+      {
+        "number": 21,
+        "outlinePdfPage": 620,
+        "mapPdfFrom": 620,
+        "mapPdfTo": 650,
+        "startDelta": 0
+      },
+      {
+        "number": 22,
+        "outlinePdfPage": 650,
+        "mapPdfFrom": 650,
+        "mapPdfTo": 674,
+        "startDelta": 0
+      },
+      {
+        "number": 23,
+        "outlinePdfPage": 676,
+        "mapPdfFrom": 676,
+        "mapPdfTo": 698,
+        "startDelta": 0
+      },
+      {
+        "number": 24,
+        "outlinePdfPage": 700,
+        "mapPdfFrom": 700,
+        "mapPdfTo": 734,
+        "startDelta": 0
+      },
+      {
+        "number": 25,
+        "outlinePdfPage": 736,
+        "mapPdfFrom": 736,
+        "mapPdfTo": 764,
+        "startDelta": 0
+      },
+      {
+        "number": 26,
+        "outlinePdfPage": 764,
+        "mapPdfFrom": 764,
+        "mapPdfTo": 785,
+        "startDelta": 0
+      },
+      {
+        "number": 27,
+        "outlinePdfPage": 786,
+        "mapPdfFrom": 786,
+        "mapPdfTo": 794,
+        "startDelta": 0
+      }
+    ]
+  },
+  "thirdChapter": {
+    "pdfFrom": 88,
+    "pdfTo": 115,
+    "printedFrom": 47,
+    "printedTo": 74,
+    "directLevel2Rows": 23,
+    "numberedPrimarySections": [
+      {
+        "number": "3.1",
+        "pdfFrom": 88,
+        "pdfTo": 91,
+        "parts": 1
+      },
+      {
+        "number": "3.2",
+        "pdfFrom": 91,
+        "pdfTo": 92,
+        "parts": 1
+      },
+      {
+        "number": "3.3",
+        "pdfFrom": 95,
+        "pdfTo": 99,
+        "parts": 1
+      },
+      {
+        "number": "3.4",
+        "pdfFrom": 103,
+        "pdfTo": 103,
+        "parts": 1
+      },
+      {
+        "number": "3.5",
+        "pdfFrom": 110,
+        "pdfTo": 112,
+        "parts": 1
+      },
+      {
+        "number": "3.6",
+        "pdfFrom": 113,
+        "pdfTo": 114,
+        "parts": 2
+      },
+      {
+        "number": "3.7",
+        "pdfFrom": 114,
+        "pdfTo": 115,
+        "parts": 1
+      }
+    ],
+    "descendantRows": 49,
+    "comparisonScope": "ML Trading actual outline; no AIMA chapter-count assumptions."
+  },
+  "tocCheck": {
+    "pdfFrom": 10,
+    "pdfTo": 33,
+    "mapRootCount": 1,
+    "numberedBodyChapterDuplicatesInToc": 0,
+    "assessment": "TOC pages retain one contents root; no copied numbered body chapters were detected there."
+  },
+  "findings": [
+    {
+      "code": "numbered_frontmatter_false_chapter",
+      "severity": "fixed",
+      "pdfPage": 3,
+      "deviceBefore": 1,
+      "localRebuildAfter": 0,
+      "localSectionsAfter": 1342,
+      "fix": "Plain-text numeric chapter candidates now require their n.1 heading on the same or next subsequent PDF page. Title blocks keep existing behavior.",
+      "remoteReparseTriggered": false,
+      "deviceRebuildPending": true
+    },
+    {
+      "code": "unbounded_map_check_notice",
+      "severity": "fixed",
+      "flags": 846,
+      "flagsByKind": {
+        "missing": 9,
+        "merged": 44,
+        "level": 702,
+        "split": 91
+      },
+      "fix": "Map banner shows a count and short instruction; per-row yellow review actions remain.",
+      "regressionNoticeMaxChars": 60
+    },
+    {
+      "code": "library_pdf_page_display",
+      "severity": "fixed",
+      "storedOffsetUnaffected": true,
+      "fix": "Page-label display is applied at presentation boundaries."
+    }
+  ],
+  "localRebuild": {
+    "remoteRequests": 0,
+    "bodyChapterStartPagesUnchanged": true,
+    "thirdChapterPdfRangeUnchanged": true,
+    "pageOffset": 41
+  },
+  "verification": {
+    "testsPassed": 25,
+    "typecheck": "pass",
+    "scopedEslint": "pass"
+  },
+  "privacy": {
+    "containsBookBody": false,
+    "containsFullOutlineTitles": false,
+    "containsCredentials": false
+  }
+}

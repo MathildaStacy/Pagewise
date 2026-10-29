@@ -1,0 +1,19 @@
+{
+  "status": "passed",
+  "build": "release",
+  "query": "liquidity",
+  "resultTitle": "Intraday liquidity patterns",
+  "resultPrintedPage": 488,
+  "targetSeq": 529008,
+  "targetSection": "u529008",
+  "targetPdfPage": 529,
+  "readerHeaderCorrect": true,
+  "originalTargetVisible": true,
+  "flowTargetVisible": true,
+  "preserveMain": "covered by two real-database VM regressions; native main pointer recheck pending",
+  "screenshots": [
+    "search-original-location.png",
+    "search-flow-location.png"
+  ],
+  "screenshotsScope": "Header and short target title strips; full private book page screenshots kept outside repository"
+}

@@ -1,0 +1,23 @@
+{
+  "date": "2026-10-29",
+  "check": {
+    "command": "npm run check",
+    "status": "passed",
+    "suites": 80,
+    "tests": 1191,
+    "snapshots": 15,
+    "seconds": 14.893
+  },
+  "lastReaderAssertion": {
+    "suite": "readerFidelity",
+    "tests": 26,
+    "status": "passed"
+  },
+  "android": {
+    "command": ":app:assembleDebug :app:assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a",
+    "status": "passed",
+    "seconds": 49,
+    "tasks": 933
+  },
+  "note": "Local final source checks. GitHub CI refers to its specific commit separately."
+}

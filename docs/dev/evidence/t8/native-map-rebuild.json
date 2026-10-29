@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "sectionsBefore": 1343,
+  "sectionsAfter": 1342,
+  "blocks": 8859,
+  "falseChapterAfter": 0,
+  "numberedChapters": 0,
+  "learningRecords": {
+    "message": {
+      "count": 87,
+      "unchanged": true
+    },
+    "qa": {
+      "count": 0,
+      "unchanged": true
+    },
+    "card": {
+      "count": 15,
+      "unchanged": true
+    },
+    "highlight": {
+      "count": 0,
+      "unchanged": true
+    },
+    "pin": {
+      "count": 0,
+      "unchanged": true
+    },
+    "study_state": {
+      "count": 1,
+      "unchanged": true
+    },
+    "section_note": {
+      "count": 0,
+      "unchanged": true
+    },
+    "stuck": {
+      "count": 2,
+      "unchanged": true
+    },
+    "detour": {
+      "count": 0,
+      "unchanged": true
+    },
+    "lesson_plan": {
+      "count": 4,
+      "unchanged": true
+    },
+    "book_part": {
+      "count": 5,
+      "unchanged": true
+    }
+  },
+  "networkUsed": false,
+  "chapterNumberStatus": "Root titles in the imported source have no explicit chapter number; no inferred count claimed."
+}

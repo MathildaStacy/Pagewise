@@ -1,0 +1,89 @@
+{
+  "status": "passed",
+  "restoreReloadObserved": true,
+  "tables": {
+    "book": {
+      "snapshot": 2,
+      "restored": 2,
+      "equal": true
+    },
+    "book_part": {
+      "snapshot": 5,
+      "restored": 5,
+      "equal": true
+    },
+    "section": {
+      "snapshot": 1359,
+      "restored": 1359,
+      "equal": true
+    },
+    "block": {
+      "snapshot": 9717,
+      "restored": 9717,
+      "equal": true
+    },
+    "message": {
+      "snapshot": 93,
+      "restored": 93,
+      "equal": true
+    },
+    "card": {
+      "snapshot": 16,
+      "restored": 16,
+      "equal": true
+    },
+    "stuck": {
+      "snapshot": 2,
+      "restored": 2,
+      "equal": true
+    },
+    "study_state": {
+      "snapshot": 2,
+      "restored": 2,
+      "equal": true
+    },
+    "lesson_plan": {
+      "snapshot": 5,
+      "restored": 5,
+      "equal": true
+    },
+    "section_note": {
+      "snapshot": 1,
+      "restored": 1,
+      "equal": true
+    },
+    "highlight": {
+      "snapshot": 1,
+      "restored": 1,
+      "equal": true
+    },
+    "pin": {
+      "snapshot": 1,
+      "restored": 1,
+      "equal": true
+    },
+    "qa": {
+      "snapshot": 0,
+      "restored": 0,
+      "equal": true
+    }
+  },
+  "imagesExpected": 552,
+  "imagesRestored": 552,
+  "allImageHashesMatch": true,
+  "originals": [
+    {
+      "format": "pdf",
+      "hashMatches": true
+    },
+    {
+      "format": "epub",
+      "hashMatches": true
+    }
+  ],
+  "credentialKeysRequireReentry": true,
+  "buildRestoringBackup": "release",
+  "entry": "Settings > Storage > Restore > Android document picker > image-containing backup",
+  "databaseInspected": "After observed release ReactHost reload, installed debug APK in place without opening app to permit run-as inspection",
+  "reactHostReloadObserved": true
+}

@@ -1,0 +1,1 @@
+<ncx><navMap><navPoint id="one"><navLabel><text>Chapter 1 First</text></navLabel><content src="chapters/one.xhtml#start"/><navPoint id="child"><navLabel><text>1.1 Child</text></navLabel><content src="chapters/one.xhtml#child"/></navPoint></navPoint><navPoint id="two"><navLabel><text>Chapter 2 Second</text></navLabel><content src="chapters/two.xhtml"/></navPoint></navMap></ncx>

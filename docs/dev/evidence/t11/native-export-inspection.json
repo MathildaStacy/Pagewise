@@ -1,0 +1,14 @@
+{
+  "backupBytes": 47943402,
+  "backupSha256": "21332ddc8dc1cf572c1764137af13e9d25f16b9fe7be4e72287da180993aa5dd",
+  "books": 2,
+  "originalsIncluded": 2,
+  "imagesDeclared": 552,
+  "imagesInArchive": 552,
+  "blockImagePathsPortable": true,
+  "markdownChapter03": true,
+  "markdownBadChapter136": false,
+  "ankiCardRows": 15,
+  "ankiCardColumnsCorrect": true,
+  "credentialBytesAbsent": true
+}

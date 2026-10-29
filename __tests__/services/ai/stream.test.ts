@@ -1,0 +1,612 @@
+// 来源：AShareSim/__tests__/ai/stream.test.ts，GPL-3.0-only；书籍场景适配。
+import {
+  callModel,
+  defaultFetch,
+  type FetchLike,
+} from '../../../src/services/ai/http';
+import { ModelStream } from '../../../src/services/ai/stream';
+import type { AiService } from '../../../src/services/ai/types';
+import { contentText } from '../../../src/services/ai/messageText';
+import { aDelta, aEnd, aStart, aText, sse } from './helpers/stream';
+
+const svc: AiService = {
+  id: 's',
+  name: '测试',
+  protocol: 'anthropic',
+  model: 'm',
+  baseUrl: 'https://relay.example.com',
+  effort: 'low',
+  cache: 'auto',
+  auth: 'bearer',
+  price: null,
+  keyTail: 'cret',
+};
+const req = {
+  url: 'https://relay.example.com/v1/messages',
+  body: { stream: true },
+};
+const text = (value: string) => ({
+  type: 'message',
+  role: 'assistant',
+  id: 'msg',
+  content: [{ type: 'output_text', text: value, annotations: [] }],
+});
+
+test('SSE 跨任意字符切片、CRLF、心跳和未知事件；实时文字与完整用量', () => {
+  const seen: string[] = [];
+  const parser = new ModelStream('anthropic', 'm', t => seen.push(t));
+  const chunks =
+    '\uFEFF: heartbeat\r\n\r\n' +
+    sse(
+      aStart,
+      aText,
+      aDelta('建议'),
+      { type: 'ping' },
+      { type: 'future_event' },
+      aDelta('继续观察。'),
+      ...aEnd,
+    ).replace(/\n/g, '\r\n');
+  for (const ch of chunks) {
+    parser.feed(ch);
+  }
+  expect(seen).toEqual(['建议', '建议继续观察。']);
+  const final = parser.finish();
+  expect(final.parts).toEqual([{ t: 'text', text: '建议继续观察。' }]);
+  expect(final.usage).toEqual({
+    input: 10,
+    cacheRead: 20,
+    cacheWrite: 5,
+    output: 7,
+    cacheReported: true,
+  });
+});
+
+test('Anthropic 拼接工具 JSON、thinking 和签名；结束前不会交出工具调用', () => {
+  const parser = new ModelStream('anthropic', 'm');
+  parser.feed(
+    sse(
+      aStart,
+      {
+        type: 'content_block_start',
+        index: 0,
+        content_block: { type: 'thinking', thinking: '', signature: '' },
+      },
+      {
+        type: 'content_block_delta',
+        index: 0,
+        delta: { type: 'thinking_delta', thinking: '分析' },
+      },
+      {
+        type: 'content_block_delta',
+        index: 0,
+        delta: { type: 'signature_delta', signature: 'sig' },
+      },
+      { type: 'content_block_stop', index: 0 },
+      {
+        type: 'content_block_start',
+        index: 1,
+        content_block: {
+          type: 'tool_use',
+          id: 'call',
+          name: 'load_section',
+          input: {},
+        },
+      },
+      {
+        type: 'content_block_delta',
+        index: 1,
+        delta: { type: 'input_json_delta', partial_json: '{"id":' },
+      },
+      {
+        type: 'content_block_delta',
+        index: 1,
+        delta: { type: 'input_json_delta', partial_json: '"3.5.2"}' },
+      },
+      { type: 'content_block_stop', index: 1 },
+      {
+        type: 'message_delta',
+        delta: { stop_reason: 'tool_use' },
+        usage: { output_tokens: 30 },
+      },
+      { type: 'message_stop' },
+    ),
+  );
+  const result = parser.finish();
+  expect(result.parts).toEqual([
+    { t: 'call', id: 'call', name: 'load_section', args: '{"id":"3.5.2"}' },
+  ]);
+  expect(result.raw.items[0]).toEqual({
+    type: 'thinking',
+    thinking: '分析',
+    signature: 'sig',
+  });
+});
+
+test('OpenAI 文字增量先显示；最终输出保留加密推理、工具参数、模型原始字段和用量', () => {
+  const seen: string[] = [];
+  const parser = new ModelStream('openai', 'm', t => seen.push(t));
+  const reasoning = {
+    type: 'reasoning',
+    id: 'rs',
+    encrypted_content: 'encrypted',
+    summary: [],
+  };
+  const tool = {
+    type: 'function_call',
+    call_id: 'call',
+    id: 'fc',
+    name: 'load_section',
+    arguments: '{"id":"3.5.2"}',
+  };
+  parser.feed(
+    sse(
+      { type: 'response.created', response: { output: [] } },
+      { type: 'response.output_item.added', output_index: 0, item: reasoning },
+      { type: 'response.output_item.added', output_index: 1, item: text('') },
+      {
+        type: 'response.output_text.delta',
+        output_index: 1,
+        content_index: 0,
+        delta: '建议',
+      },
+      {
+        type: 'response.output_text.delta',
+        output_index: 1,
+        content_index: 0,
+        delta: '持有。',
+      },
+      {
+        type: 'response.output_text.done',
+        output_index: 1,
+        content_index: 0,
+        text: '建议持有。',
+      },
+      {
+        type: 'response.output_item.added',
+        output_index: 2,
+        item: { ...tool, arguments: '' },
+      },
+      {
+        type: 'response.function_call_arguments.delta',
+        output_index: 2,
+        delta: '{"id":',
+      },
+      {
+        type: 'response.function_call_arguments.delta',
+        output_index: 2,
+        delta: '"3.5.2"}',
+      },
+      {
+        type: 'response.function_call_arguments.done',
+        output_index: 2,
+        arguments: tool.arguments,
+      },
+      { type: 'response.output_item.done', output_index: 2, item: tool },
+    ),
+  );
+  expect(seen).toContain('建议');
+  expect(seen.at(-1)).toBe('建议持有。');
+  parser.feed(
+    sse({
+      type: 'response.completed',
+      response: {
+        status: 'completed',
+        output: [
+          reasoning,
+          { ...text('建议持有。'), phase: 'commentary' },
+          tool,
+        ],
+        usage: {
+          input_tokens: 100,
+          input_tokens_details: { cached_tokens: 80 },
+          output_tokens: 30,
+        },
+      },
+    }),
+  );
+  const result = parser.finish();
+  expect(result.parts).toEqual([
+    { t: 'text', text: '建议持有。' },
+    { t: 'call', id: 'call', name: 'load_section', args: tool.arguments },
+  ]);
+  expect(result.raw.items[0]).toEqual(reasoning);
+  expect(result.raw.items[1]).toMatchObject({ phase: 'commentary' });
+  expect(result.usage).toMatchObject({ input: 20, cacheRead: 80, output: 30 });
+});
+
+test('多行 data 和没有最后空行的终止事件', () => {
+  const parser = new ModelStream('anthropic', 'm');
+  parser.feed(
+    'data: {"type":"message_start",\ndata: "message":{"content":[],"usage":{}}}\n\n',
+  );
+  parser.feed('data: {"type":"message_stop"}');
+  expect(parser.finish().parts).toEqual([]);
+});
+
+test('EOF 不等于完整结束，不返回未完成工具；流内错误直接报出', () => {
+  const parser = new ModelStream('anthropic', 'm');
+  parser.feed(sse(aStart, aText, aDelta('已收到部分')));
+  expect(() => parser.finish()).toThrow('未收到结束事件');
+  expect(() =>
+    parser.feed(sse({ type: 'error', error: { message: 'Overloaded' } })),
+  ).toThrow('Overloaded');
+  const invalid = new ModelStream('openai', 'm');
+  expect(() => invalid.feed('data: {bad}\n\n')).toThrow('无效的事件');
+});
+
+test('传输尚未完成时就通知 UI；终止后保留最终解析', async () => {
+  let finish!: () => void;
+  const gate = new Promise<void>(r => {
+    finish = r;
+  });
+  const seen: string[] = [];
+  const first = sse(aStart, aText, aDelta('先给结论'));
+  const rest = sse(aDelta('，再讲理由。'), ...aEnd);
+  const fetchImpl: FetchLike = async (_url, init) => {
+    expect(JSON.parse(init.body).stream).toBe(true);
+    init.onChunk!(first);
+    await gate;
+    init.onChunk!(rest);
+    return { status: 200, text: async () => first + rest };
+  };
+  const response = callModel(svc, 'sk-test-secret', req, {
+    fetchImpl,
+    onText: t => seen.push(t),
+  });
+  expect(seen).toEqual(['先给结论']);
+  finish();
+  expect((await response).parsed.parts).toEqual([
+    { t: 'text', text: '先给结论，再讲理由。' },
+  ]);
+});
+
+test('兼容忽略 stream 的 JSON 服务；HTTP 错误与流内错误都隐藏 Key', async () => {
+  const json = {
+    content: [{ type: 'text', text: 'OK' }],
+    stop_reason: 'end_turn',
+  };
+  const result = await callModel(svc, 'sk-test-secret', req, {
+    fetchImpl: async (_u, init) => {
+      const body = JSON.stringify(json);
+      init.onChunk!(body);
+      return { status: 200, text: async () => body };
+    },
+  });
+  expect(result.parsed.parts).toEqual([{ t: 'text', text: 'OK' }]);
+  for (const status of [401, 200]) {
+    const body =
+      status === 401
+        ? JSON.stringify({ error: { message: 'bad sk-test-secret' } })
+        : sse({ type: 'error', error: { message: 'bad sk-test-secret' } });
+    await expect(
+      callModel(svc, 'sk-test-secret', req, {
+        fetchImpl: async (_u, init) => {
+          if (status === 200) {
+            init.onChunk!(body);
+          }
+          return { status, text: async () => body };
+        },
+      }),
+    ).rejects.toThrow('bad ••••');
+  }
+});
+
+test('用户停止或超时会中止底层传输', async () => {
+  const fetchImpl: FetchLike = (_url, init) =>
+    new Promise((_resolve, reject) => {
+      if (init.signal!.aborted) {
+        reject(new Error('abort'));
+      }
+      init.signal!.addEventListener('abort', () => reject(new Error('abort')));
+    });
+  const ctl = new AbortController();
+  const response = callModel(svc, '', req, { fetchImpl, signal: ctl.signal });
+  ctl.abort();
+  await expect(response).rejects.toMatchObject({ code: 'cancelled' });
+  await expect(
+    callModel(svc, '', req, { fetchImpl, timeoutMs: 5 }),
+  ).rejects.toMatchObject({ code: 'timeout' });
+});
+
+test('RN XHR progress 不重复交付文本，结束前可读取，停止时立即 abort', async () => {
+  const original = global.XMLHttpRequest;
+  const instance = () => (FakeXhr as any).instance;
+  class FakeXhr {
+    status = 200;
+    responseText = '';
+    onprogress: any;
+    onload: any;
+    onerror: any;
+    onabort: any;
+    constructor() {
+      Object.assign(FakeXhr, { instance: this });
+    }
+    open() {}
+    setRequestHeader() {}
+    send() {}
+    abort = jest.fn(() => this.onabort?.());
+  }
+  global.XMLHttpRequest = FakeXhr as any;
+  try {
+    const chunks: string[] = [];
+    const ctl = new AbortController();
+    const response = defaultFetch(req.url, {
+      method: 'POST',
+      headers: {},
+      body: '',
+      signal: ctl.signal,
+      onChunk: c => chunks.push(c),
+    });
+    instance().responseText = '一';
+    instance().onprogress();
+    instance().responseText = '一二';
+    instance().onprogress();
+    expect(chunks).toEqual(['一', '二']);
+    instance().onload();
+    expect((await response).status).toBe(200);
+    expect(chunks).toEqual(['一', '二']);
+    const next = defaultFetch(req.url, {
+      method: 'POST',
+      headers: {},
+      body: '',
+      signal: ctl.signal,
+      onChunk: () => {},
+    });
+    ctl.abort();
+    await expect(next).rejects.toThrow('停止');
+    expect(instance().abort).toHaveBeenCalledTimes(1);
+  } finally {
+    global.XMLHttpRequest = original;
+  }
+});
+
+describe('Responses 中转服务结束快照不完整', () => {
+  const usage = {
+    input_tokens: 8427,
+    input_tokens_details: { cached_tokens: 3712 },
+    output_tokens: 197,
+  };
+  test.each([
+    { output: [] },
+    { output: [{ type: 'reasoning', id: 'r', summary: [] }] },
+  ])('结束事件未携带正文时保留已收到的增量和最终用量：%j', ({ output }) => {
+    const seen: string[] = [];
+    const parser = new ModelStream('openai', 'gpt-6.1-sol', t => seen.push(t));
+    parser.feed(
+      sse(
+        {
+          type: 'response.created',
+          response: { model: 'gpt-6.1-sol', output: [] },
+        },
+        {
+          type: 'response.output_item.added',
+          output_index: 0,
+          item: { type: 'reasoning', id: 'r', summary: [] },
+        },
+        { type: 'response.output_item.added', output_index: 1, item: text('') },
+        {
+          type: 'response.output_text.delta',
+          item_id: 'msg',
+          output_index: 1,
+          content_index: 0,
+          delta: '你正在查看中证1000指数。',
+        },
+        {
+          type: 'response.completed',
+          response: {
+            model: 'gpt-6.1-sol',
+            status: 'completed',
+            output,
+            usage,
+          },
+        },
+      ),
+    );
+    expect(seen.at(-1)).toBe('你正在查看中证1000指数。');
+    const final = parser.finish();
+    expect(final.parts).toEqual([
+      { t: 'text', text: '你正在查看中证1000指数。' },
+    ]);
+    expect(final.usage).toMatchObject({
+      input: 4715,
+      cacheRead: 3712,
+      output: 197,
+    });
+    expect(JSON.stringify(final.raw.items)).toContain('你正在查看中证1000指数');
+  });
+
+  test('空的 part.done/item.done 不能清掉已经收到的正文；有效最终修正优先', () => {
+    const parser = new ModelStream('openai', 'm');
+    parser.feed(
+      sse(
+        { type: 'response.created', response: { output: [] } },
+        { type: 'response.output_item.added', output_index: 0, item: text('') },
+        {
+          type: 'response.output_text.delta',
+          output_index: 0,
+          content_index: 0,
+          delta: '已经收到的回答。',
+        },
+        {
+          type: 'response.content_part.done',
+          output_index: 0,
+          content_index: 0,
+          part: { type: 'output_text', text: '' },
+        },
+        {
+          type: 'response.output_item.done',
+          output_index: 0,
+          item: { ...text(''), status: 'completed' },
+        },
+        {
+          type: 'response.completed',
+          response: { status: 'completed', output: [text('')] },
+        },
+      ),
+    );
+    expect(parser.finish().parts).toEqual([
+      { t: 'text', text: '已经收到的回答。' },
+    ]);
+  });
+});
+
+test('Responses 有效最终正文修正及拒绝回答优先，不复活之前的草稿', () => {
+  for (const content of [
+    [{ type: 'output_text', text: '核实后的修正。' }],
+    [{ type: 'refusal', refusal: '无法回答这个请求。' }],
+  ]) {
+    const parser = new ModelStream('openai', 'm');
+    parser.feed(
+      sse(
+        { type: 'response.output_item.added', output_index: 0, item: text('') },
+        {
+          type: 'response.output_text.delta',
+          output_index: 0,
+          content_index: 0,
+          delta: '未经核实的草稿。',
+        },
+        {
+          type: 'response.completed',
+          response: { status: 'completed', output: [{ ...text(''), content }] },
+        },
+      ),
+    );
+    expect(parser.finish().parts).toEqual([
+      { t: 'text', text: contentText(content) },
+    ]);
+  }
+});
+
+test('结束快照省略内容时，不恢复未完成的工具；完整工具仍等整个响应结束', () => {
+  const tool = {
+    type: 'function_call',
+    id: 'fc',
+    call_id: 'call',
+    name: 'place_order',
+    arguments: '',
+  };
+  const parser = new ModelStream('openai', 'm');
+  parser.feed(
+    sse(
+      { type: 'response.output_item.added', output_index: 0, item: tool },
+      {
+        type: 'response.function_call_arguments.delta',
+        output_index: 0,
+        delta: '{"qty":',
+      },
+      {
+        type: 'response.completed',
+        response: { status: 'completed', output: [] },
+      },
+    ),
+  );
+  expect(parser.finish().parts).toEqual([]);
+  const complete = new ModelStream('openai', 'm');
+  complete.feed(
+    sse({
+      type: 'response.output_item.done',
+      output_index: 0,
+      item: { ...tool, arguments: '{"qty":100}' },
+    }),
+  );
+  expect(() => complete.finish()).toThrow('未收到结束事件');
+  complete.feed(
+    sse({
+      type: 'response.completed',
+      response: { status: 'completed', output: [] },
+    }),
+  );
+  expect(complete.finish().parts).toEqual([
+    { t: 'call', id: 'call', name: 'place_order', args: '{"qty":100}' },
+  ]);
+});
+
+test('Chat 兼容服务在终止帧返回完整 message 或结构化正文时仍能显示', () => {
+  for (const content of [
+    '完整回答。',
+    [{ type: 'text', text: '完整回答。' }],
+  ]) {
+    const seen: string[] = [];
+    const parser = new ModelStream('chat', 'm', t => seen.push(t));
+    parser.feed(
+      sse({
+        choices: [
+          {
+            index: 0,
+            message: { role: 'assistant', content },
+            finish_reason: 'stop',
+          },
+        ],
+        usage: { completion_tokens: 197 },
+      }),
+    );
+    expect(seen.at(-1)).toBe('完整回答。');
+    expect(parser.finish().parts).toEqual([{ t: 'text', text: '完整回答。' }]);
+  }
+});
+
+test.each(['', '收到的正文。'])(
+  '终止快照省略 message id 且索引变化时只合并一份正文：%j',
+  finalText => {
+    const parser = new ModelStream('openai', 'm');
+    parser.feed(
+      sse(
+        {
+          type: 'response.output_item.added',
+          output_index: 0,
+          item: { type: 'reasoning', id: 'r', summary: [] },
+        },
+        { type: 'response.output_item.added', output_index: 1, item: text('') },
+        {
+          type: 'response.output_text.delta',
+          output_index: 1,
+          content_index: 0,
+          delta: '收到的正文。',
+        },
+        {
+          type: 'response.completed',
+          response: {
+            status: 'completed',
+            output: [
+              {
+                type: 'message',
+                role: 'assistant',
+                content: [{ type: 'output_text', text: finalText }],
+              },
+            ],
+          },
+        },
+      ),
+    );
+    const result = parser.finish();
+    expect(result.parts).toEqual([{ t: 'text', text: '收到的正文。' }]);
+    expect(
+      result.raw.items.filter((x: any) => x.type === 'message'),
+    ).toHaveLength(1);
+  },
+);
+
+test('错误地标为完成但 JSON 仍残缺的工具不能从空终止快照恢复', () => {
+  const parser = new ModelStream('openai', 'm');
+  expect(() =>
+    parser.feed(
+      sse(
+        {
+          type: 'response.output_item.done',
+          output_index: 0,
+          item: {
+            type: 'function_call',
+            id: 'fc',
+            call_id: 'call',
+            name: 'place_order',
+            arguments: '{"qty":',
+          },
+        },
+        {
+          type: 'response.completed',
+          response: { status: 'completed', output: [] },
+        },
+      ),
+    ),
+  ).toThrow('工具参数不是完整的 JSON');
+});

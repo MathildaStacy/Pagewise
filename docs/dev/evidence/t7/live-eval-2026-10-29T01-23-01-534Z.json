@@ -1,0 +1,156 @@
+{
+  "date": "2026-10-29T01:23:01.534Z",
+  "model": "deepseek-v4.1-flash-1017",
+  "protocol": "chat",
+  "json": [
+    {
+      "task": "plan",
+      "ok": false,
+      "reason": "protected-group"
+    },
+    {
+      "task": "recap",
+      "ok": true
+    },
+    {
+      "task": "sectionDraft",
+      "ok": true
+    },
+    {
+      "task": "detourTitle",
+      "ok": true
+    },
+    {
+      "task": "pinTitle",
+      "ok": true
+    },
+    {
+      "task": "explain",
+      "ok": true
+    },
+    {
+      "task": "translate",
+      "ok": true
+    },
+    {
+      "task": "guide",
+      "ok": true
+    },
+    {
+      "task": "partSummary",
+      "ok": true
+    },
+    {
+      "task": "compact",
+      "ok": true
+    },
+    {
+      "task": "plan",
+      "ok": true
+    },
+    {
+      "task": "recap",
+      "ok": true
+    },
+    {
+      "task": "sectionDraft",
+      "ok": true
+    },
+    {
+      "task": "detourTitle",
+      "ok": true
+    },
+    {
+      "task": "pinTitle",
+      "ok": true
+    },
+    {
+      "task": "explain",
+      "ok": false
+    },
+    {
+      "task": "translate",
+      "ok": true
+    },
+    {
+      "task": "guide",
+      "ok": true
+    },
+    {
+      "task": "partSummary",
+      "ok": true
+    },
+    {
+      "task": "compact",
+      "ok": true
+    }
+  ],
+  "flows": [
+    {
+      "intent": "first",
+      "ok": true,
+      "citations": 3,
+      "invalid": 0,
+      "calls": []
+    },
+    {
+      "intent": "next",
+      "ok": true,
+      "citations": 3,
+      "invalid": 0,
+      "calls": []
+    },
+    {
+      "intent": "detour",
+      "ok": true,
+      "citations": 9,
+      "invalid": 0,
+      "calls": [
+        "load_section"
+      ]
+    },
+    {
+      "intent": "quiz",
+      "ok": true,
+      "citations": 0,
+      "invalid": 0,
+      "calls": [
+        "show_quiz"
+      ]
+    },
+    {
+      "intent": "draft",
+      "ok": true,
+      "citations": 0,
+      "invalid": 0,
+      "calls": []
+    }
+  ],
+  "cache": {
+    "protocol": "chat",
+    "rounds": [
+      {
+        "cacheRead": 1408,
+        "reported": true
+      },
+      {
+        "cacheRead": 1408,
+        "reported": true
+      },
+      {
+        "cacheRead": 1408,
+        "reported": true
+      },
+      {
+        "cacheRead": 1408,
+        "reported": true
+      },
+      {
+        "cacheRead": 1408,
+        "reported": true
+      }
+    ],
+    "status": "anthropic-acceptance-unavailable"
+  },
+  "jsonSuccessRate": 0.9
+}

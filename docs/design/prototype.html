@@ -38,6 +38,16 @@ input,select,textarea{font:inherit;color:inherit}
 .nav .ib{width:40px;height:40px;display:grid;place-items:center;border-radius:20px;font-size:20px;color:var(--ink2);flex:none}
 .nav .ib:active{background:var(--bg)}
 .nav .tb{height:30px;padding:0 10px;border-radius:15px;font-size:13px;color:var(--acc);flex:none}
+.nav .mode{position:relative;display:flex;flex:none;height:30px;padding:2px;border-radius:15px;background:var(--acc-bg);box-shadow:inset 0 0 0 1px #C6D5EF}
+.nav .mode .thumb{position:absolute;top:2px;bottom:2px;left:2px;width:calc(50% - 2px);border-radius:13px;background:var(--acc);box-shadow:0 1px 3px rgba(30,63,122,.3)}
+.nav .mode .thumb.on-reader{left:50%}
+.nav .mode.slide .thumb.on-study{animation:modeL .26s cubic-bezier(.3,.7,0,1)}
+.nav .mode.slide .thumb.on-reader{animation:modeR .26s cubic-bezier(.3,.7,0,1)}
+@keyframes modeL{from{transform:translateX(100%)}to{transform:none}}
+@keyframes modeR{from{transform:translateX(-100%)}to{transform:none}}
+.nav .mode button{position:relative;width:48px;border-radius:13px;font-size:13px;color:var(--acc);font-weight:500}
+.nav .mode button.on{color:#fff;font-weight:600;cursor:default}
+@media (prefers-reduced-motion:reduce){.nav .mode .thumb{animation:none!important}}
 .nav.root h1{text-align:left;padding-left:10px;font-size:20px}
 #view{flex:1;overflow-y:auto;overflow-x:hidden;min-height:0;scrollbar-width:none}
 #view::-webkit-scrollbar{display:none}
@@ -760,6 +770,13 @@ function render(resetScroll) {
   renderConsole();
 }
 function refresh() { render(false); }
+// 伴读 ⇄ 原文 切换：伴读页和原文页顶栏右侧共用；只在点它切过去的那一次播滑动动画
+let modeSlide = false;
+function modeSwitch(cur, toOther) {
+  const slide = modeSlide; modeSlide = false;
+  return '<div class="mode' + (slide ? ' slide' : '') + '" role="tablist"><span class="thumb on-' + cur + '"></span>' +
+    [['study', '伴读'], ['reader', '原文']].map(([k, l]) => '<button role="tab" aria-selected="' + (k === cur) + '" class="' + (k === cur ? 'on' : '') + '"' + (k === cur ? '' : ' onclick="' + on(() => { modeSlide = true; toOther(); }) + '"') + '>' + l + '</button>').join('') + '</div>';
+}
 
 // ---------- 浮层 ----------
 function closeOverlay() { $('#overlay').innerHTML = ''; const m = $('#app .selmenu'); if (m) m.remove(); }
@@ -1199,7 +1216,7 @@ function openCite(id) { go('reader', { block: id }); }
 
 SCREENS.study = {
   title: () => { const st = ST(); return esc(secName(st.sec)) + '<span class="sub">人工智能：现代方法 · ' + pagesOf(st.sec) + '</span>'; },
-  navRight: () => '<button class="tb" onclick="' + on(() => go('reader', { sec: ST().detour || ST().sec })) + '">原文</button><button class="ib" aria-label="更多" onclick="studyMenu()">⋯</button>',
+  navRight: () => modeSwitch('study', () => go('reader', { sec: ST().detour || ST().sec })) + '<button class="ib" aria-label="更多" onclick="studyMenu()">⋯</button>',
   top() {
     const st = ST();
     const doneN = st.phase === 'resume' ? 1 : st.part + (st.phase === 'ready' ? 1 : 0);
@@ -1327,7 +1344,7 @@ function saveSection(d, nx) {
 'use strict';
 SCREENS.reader = {
   title: p => { const sec = readerSec(p); return '原文 · ' + esc(secName(sec)) + '<span class="sub">' + pagesOf(sec) + '</span>'; },
-  navRight: () => '<button class="tb" onclick="' + on(() => { if (R.stack.length > 1 && R.stack[R.stack.length - 2].name === 'study') back(); else go('study'); }) + '">伴读</button>',
+  navRight: () => modeSwitch('reader', () => { if (R.stack.length > 1 && R.stack[R.stack.length - 2].name === 'study') back(); else go('study'); }) + '<span style="width:40px;flex:none"></span>',
   top: p => {
     const sec = readerSec(p);
     return '<div class="rdtool"><div class="seg">' + [['orig', '原版'], ['flow', '重排']].map(([k, l]) => '<button class="' + (S.readerMode === k ? 'on' : '') + '" onclick="' + on(() => { S.readerMode = k; refresh(); }) + '">' + l + '</button>').join('') + '</div><span class="pgi">' + (S.sec[sec].status === 'done' ? '已学' : sec === S.study.sec ? '讲到第 ' + (S.study.part + 1) + ' 段' : '') + '　点段落可解释、提问</span></div>';
