@@ -424,8 +424,8 @@ export function useStudyVM(
         : null,
       thread: presentThread(raw, blocks, expanded, history),
       scroll: {
-        toEndToken:
-          raw.messages.length * 100000 + (raw.streaming?.text.length ?? 0),
+        // Streaming growth is followed through content size changes, not per-text tokens.
+        toEndToken: raw.messages.length * 2 + (raw.streaming ? 1 : 0),
         toItemId: itemToScroll ? String(itemToScroll.id) : undefined,
         toItemToken: stepScrollToken,
       },

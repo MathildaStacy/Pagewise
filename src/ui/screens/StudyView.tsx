@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -32,6 +32,8 @@ import {
   UserBubble,
   makeStyles,
   usePresentation,
+  useStableHandlers,
+  useStickToBottom,
   BottomFade,
 } from '@ui/kit';
 import type {
@@ -51,12 +53,19 @@ export function StudyView({
   const [dockHeight, setDockHeight] = useState(0);
   const s = useStyles(),
     list = useRef<FlatList<ThreadItem>>(null),
-    lastScroll = useRef<number | undefined>(undefined);
+    lastScroll = useRef<number | undefined>(undefined),
+    // Stable identity lets unchanged rows skip rendering while text streams in.
+    rowIntents = useStableHandlers(intents);
   const index = state.listen.scroll.toItemId
     ? state.listen.thread.findIndex(
         item => item.id === state.listen.scroll.toItemId,
       )
     : -1;
+  const stick = useStickToBottom(list, {
+    resumeWhen: state.listen.composer.streaming,
+    disabled: index >= 0,
+    animated: !state.loading,
+  });
   useEffect(() => {
     if (state.mode !== 'listen') return;
     if (index >= 0) {
@@ -65,13 +74,14 @@ export function StudyView({
     }
     if (lastScroll.current === state.listen.scroll.toEndToken) return;
     lastScroll.current = state.listen.scroll.toEndToken;
-    list.current?.scrollToEnd({ animated: true });
+    stick.scrollToEnd({ animated: true });
   }, [
     state.mode,
     state.listen.scroll.toEndToken,
     state.listen.scroll.toItemId,
     state.listen.scroll.toItemToken,
     index,
+    stick,
   ]);
   const comp = state.listen.composer;
   const paperReader = !groupedLists && state.mode === 'read';
@@ -158,7 +168,7 @@ export function StudyView({
                 data={state.listen.thread}
                 keyExtractor={item => item.id}
                 renderItem={({ item }) => (
-                  <ThreadCard item={item} intents={intents} />
+                  <ThreadRow item={item} intents={rowIntents} />
                 )}
                 ListEmptyComponent={
                   <Empty
@@ -169,10 +179,7 @@ export function StudyView({
                     }
                   />
                 }
-                onContentSizeChange={() => {
-                  if (index < 0)
-                    list.current?.scrollToEnd({ animated: !state.loading });
-                }}
+                {...stick.listProps}
                 onScrollToIndexFailed={info =>
                   list.current?.scrollToOffset({
                     offset: Math.max(0, info.averageItemLength * info.index),
@@ -355,6 +362,7 @@ function ThreadCard({
       );
   }
 }
+const ThreadRow = memo(ThreadCard);
 const useStyles = makeStyles(t => ({
   root: { flex: 1 },
   listenArea: { flex: 1 },

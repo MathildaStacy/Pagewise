@@ -148,6 +148,7 @@ export class StudySession implements StudySessionApi {
       prefs: defaultPrefs,
       stuckCandidates: [],
       draft: null,
+      streamKeys: {},
     }));
   }
   private get state() {
@@ -196,7 +197,7 @@ export class StudySession implements StudySessionApi {
         }
       })
       .finally(() => {
-        this.clearStreamTimer();
+        this.stopStream();
         this.set({ busy: false, loading: false, streaming: null, tools: [] });
         this.controller = null;
         this.active = null;
@@ -507,6 +508,7 @@ export class StudySession implements StudySessionApi {
     kind: MessageInsert['kind'],
     content: string,
     patch: Partial<MessageInsert> = {},
+    state: (message: Message) => Partial<StudyState> = () => ({}),
   ): Promise<Message> {
     const s = this.state;
     const message = await this.c.repos.messages.append({
@@ -520,7 +522,10 @@ export class StudySession implements StudySessionApi {
       created_at: this.now(),
       ...patch,
     });
-    this.set({ messages: [...this.state.messages, message] });
+    this.set({
+      messages: [...this.state.messages, message],
+      ...state(message),
+    });
     return message;
   }
   private async card(card: StudyCard, inContext = false) {
@@ -822,21 +827,21 @@ export class StudySession implements StudySessionApi {
     this.retryAction = () => this.loop(round);
     await this.loop(round);
   }
-  private clearStreamTimer() {
+  private stopStream() {
     if (this.streamTimer) {
       clearTimeout(this.streamTimer);
       this.streamTimer = null;
     }
   }
+  /** Publish received text at most every 50ms; the view paces the reveal itself. */
   private streamText(full: string) {
     this.lastStream = full;
-    if (!this.streamTimer)
-      this.streamTimer = setTimeout(() => {
-        this.streamTimer = null;
-        const streaming = this.state.streaming;
-        if (streaming)
-          this.set({ streaming: { ...streaming, text: this.lastStream } });
-      }, 50);
+    this.streamTimer ??= setTimeout(() => {
+      this.streamTimer = null;
+      const streaming = this.state.streaming;
+      if (streaming)
+        this.set({ streaming: { ...streaming, text: this.lastStream } });
+    }, 50);
   }
   private async loop(round: Round) {
     const signal = this.controller!.signal;
@@ -862,6 +867,7 @@ export class StudySession implements StudySessionApi {
           onText: full => this.streamText(full),
         });
       } catch (error) {
+        this.stopStream();
         if (signal.aborted) {
           if (this.lastStream)
             await this.saveAnswer(
@@ -877,7 +883,7 @@ export class StudySession implements StudySessionApi {
         }
         throw error;
       }
-      this.clearStreamTimer();
+      this.stopStream();
       if (signal.aborted) {
         const partial = this.lastStream || textOf(response.parts);
         if (partial)
@@ -1070,14 +1076,31 @@ export class StudySession implements StudySessionApi {
       blocks: round.blocks,
       mainSectionId: this.state.main.sectionId,
     });
-    const message = await this.append('assistant', content, {
-      parts: asJson(parts) as JsonValue[],
-      raw: raw ? asJson(raw) : null,
-      allowed_refs: [...round.allowed],
-      unverified: checked.unverifiedCount,
-      usage: usage ? asJson(usage) : null,
-      intent: round.intent,
-    });
+    const message = await this.append(
+      'assistant',
+      content,
+      {
+        parts: asJson(parts) as JsonValue[],
+        raw: raw ? asJson(raw) : null,
+        allowed_refs: [...round.allowed],
+        unverified: checked.unverifiedCount,
+        usage: usage ? asJson(usage) : null,
+        intent: round.intent,
+      },
+      // Swap the live entry for the saved message in one update, keeping its list key.
+      saved => {
+        const streaming = this.state.streaming;
+        return streaming
+          ? {
+              streaming: null,
+              streamKeys: {
+                ...this.state.streamKeys,
+                [saved.id]: streaming.entryId,
+              },
+            }
+          : {};
+      },
+    );
     if (complete) {
       const next = advanceCitationStreak(
         this.state.unverifiedStreak,
@@ -1974,6 +1997,6 @@ export class StudySession implements StudySessionApi {
       });
     }
     await this.anchorWrite;
-    this.clearStreamTimer();
+    this.stopStream();
   }
 }
