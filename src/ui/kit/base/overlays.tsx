@@ -430,7 +430,7 @@ export function Dialog({
     root: {
       flex: 1,
       justifyContent: 'center',
-      padding: tokens.space.pageX,
+      padding: 24,
     },
   }).root;
   const dialogScrollStyle = StyleSheet.create({
@@ -452,7 +452,10 @@ export function Dialog({
     root: {
       color: tokens.color.ink,
       textAlign: 'center',
-      padding: tokens.space.pageX,
+      paddingTop: 18,
+      paddingHorizontal: 16,
+      paddingBottom: 4,
+      fontSize: 16,
     },
   }).root;
   const dialogActionsStyle = StyleSheet.create({
@@ -463,8 +466,32 @@ export function Dialog({
       borderColor: tokens.color.line,
     },
   }).root;
-  const dialogCancelStyle = StyleSheet.create({ root: { flexGrow: 1 } }).root;
-  const dialogConfirmStyle = StyleSheet.create({ root: { flexGrow: 1 } }).root;
+  const dialogParts = StyleSheet.create({
+    body: {
+      color: tokens.color.ink2,
+      paddingHorizontal: 18,
+      paddingTop: 8,
+      paddingBottom: 16,
+      fontSize: 14,
+      lineHeight: 23.1,
+    },
+    bodySlot: { paddingHorizontal: 18, paddingTop: 8, paddingBottom: 16 },
+    button: { minHeight: 48, alignItems: 'center', justifyContent: 'center' },
+    buttonText: { fontSize: 15, color: tokens.color.accentInk },
+    confirmText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: tokens.color.accentInk,
+    },
+  });
+  const dialogCancelStyle = StyleSheet.create({ root: { flex: 1 } }).root;
+  const dialogConfirmStyle = StyleSheet.create({
+    root: {
+      flex: 1,
+      borderLeftWidth: cancel ? StyleSheet.hairlineWidth : 0,
+      borderColor: tokens.color.line,
+    },
+  }).root;
   return (
     <Modal
       transparent
@@ -505,47 +532,34 @@ export function Dialog({
               {title}
             </Text>
             {typeof body === 'string' ? (
-              <Text
-                style={[
-                  tokens.type.body,
-                  {
-                    color: tokens.color.ink2,
-                    paddingHorizontal: tokens.space.pageX,
-                    paddingBottom: tokens.space.pageX,
-                  },
-                ]}
-              >
-                {body}
-              </Text>
+              <Text style={[tokens.type.body, dialogParts.body]}>{body}</Text>
             ) : (
-              <View
-                testID="dialog-body-slot"
-                style={{
-                  paddingHorizontal: tokens.space.pageX,
-                  paddingBottom: tokens.space.pageX,
-                }}
-              >
+              <View testID="dialog-body-slot" style={dialogParts.bodySlot}>
                 {body}
               </View>
             )}
             <View style={dialogActionsStyle}>
               {cancel ? (
                 <View style={dialogCancelStyle}>
-                  <Button
-                    variant="text"
-                    size="block"
-                    label={cancel}
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={cancel}
                     onPress={onCancel}
-                  />
+                    style={dialogParts.button}
+                  >
+                    <Text style={dialogParts.buttonText}>{cancel}</Text>
+                  </Pressable>
                 </View>
               ) : null}
               <View style={dialogConfirmStyle}>
-                <Button
-                  variant="text"
-                  size="block"
-                  label={confirm}
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={confirm}
                   onPress={onConfirm}
-                />
+                  style={dialogParts.button}
+                >
+                  <Text style={dialogParts.confirmText}>{confirm}</Text>
+                </Pressable>
               </View>
             </View>
           </View>
@@ -644,13 +658,17 @@ export function SelectionMenuSurface({
   const menuItemsStyle = StyleSheet.create({
     root: {
       flexDirection: 'row',
-      flexWrap: 'wrap',
+      flexWrap: material ? 'nowrap' : 'wrap',
       padding: material ? 0 : 3,
     },
   }).root;
   const menuTextStyle = StyleSheet.create({
     root: { color: foreground, textAlign: 'center' },
   }).root;
+  const menuContentStyle = StyleSheet.create({
+    root: { flexDirection: 'row', flexWrap: material ? 'nowrap' : 'wrap' },
+  }).root;
+  const materialTextStyle = StyleSheet.create({ root: { fontSize: 14 } }).root;
   return (
     <Modal
       transparent
@@ -673,32 +691,46 @@ export function SelectionMenuSurface({
           onLayout={event => setMeasuredHeight(event.nativeEvent.layout.height)}
           style={menuItemsStyle}
         >
-          {items.map((item, index) => (
-            <Pressable
-              key={item.key}
-              accessibilityRole="menuitem"
-              accessibilityLabel={item.label}
-              accessibilityState={{ disabled: false }}
-              onPress={() => onSelect(item.key)}
-              style={({ pressed }) => ({
-                flexGrow: 1,
-                minHeight: 48,
-                minWidth: 72,
-                alignItems: 'center',
-                justifyContent: 'center',
-                paddingHorizontal: tokens.space.gap,
-                paddingVertical: tokens.space.gap,
-                borderLeftWidth:
-                  material && index > 0 ? StyleSheet.hairlineWidth : 0,
-                borderColor: tokens.color.line,
-                backgroundColor: pressed ? tokens.color.pressed : undefined,
-              })}
-            >
-              <Text style={[tokens.type.label, menuTextStyle]}>
-                {item.label}
-              </Text>
-            </Pressable>
-          ))}
+          <ScrollView
+            horizontal={material}
+            scrollEnabled={material}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={menuContentStyle}
+          >
+            {items.map((item, index) => (
+              <Pressable
+                key={item.key}
+                accessibilityRole="menuitem"
+                accessibilityLabel={item.label}
+                accessibilityState={{ disabled: false }}
+                onPress={() => onSelect(item.key)}
+                style={({ pressed }) => ({
+                  flexGrow: material ? 0 : 1,
+                  minHeight: 48,
+                  minWidth: material ? undefined : 72,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingHorizontal: material ? 11 : tokens.space.gap,
+                  paddingVertical: material ? 0 : tokens.space.gap,
+                  borderLeftWidth:
+                    material && index > 0 ? StyleSheet.hairlineWidth : 0,
+                  borderColor: tokens.color.line,
+                  backgroundColor: pressed ? tokens.color.pressed : undefined,
+                })}
+              >
+                <Text
+                  style={[
+                    tokens.type.label,
+                    menuTextStyle,
+                    material && materialTextStyle,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {item.label}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
         </View>
       </GlassSurface>
     </Modal>

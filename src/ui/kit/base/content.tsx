@@ -4,6 +4,7 @@ import {
   Image,
   Pressable,
   ScrollView,
+  StyleSheet,
   Text,
   View,
   useWindowDimensions,
@@ -165,7 +166,7 @@ export function RichView({
                 key={index}
                 uri={block.uri}
                 caption={block.text ?? block.label ?? `图 b${block.ref}`}
-                onPress={() => onFigure?.(block.ref)}
+                onPress={onFigure ? () => onFigure(block.ref) : undefined}
               />
             ) : (
               <Kit.Note key={index} tone="neutral">
@@ -334,14 +335,8 @@ export function CiteChip({
 
 export function FigureView({ uri, caption, onPress }: KitProps['FigureView']) {
   const s = useStyles();
-  return (
-    <Pressable
-      onPress={onPress}
-      style={s.figure}
-      accessibilityRole="button"
-      accessibilityLabel={`${caption}，查看大图`}
-      accessibilityState={{}}
-    >
+  const content = (
+    <>
       <Image
         source={{ uri }}
         resizeMode="contain"
@@ -349,7 +344,20 @@ export function FigureView({ uri, caption, onPress }: KitProps['FigureView']) {
         accessibilityLabel={caption}
       />
       <Text style={s.bookCaption}>{caption}</Text>
+    </>
+  );
+  return onPress ? (
+    <Pressable
+      onPress={onPress}
+      style={s.figure}
+      accessibilityRole="button"
+      accessibilityLabel={`${caption}，查看大图`}
+      accessibilityState={{}}
+    >
+      {content}
     </Pressable>
+  ) : (
+    <View style={s.figure}>{content}</View>
   );
 }
 
@@ -1024,6 +1032,47 @@ function TypingDot({ index }: { index: number }) {
 
 export { PageOrig } from './PageOrig';
 
+function accessibleDocText(doc: KitProps['RichView']['doc']): string {
+  const inline = (nodes: RichInline[]): string =>
+    nodes
+      .map(node => {
+        switch (node.t) {
+          case 'text':
+            return node.v;
+          case 'b':
+            return inline(node.c);
+          case 'math':
+            return node.tex;
+          case 'cite':
+            return node.label ?? `引用 ${node.ref}`;
+          case 'unverified':
+            return '未核实';
+        }
+      })
+      .join('');
+  return doc
+    .map(block => {
+      switch (block.t) {
+        case 'p':
+        case 'check':
+          return inline(block.c);
+        case 'math':
+          return block.tex;
+        case 'code':
+          return block.text;
+        case 'list':
+          return block.items.map(inline).join('，');
+        case 'aux':
+          return accessibleDocText(block.body);
+        case 'quote':
+        case 'figure':
+          return block.text ?? block.label ?? `图 ${block.ref}`;
+      }
+    })
+    .filter(Boolean)
+    .join('，');
+}
+
 export function BlockView({
   doc,
   text,
@@ -1037,6 +1086,25 @@ export function BlockView({
   const t = useTokens();
   const content = (
     <>
+      {t.layout.groupedLists && (current || done) ? (
+        <View
+          pointerEvents="none"
+          style={
+            StyleSheet.create({
+              mark: {
+                position: 'absolute',
+                left: -3,
+                top: 8,
+                bottom: 8,
+                width: 3,
+                borderRadius: 2,
+                backgroundColor: t.color.accent,
+                opacity: current ? 1 : 0.35,
+              },
+            }).mark
+          }
+        />
+      ) : null}
       {doc ? (
         <BookTypography.Provider value>
           <Kit.RichView doc={doc} />
@@ -1050,10 +1118,11 @@ export function BlockView({
   const style = [
     s.block,
     highlighted && { backgroundColor: t.color.highlight },
-    (current || done) && {
-      borderLeftWidth: current ? 3 : 2,
-      borderLeftColor: current ? t.color.accent : t.color.stepCur,
-    },
+    (current || done) &&
+      !t.layout.groupedLists && {
+        borderLeftWidth: current ? 3 : 2,
+        borderLeftColor: current ? t.color.accent : t.color.stepCur,
+      },
   ];
   return onPress ? (
     <Pressable
@@ -1065,7 +1134,7 @@ export function BlockView({
       accessibilityRole="button"
       accessibilityLabel={`${
         current ? '当前段落，' : done ? '讲过的段落，' : ''
-      }${text ?? '原文段落'}`}
+      }${(text ?? (doc ? accessibleDocText(doc) : '')) || '原文段落'}`}
       accessibilityState={{ selected: !!current }}
     >
       {content}
@@ -1074,7 +1143,9 @@ export function BlockView({
     <View
       style={style}
       accessibilityRole="none"
-      accessibilityLabel={text ?? '原文段落'}
+      accessibilityLabel={
+        (text ?? (doc ? accessibleDocText(doc) : '')) || '原文段落'
+      }
       accessibilityState={{ selected: !!current }}
     >
       {content}

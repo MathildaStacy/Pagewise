@@ -151,6 +151,16 @@ const prototypePaths: Record<string, string> = {
   arrowDown: '<path d="M5 9l7 7 7-7"/>',
 };
 
+const paperTabPaths: Record<string, string> = {
+  shelf:
+    '<path d="M4 4h4v16H4zM10 4h4v16h-4z"/><path d="M15 5.5l3.6-1 3 14.6-3.6 1z"/>',
+  cards:
+    '<rect x="4" y="7" width="13" height="13" rx="2"/><path d="M8 4h10a2 2 0 012 2v11"/>',
+  note: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 12h7M9 16h5"/>',
+  person:
+    '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/>',
+};
+
 export function createIconMap(kind: 'paper' | 'glass'): IconMap {
   return Object.fromEntries(
     Object.entries({
@@ -166,6 +176,7 @@ export function createIconMap(kind: 'paper' | 'glass'): IconMap {
       const Impl = name === 'back' && kind === 'glass' ? ChevronLeft : Glyph;
       const Icon = (props: IconGlyphProps) =>
         (kind === 'glass' && prototypePaths[name]) ||
+        (kind === 'paper' && paperTabPaths[name]) ||
         !glyphs[name as keyof typeof glyphs] ? (
           <SvgXml
             width={props.size}
@@ -173,7 +184,9 @@ export function createIconMap(kind: 'paper' | 'glass'): IconMap {
             xml={`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="${
               props.color
             }" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${(
-              prototypePaths[name] ?? ''
+              (kind === 'paper' ? paperTabPaths[name] : undefined) ??
+              prototypePaths[name] ??
+              ''
             ).replaceAll('currentColor', props.color ?? 'black')}</svg>`}
           />
         ) : (

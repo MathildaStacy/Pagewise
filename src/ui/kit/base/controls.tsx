@@ -1068,17 +1068,42 @@ export function Cover({ title, color, size = 'md' }: KitProps['Cover']) {
         StyleSheet.create({
           root: {
             width,
-            height: width * (t.layout.groupedLists ? 76 / 54 : 74 / 54),
+            height: (width * 74) / 54,
             backgroundColor: color,
           },
         }).root,
       ]}
     >
+      {t.layout.groupedLists ? (
+        <View
+          pointerEvents="none"
+          style={
+            StyleSheet.create({
+              root: {
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: 5,
+                backgroundColor: 'rgba(0,0,0,0.22)',
+                borderRightWidth: 1,
+                borderRightColor: 'rgba(255,255,255,0.18)',
+              },
+            }).root
+          }
+        />
+      ) : null}
       <Text
-        style={[
-          s.micro,
-          StyleSheet.create({ root: { color: t.color.onAccent } }).root,
-        ]}
+        style={
+          StyleSheet.create({
+            root: {
+              color: '#fff',
+              fontSize: 10,
+              lineHeight: 12.5,
+              fontWeight: t.layout.groupedLists ? '700' : '600',
+            },
+          }).root
+        }
         numberOfLines={3}
       >
         {Array.from(title).slice(0, 12).join('')}
@@ -1122,7 +1147,15 @@ export function SectionStatusIcon({ status }: KitProps['SectionStatusIcon']) {
         StyleSheet.create({
           root: {
             borderColor: fg,
-            backgroundColor: status === 'done' ? fg : t.color.surface,
+            backgroundColor:
+              status === 'done'
+                ? fg
+                : status === 'learning' && t.layout.groupedLists
+                ? 'transparent'
+                : status === 'learning'
+                ? '#fff'
+                : t.color.surface,
+            overflow: 'hidden',
           },
         }).root,
       ]}
@@ -1131,10 +1164,18 @@ export function SectionStatusIcon({ status }: KitProps['SectionStatusIcon']) {
         <Icon name="check" size={12} color={t.color.onAccent} />
       ) : status === 'learning' ? (
         <View
-          style={[
-            s.dot,
-            StyleSheet.create({ root: { backgroundColor: fg } }).root,
-          ]}
+          style={
+            StyleSheet.create({
+              root: {
+                position: 'absolute',
+                right: 0,
+                top: 0,
+                bottom: 0,
+                width: '50%',
+                backgroundColor: fg,
+              },
+            }).root
+          }
         />
       ) : null}
     </View>

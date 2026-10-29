@@ -212,3 +212,62 @@ it('Note wraps adjacent text expressions and numbers in one native Text', async 
   expect(note).toBeDefined();
   expect(JSON.stringify(renderer.toJSON())).toContain('核对结果\\n演示内容3');
 });
+
+for (const skin of ['paper', 'glass'] as const) {
+  it(`${skin} 富文本段落可读且图片不拦截段落操作`, async () => {
+    const onPress = jest.fn();
+    const renderer = await mount(
+      <Kit.BlockView
+        current
+        onPress={onPress}
+        doc={[
+          {
+            t: 'p',
+            c: [
+              { t: 'text', v: '第一段' },
+              { t: 'b', c: [{ t: 'text', v: '正文' }] },
+            ],
+          },
+          {
+            t: 'figure',
+            ref: 7,
+            verified: true,
+            uri: 'file:///image.png',
+            text: '图 7',
+          },
+        ]}
+      />,
+      skin,
+    );
+    const block = action(renderer.root, '当前段落，第一段正文，图 7');
+    expect(
+      renderer.root.findAll(
+        node => node.props.accessibilityLabel === '图 7，查看大图',
+      ),
+    ).toHaveLength(0);
+    await act(async () => block.props.onPress());
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+  it(`${skin} 图片查看器回调只在提供时暴露`, async () => {
+    const onFigure = jest.fn();
+    const renderer = await mount(
+      <Kit.RichView
+        doc={[
+          {
+            t: 'figure',
+            ref: 7,
+            verified: true,
+            uri: 'file:///image.png',
+            text: '图 7',
+          },
+        ]}
+        onFigure={onFigure}
+      />,
+      skin,
+    );
+    await act(async () =>
+      action(renderer.root, '图 7，查看大图').props.onPress(),
+    );
+    expect(onFigure).toHaveBeenCalledWith(7);
+  });
+}

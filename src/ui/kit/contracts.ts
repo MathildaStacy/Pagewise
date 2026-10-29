@@ -333,7 +333,7 @@ export interface CiteChipProps {
 export interface FigureViewProps {
   uri: string;
   caption: string;
-  onPress(): void;
+  onPress?(): void;
 }
 export interface UserBubbleProps {
   text: string;

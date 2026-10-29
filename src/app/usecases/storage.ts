@@ -1,4 +1,5 @@
 import type { Block } from '@core/types';
+import { version as appVersion } from '../../../package.json';
 import { SCHEMA_VERSION, migrate } from '@data/migrations';
 import type { Db } from '@data/db';
 import {
@@ -131,7 +132,7 @@ export async function exportBackup(
         format: 'pagewise-backup',
         version: 1,
         schemaVersion: SCHEMA_VERSION,
-        appVersion: '0.0.1',
+        appVersion,
         createdAt: c.clock.now().toISOString(),
         books: books.map(book => ({ ...book, originalIncluded: false })),
       };
