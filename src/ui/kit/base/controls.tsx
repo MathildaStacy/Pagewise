@@ -1,4 +1,6 @@
 import {
+  Animated,
+  Easing,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -8,11 +10,18 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { KitProps, Tone } from '../contracts';
-import { useTokens } from '../context';
+import { useSkin, useTokens } from '../context';
 import { Icon } from '../Icon';
 import { makeStyles } from '../makeStyles';
 import * as Kit from '../proxy';
-import { Children, cloneElement, isValidElement, useState } from 'react';
+import {
+  Children,
+  cloneElement,
+  isValidElement,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 function tonePair(t: ReturnType<typeof useTokens>, tone: Tone = 'neutral') {
   const c = t.color;
@@ -57,11 +66,30 @@ export function Screen({ scroll, edges, children, style }: KitProps['Screen']) {
   const s = useStyles(),
     t = useTokens();
   const [scrollY, setScrollY] = useState(0);
+  const [navigationHeight, setNavigationHeight] = useState(44);
   const parts = Children.toArray(children);
   const first = parts[0];
   const hasHeader =
     isValidElement<KitProps['AppBar']>(first) && first.type === Kit.AppBar;
-  const header = hasHeader ? cloneElement(first, { scrollY }) : null;
+  const floatingHeader = hasHeader && t.layout.groupedLists;
+  const largeTitle = floatingHeader && first.props.variant === 'root';
+  const header = hasHeader
+    ? cloneElement(first, {
+        scrollY,
+        part: floatingHeader ? 'navigation' : 'all',
+      })
+    : null;
+  const layout = StyleSheet.create({
+    body: { flex: 1 },
+    overlayHeader: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 10,
+    },
+    scrollInset: { paddingTop: navigationHeight },
+  });
   return (
     <SafeAreaView
       edges={edges}
@@ -70,21 +98,36 @@ export function Screen({ scroll, edges, children, style }: KitProps['Screen']) {
       accessibilityLabel="页面"
       accessibilityState={{}}
     >
-      {scroll && hasHeader ? header : null}
       {scroll ? (
-        <ScrollView
-          onScroll={event => setScrollY(event.nativeEvent.contentOffset.y)}
-          scrollEventThrottle={16}
-          contentContainerStyle={[
-            s.scrollContent,
-            hasHeader && first.props.variant === 'root' && t.layout.groupedLists
-              ? s.floatingTabSpace
-              : undefined,
-          ]}
-          keyboardShouldPersistTaps="handled"
-        >
-          {hasHeader ? parts.slice(1) : children}
-        </ScrollView>
+        <View style={layout.body}>
+          {hasHeader ? (
+            <View
+              testID="screen-navigation"
+              style={floatingHeader ? layout.overlayHeader : undefined}
+              onLayout={event => {
+                const height = event.nativeEvent.layout.height;
+                if (height > 0) setNavigationHeight(height);
+              }}
+            >
+              {header}
+            </View>
+          ) : null}
+          <ScrollView
+            onScroll={event => setScrollY(event.nativeEvent.contentOffset.y)}
+            scrollEventThrottle={16}
+            contentContainerStyle={[
+              s.scrollContent,
+              floatingHeader ? layout.scrollInset : undefined,
+              largeTitle ? s.floatingTabSpace : undefined,
+            ]}
+            keyboardShouldPersistTaps="handled"
+          >
+            {largeTitle
+              ? cloneElement(first, { scrollY, part: 'largeTitle' })
+              : null}
+            {hasHeader ? parts.slice(1) : children}
+          </ScrollView>
+        </View>
       ) : (
         children
       )}
@@ -222,6 +265,22 @@ export function Segmented({
 export function ModeSwitch({ value, onChange }: KitProps['ModeSwitch']) {
   const s = useStyles();
   const t = useTokens();
+  const { reduceMotion } = useSkin();
+  const slide = useRef(new Animated.Value(value === 'read' ? 48 : 0)).current;
+  useEffect(() => {
+    if (reduceMotion) {
+      slide.setValue(value === 'read' ? 48 : 0);
+      return;
+    }
+    const animation = Animated.timing(slide, {
+      toValue: value === 'read' ? 48 : 0,
+      duration: 260,
+      easing: Easing.bezier(0.3, 0.7, 0, 1),
+      useNativeDriver: true,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [value, reduceMotion, slide]);
   return (
     <View
       style={s.mode}
@@ -230,6 +289,11 @@ export function ModeSwitch({ value, onChange }: KitProps['ModeSwitch']) {
       accessibilityState={{}}
     >
       <View style={s.modeTrack} />
+      <Animated.View
+        testID="paper-mode-thumb"
+        pointerEvents="none"
+        style={[s.modeThumb, { transform: [{ translateX: slide }] }]}
+      />
       {(
         [
           { key: 'listen', label: '伴读' },
@@ -245,12 +309,7 @@ export function ModeSwitch({ value, onChange }: KitProps['ModeSwitch']) {
           onPress={() => onChange(item.key)}
           style={({ pressed }) => [s.modeItem, pressed && { opacity: 0.75 }]}
         >
-          <View
-            style={[
-              s.modeVisual,
-              value === item.key && { backgroundColor: t.color.accent },
-            ]}
-          >
+          <View style={s.modeVisual}>
             <Text
               style={[
                 s.label,
@@ -258,6 +317,7 @@ export function ModeSwitch({ value, onChange }: KitProps['ModeSwitch']) {
                   root: {
                     color:
                       value === item.key ? t.color.onAccent : t.color.accentInk,
+                    fontWeight: value === item.key ? '600' : '500',
                   },
                 }).root,
               ]}
@@ -521,12 +581,28 @@ export function Composer({
     >
       {quote ? (
         <View style={s.quote}>
-          <Text style={[s.caption, s.grow]}>{quote.label}</Text>
-          <Kit.IconButton
-            icon="close"
-            label="取消引用"
+          {quote.page && quote.excerpt !== undefined ? (
+            <>
+              <Text style={s.caption}>引用</Text>
+              <Text numberOfLines={1} style={[s.caption, s.grow]}>
+                {quote.page} · {quote.excerpt}
+              </Text>
+            </>
+          ) : (
+            <Text numberOfLines={1} style={[s.caption, s.grow]}>
+              {quote.label}
+            </Text>
+          )}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="取消引用"
+            accessibilityState={{}}
             onPress={quote.onClear}
-          />
+            hitSlop={10}
+            style={s.quoteClose}
+          >
+            <Icon name="close" size={14} color={t.color.ink2} />
+          </Pressable>
         </View>
       ) : null}
       <View style={s.composer}>
@@ -1235,7 +1311,7 @@ const useStyles = makeStyles(t => ({
     padding: 2,
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: t.shape.pill,
+    borderRadius: 15,
   },
   modeTrack: {
     position: 'absolute',
@@ -1244,7 +1320,7 @@ const useStyles = makeStyles(t => ({
     top: 0,
     bottom: 0,
     backgroundColor: t.color.accentBg,
-    borderRadius: t.shape.pill,
+    borderRadius: 15,
   },
   modeItem: {
     minHeight: 26,
@@ -1252,12 +1328,23 @@ const useStyles = makeStyles(t => ({
     justifyContent: 'center',
     borderRadius: 13,
   },
+  modeThumb: {
+    position: 'absolute',
+    left: 2,
+    top: 2,
+    bottom: 2,
+    width: 48,
+    borderRadius: 13,
+    overflow: 'hidden',
+    backgroundColor: t.color.accent,
+    boxShadow: '0 1px 3px rgba(30,63,122,.3)',
+  },
   modeVisual: {
     paddingHorizontal: 0,
     minHeight: 26,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: t.shape.pill,
+    borderRadius: 13,
   },
   switchTarget: {
     minHeight: 48,
@@ -1354,10 +1441,17 @@ const useStyles = makeStyles(t => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingLeft: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     backgroundColor: t.color.surfaceAlt,
     borderTopWidth: 1,
     borderTopColor: t.color.line,
+  },
+  quoteClose: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   progressRoot: {
     paddingHorizontal: 12,

@@ -16,6 +16,7 @@ import {
   Pressable,
   ScrollView,
   Text,
+  TextInput,
   View,
   useWindowDimensions,
   type LayoutChangeEvent,
@@ -29,7 +30,6 @@ import {
   Button,
   Dialog,
   Empty,
-  Field,
   GuideBar,
   Icon,
   LayerRow,
@@ -51,6 +51,7 @@ import {
   makeStyles,
   useTokens,
   type RichInline,
+  type SheetProps,
 } from '@ui/kit';
 import type {
   ReaderItem,
@@ -68,16 +69,26 @@ export function ReaderView({
   state: ReaderScreenState;
   intents: StudyIntents;
 }) {
-  const s = useStyles();
+  const s = useStyles(),
+    t = useTokens();
   return (
     <Screen edges={['top', 'left', 'right', 'bottom']}>
       <AppBar
         variant="push"
-        title={state.header.title}
+        title={
+          t.layout.groupedLists
+            ? state.header.title
+            : `原文 · ${state.header.title}`
+        }
         subtitle={state.header.subtitle}
         onBack={intents.back}
         backLabel="返回"
-        right={<ModeSwitch value="read" onChange={intents.setMode} />}
+        right={
+          <View style={s.headerActions}>
+            <ModeSwitch value="read" onChange={intents.setMode} />
+            <View testID="reader-header-spacer" style={s.headerSpacer} />
+          </View>
+        }
       />
       <View style={s.grow}>
         <ReaderContent state={state.read} intents={intents} />
@@ -345,13 +356,11 @@ export function ReaderContent({
             }
             ListFooterComponent={
               state.readEnd.visible ? (
-                <View style={s.end}>
-                  <ReadEnd
-                    label={state.readEnd.label}
-                    onPress={intents.finishReading}
-                  />
-                  <Text style={s.hint}>{state.readEnd.hint}</Text>
-                </View>
+                <ReadEnd
+                  label={state.readEnd.label}
+                  hint={state.readEnd.hint}
+                  onPress={intents.finishReading}
+                />
               ) : (
                 <View style={s.footerSpace} />
               )
@@ -615,13 +624,11 @@ function OriginalReaderPages({
         }
         ListFooterComponent={
           state.readEnd.visible ? (
-            <View style={s.end}>
-              <ReadEnd
-                label={state.readEnd.label}
-                onPress={intents.finishReading}
-              />
-              <Text style={s.hint}>{state.readEnd.hint}</Text>
-            </View>
+            <ReadEnd
+              label={state.readEnd.label}
+              hint={state.readEnd.hint}
+              onPress={intents.finishReading}
+            />
           ) : undefined
         }
       />
@@ -710,7 +717,9 @@ export function StudyOverlays({
   overlay: StudyOverlay | null;
   intents: StudyIntents;
 }) {
-  const s = useStyles();
+  const s = useStyles(),
+    t = useTokens();
+  const apple = t.layout.groupedLists;
   if (!overlay) return null;
   if (overlay.kind === 'jumpStep' || overlay.kind === 'switchMain')
     return (
@@ -733,6 +742,92 @@ export function StudyOverlays({
         onCancel={intents.closeOverlay}
       />
     );
+  if (overlay.kind === 'note')
+    return (
+      <Dialog
+        visible
+        title={`记笔记 · ${overlay.subtitle}`}
+        body={
+          <View>
+            <View style={s.noteQuote}>
+              <RichView doc={overlay.quote} typography="dialogQuote" />
+            </View>
+            <TextInput
+              accessibilityLabel="我的理解"
+              placeholder="写下你的理解"
+              placeholderTextColor={t.color.ink3}
+              value={overlay.value}
+              onChangeText={intents.setNoteText}
+              multiline
+              autoFocus
+              style={s.noteEditor}
+            />
+          </View>
+        }
+        confirm="保存"
+        cancel="取消"
+        onConfirm={() => {
+          if (overlay.value.trim()) intents.overlayAction('save');
+        }}
+        onCancel={intents.closeOverlay}
+      />
+    );
+  const actions: NonNullable<SheetProps['actions']> = [];
+  if (overlay.kind === 'peek') {
+    if (!overlay.detour)
+      actions.push({
+        label: apple ? '在读书模式打开' : '在原文模式打开',
+        kind: 'primary',
+        onPress: () => intents.overlayAction('openInReader'),
+      });
+    actions.push({
+      label: overlay.detour ? '好的' : '关闭',
+      kind: overlay.detour ? 'primary' : 'ghost',
+      onPress: intents.closeOverlay,
+    });
+  } else if (overlay.kind === 'explain') {
+    const ask = {
+      label: apple ? '带到听讲里继续问' : '带到伴读里继续问',
+      kind: 'primary' as const,
+      onPress: () => intents.overlayAction('ask'),
+    };
+    const stuck = {
+      label: '记为卡点',
+      kind: 'ghost' as const,
+      onPress: () => intents.overlayAction('stuck'),
+    };
+    if (apple)
+      actions.push(
+        ask,
+        {
+          label: '好的',
+          kind: 'ghost',
+          disabled: !overlay.answer || overlay.streaming,
+          onPress: () => {
+            if (overlay.answer && !overlay.streaming)
+              intents.overlayAction('ok');
+          },
+        },
+        stuck,
+      );
+    else actions.push(stuck, ask);
+  } else if (overlay.kind === 'translate') {
+    if (apple)
+      actions.push({
+        label: '好的',
+        kind: 'primary',
+        onPress: intents.closeOverlay,
+      });
+  } else if (overlay.kind === 'pin') {
+    actions.push(
+      {
+        label: apple ? '在听讲里继续问' : '在伴读里继续问',
+        kind: 'primary',
+        onPress: () => intents.overlayAction('ask'),
+      },
+      { label: '好的', kind: 'ghost', onPress: intents.closeOverlay },
+    );
+  }
   const title =
     overlay.kind === 'menu'
       ? '伴读'
@@ -749,13 +844,13 @@ export function StudyOverlays({
       : overlay.kind === 'translate'
       ? '翻译'
       : overlay.kind === 'pin'
-      ? '问答便签'
-      : overlay.kind === 'note'
-      ? '记笔记'
+      ? overlay.title
       : '查看表格';
   const subtitle =
     'subtitle' in overlay
-      ? overlay.subtitle
+      ? overlay.kind === 'pin' && apple
+        ? `问答便签 · ${overlay.subtitle}`
+        : overlay.subtitle
       : overlay.kind === 'context'
       ? '本轮请求 · 预计输入 token'
       : overlay.kind === 'figure'
@@ -767,6 +862,7 @@ export function StudyOverlays({
       title={title}
       subtitle={subtitle}
       onClose={intents.closeOverlay}
+      actions={actions}
       detent={
         overlay.kind === 'figure' || overlay.kind === 'table' ? 'full' : 'auto'
       }
@@ -808,7 +904,7 @@ export function StudyOverlays({
         </ListSection>
       ) : null}
       {overlay.kind === 'context' ? (
-        <View style={s.panel}>
+        <View style={s.overlayBody}>
           <StackBar layers={overlay.layers.map(l => ({ value: l.value }))} />
           {overlay.layers.map((l, i) => (
             <LayerRow
@@ -828,7 +924,7 @@ export function StudyOverlays({
         </View>
       ) : null}
       {overlay.kind === 'peek' ? (
-        <View style={s.panel}>
+        <View style={s.overlayBody}>
           {overlay.blocks.map(block => (
             <View key={block.ref} style={block.target ? s.target : s.quote}>
               <RichView
@@ -838,20 +934,10 @@ export function StudyOverlays({
               />
             </View>
           ))}
-          <View style={s.actions}>
-            {!overlay.detour ? (
-              <Button onPress={() => intents.overlayAction('openInReader')}>
-                在读书模式打开
-              </Button>
-            ) : null}
-            <Button variant="secondary" onPress={intents.closeOverlay}>
-              {overlay.detour ? '好的' : '关闭'}
-            </Button>
-          </View>
         </View>
       ) : null}
       {overlay.kind === 'figure' ? (
-        <ScrollView contentContainerStyle={s.panel}>
+        <ScrollView contentContainerStyle={s.overlayBody}>
           <Image
             source={{ uri: overlay.uri }}
             style={s.figure}
@@ -862,9 +948,9 @@ export function StudyOverlays({
         </ScrollView>
       ) : null}
       {overlay.kind === 'explain' || overlay.kind === 'translate' ? (
-        <View style={s.panel}>
-          <View style={s.quote}>
-            <RichView doc={overlay.quote} />
+        <View style={s.overlayBody}>
+          <View style={s.sheetQuote}>
+            <RichView doc={overlay.quote} typography="sheetQuote" />
           </View>
           {overlay.streaming ? <Typing label="正在整理…" /> : null}
           {overlay.answer ? (
@@ -875,60 +961,16 @@ export function StudyOverlays({
             />
           ) : null}
           {overlay.error ? <Note tone="bad">{overlay.error}</Note> : null}
-          <View style={s.actions}>
-            <Button
-              variant="secondary"
-              onPress={() => intents.overlayAction('stuck')}
-            >
-              记为卡点
-            </Button>
-            <Button
-              variant="secondary"
-              onPress={() => intents.overlayAction('ask')}
-            >
-              带到听讲里继续问
-            </Button>
-            <Button
-              disabled={!overlay.answer || overlay.streaming}
-              onPress={() => intents.overlayAction('ok')}
-            >
-              好的，贴成便签
-            </Button>
-          </View>
         </View>
       ) : null}
       {overlay.kind === 'pin' ? (
-        <View style={s.panel}>
-          <Text style={s.headline}>{overlay.title}</Text>
+        <View style={s.overlayBody}>
           <RichView doc={overlay.answer} />
-          <View style={s.actions}>
-            <Button onPress={() => intents.overlayAction('ask')}>
-              在听讲里继续问
-            </Button>
-            <Button variant="secondary" onPress={intents.closeOverlay}>
-              好的
-            </Button>
-          </View>
-        </View>
-      ) : null}
-      {overlay.kind === 'note' ? (
-        <View style={s.panel}>
-          <View style={s.quote}>
-            <RichView doc={overlay.quote} />
-          </View>
-          <Field
-            label="我的理解"
-            value={overlay.value}
-            onChange={intents.setNoteText}
-            placeholder="写下你的理解"
-            multiline
-          />
-          <Button onPress={() => intents.overlayAction('save')}>保存</Button>
         </View>
       ) : null}
       {overlay.kind === 'table' ? (
         <ScrollView horizontal>
-          <View style={s.panel}>
+          <View style={s.overlayBody}>
             {overlay.rows.map((row, i) => (
               <View key={i} style={s.tableRow}>
                 {row.map((cell, j) => (
@@ -1062,7 +1104,8 @@ const useStyles = makeStyles(t => ({
   selected: { backgroundColor: t.color.pressed, borderRadius: t.shape.md },
   flash: { backgroundColor: t.color.accentBg, borderRadius: t.shape.md },
   pin: { paddingLeft: t.space.pageX, paddingBottom: t.space.gap },
-  end: { padding: t.space.pageX, gap: t.space.gap },
+  headerActions: { flexDirection: 'row', alignItems: 'center' },
+  headerSpacer: { width: t.layout.groupedLists ? 44 : 40, flexShrink: 0 },
   footerSpace: { height: 50 },
   panel: { padding: t.space.pageX, gap: t.space.gap },
   body: { ...t.type.body, color: t.color.ink },
@@ -1095,6 +1138,41 @@ const useStyles = makeStyles(t => ({
     borderLeftWidth: 3,
     borderLeftColor: t.color.accent,
     backgroundColor: t.color.accentBg,
+  },
+  overlayBody: { gap: 10 },
+  noteQuote: {
+    marginBottom: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: t.color.highlight,
+    paddingLeft: t.layout.groupedLists ? 12 : 10,
+    paddingVertical: t.layout.groupedLists ? 0 : 2,
+  },
+  sheetQuote: {
+    borderLeftWidth: 3,
+    borderLeftColor: t.color.highlight,
+    paddingLeft: t.layout.groupedLists ? 12 : 10,
+    paddingVertical: t.layout.groupedLists ? 0 : 2,
+    marginTop: t.layout.groupedLists ? 4 : 0,
+    marginRight: t.layout.groupedLists ? 2 : 0,
+  },
+  noteEditor: {
+    ...t.type.body,
+    fontSize: t.layout.groupedLists
+      ? t.type.label.fontSize
+      : t.type.body.fontSize,
+    lineHeight: t.layout.groupedLists ? 24 : 23.8,
+    color: t.color.ink,
+    backgroundColor: t.layout.groupedLists
+      ? t.color.surfaceFill
+      : t.color.editor,
+    borderWidth: t.layout.groupedLists ? 0 : 1,
+    borderColor: t.color.line,
+    borderRadius: t.layout.groupedLists ? t.shape.lg - 8 : t.shape.sm,
+    paddingVertical: t.layout.groupedLists ? 13 : 9,
+    paddingHorizontal: t.layout.groupedLists ? 16 : 10,
+    minHeight: t.layout.groupedLists ? 96 : 120,
+    marginTop: t.layout.groupedLists ? 10 : 0,
+    textAlignVertical: 'top',
   },
   actions: {
     flexDirection: 'row',

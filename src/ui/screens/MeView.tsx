@@ -9,6 +9,7 @@ import {
 import {
   AppBar,
   Screen,
+  Segmented,
   Note,
   Icon,
   Switch,
@@ -313,7 +314,18 @@ export function SettingsSegmented({
   onChange(value: string): void;
   label: string;
 }) {
-  const s = useSettingsStyles();
+  const s = useSettingsStyles(),
+    { groupedLists } = usePresentation();
+  if (groupedLists) {
+    return (
+      <Segmented
+        value={value}
+        options={options}
+        onChange={onChange}
+        accessibilityLabel={label}
+      />
+    );
+  }
   return (
     <View
       accessibilityRole="tablist"
@@ -427,12 +439,8 @@ export function MeView({
     t = useTokens(),
     { groupedLists } = usePresentation();
   return (
-    <Screen scroll>
-      <View style={groupedLists ? s.rootGlass : s.rootPaper}>
-        <Text accessibilityRole="header" style={s.rootTitle}>
-          我的
-        </Text>
-      </View>
+    <Screen scroll edges={['top', 'left', 'right']}>
+      <AppBar title="我的" variant="root" />
       <SettingsFeedback state={state} />
       {state.groups.map((group, index) => (
         <SettingsGroup key={index} icons>
@@ -695,21 +703,6 @@ const useStyles = (g: boolean) =>
       color: t.color.ink2,
     },
     feedback: { paddingHorizontal: t.space.pageX, paddingVertical: 10 },
-    rootGlass: { paddingTop: 44, paddingHorizontal: 20, paddingBottom: 12 },
-    rootPaper: {
-      height: 48,
-      paddingHorizontal: 16,
-      justifyContent: 'center',
-      backgroundColor: t.color.surface,
-      borderBottomWidth: 1,
-      borderBottomColor: t.color.line,
-    },
-    rootTitle: {
-      ...t.type.largeTitle,
-      color: t.color.ink,
-      lineHeight: g ? 40.8 : 24,
-      fontWeight: g ? '700' : '600',
-    },
     settingsIcon: {
       width: 30,
       height: 30,

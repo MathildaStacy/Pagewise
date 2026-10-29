@@ -74,6 +74,7 @@ export function StudyView({
     index,
   ]);
   const comp = state.listen.composer;
+  const paperReader = !groupedLists && state.mode === 'read';
   return (
     <Screen
       edges={
@@ -85,18 +86,31 @@ export function StudyView({
       <KeyboardAvoidingView style={s.root} behavior="padding">
         <AppBar
           variant="push"
-          title={state.header.title}
-          subtitle={state.header.subtitle}
-          onBack={intents.back}
-          backLabel={state.header.backLabel}
+          title={
+            paperReader ? `原文 · ${state.header.title}` : state.header.title
+          }
+          subtitle={
+            paperReader
+              ? state.header.readSubtitle ?? state.header.subtitle
+              : state.header.subtitle
+          }
+          onBack={paperReader ? () => intents.setMode('listen') : intents.back}
+          backLabel={paperReader ? '返回' : state.header.backLabel}
           right={
             <View style={s.headerActions}>
               <ModeSwitch value={state.mode} onChange={intents.setMode} />
-              <IconButton
-                icon="more"
-                label="伴读菜单"
-                onPress={intents.openMenu}
-              />
+              {paperReader ? (
+                <View
+                  testID="reader-header-spacer"
+                  style={s.readerHeaderSpacer}
+                />
+              ) : (
+                <IconButton
+                  icon="more"
+                  label="伴读菜单"
+                  onPress={intents.openMenu}
+                />
+              )}
             </View>
           }
         />
@@ -137,7 +151,9 @@ export function StudyView({
                 style={s.root}
                 contentContainerStyle={[
                   s.thread,
-                  groupedLists ? { paddingBottom: dockHeight + 12 } : undefined,
+                  groupedLists
+                    ? { paddingBottom: dockHeight + 8 + 24 }
+                    : undefined,
                 ]}
                 data={state.listen.thread}
                 keyExtractor={item => item.id}
@@ -370,10 +386,11 @@ const useStyles = makeStyles(t => ({
     alignItems: 'center',
     gap: 0,
   },
+  readerHeaderSpacer: { width: 40, flexShrink: 0 },
   thread: {
     paddingHorizontal: t.layout.groupedLists ? 20 : 14,
-    paddingTop: 12,
-    paddingBottom: t.layout.groupedLists ? 26 : 18,
+    paddingTop: t.layout.groupedLists ? 4 : 12,
+    paddingBottom: t.layout.groupedLists ? 24 : 18,
     gap: 12,
   },
   detourRun: {

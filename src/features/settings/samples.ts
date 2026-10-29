@@ -45,7 +45,7 @@ export const meSamples: Record<string, MeState> = {
         {
           key: 'MeAppearance',
           title: '外观',
-          subtitle: '纸感 / 苹果风 · 深浅色 · 正文字号',
+          subtitle: '纸感 · 跟随系统 · 正文中',
           tone: 'neutral',
         },
         {
@@ -57,7 +57,7 @@ export const meSamples: Record<string, MeState> = {
         {
           key: 'About',
           title: '关于 Pagewise',
-          subtitle: '带着整本书的 AI 伴读 · GPL-3.0',
+          subtitle: '版本 0.0.1 · GPL-3.0',
           tone: 'neutral',
         },
       ],

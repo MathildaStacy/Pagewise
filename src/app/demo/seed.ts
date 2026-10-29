@@ -9,10 +9,15 @@ import type { Db } from '@data/db';
 import { createRepos, type Repos } from '@data/repos';
 import type { Clock } from '../clock';
 import { exploreSource, prototypeSource } from './source';
+import { demoFigureAssets } from './figures';
 
 const DEMO_VERSION = 1;
 const DEMO_KEY = 'demo.seed.version';
 const EXAMPLE = '[示意内容] ';
+const figureByBlock: Readonly<Record<string, string>> = {
+  b6: demoFigureAssets.f318.uri,
+  b0903: demoFigureAssets.f310.uri,
+};
 
 type DemoBlock = Omit<BlockInsert, 'book_id'> & {
   source_id: string;
@@ -186,7 +191,7 @@ function block(
     text: marked,
     latex,
     html: null,
-    image_path: null,
+    image_path: type === 'image' ? figureByBlock[source_id] ?? null : null,
     section_id,
     chars: Array.from(marked).length,
     ...(step === undefined ? {} : { step }),

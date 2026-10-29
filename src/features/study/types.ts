@@ -1,4 +1,4 @@
-import type { PageOrigProps, RichDoc } from '@ui/kit';
+import type { ComposerQuote, PageOrigProps, RichDoc } from '@ui/kit';
 
 export type QuickKey =
   | 'next'
@@ -203,7 +203,12 @@ export type StudyOverlay =
   | { kind: 'switchMain'; body: string; rebase?: boolean }
   | { kind: 'table'; rows: string[][]; caption: string };
 export interface StudyState {
-  header: { title: string; subtitle: string; backLabel: string };
+  header: {
+    title: string;
+    subtitle: string;
+    readSubtitle?: string;
+    backLabel: string;
+  };
   mode: 'listen' | 'read';
   loading: boolean;
   toast: string | null;
@@ -222,7 +227,7 @@ export interface StudyState {
       placeholder: string;
       canSend: boolean;
       streaming: boolean;
-      quote: null | { label: string };
+      quote: ComposerQuote | null;
     };
     busy: boolean;
   };

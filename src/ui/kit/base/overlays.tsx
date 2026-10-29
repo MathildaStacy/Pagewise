@@ -228,6 +228,7 @@ function SheetActions({
             size="block"
             onPress={action.onPress}
             label={action.label}
+            disabled={action.disabled}
           />
         </View>
       ))}
@@ -486,6 +487,8 @@ export function Dialog({
           style={dialogScrollStyle}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={dialogContentStyle}
+          automaticallyAdjustKeyboardInsets
+          keyboardDismissMode="interactive"
         >
           <View
             accessibilityViewIsModal
@@ -501,18 +504,30 @@ export function Dialog({
             >
               {title}
             </Text>
-            <Text
-              style={[
-                tokens.type.body,
-                {
-                  color: tokens.color.ink2,
+            {typeof body === 'string' ? (
+              <Text
+                style={[
+                  tokens.type.body,
+                  {
+                    color: tokens.color.ink2,
+                    paddingHorizontal: tokens.space.pageX,
+                    paddingBottom: tokens.space.pageX,
+                  },
+                ]}
+              >
+                {body}
+              </Text>
+            ) : (
+              <View
+                testID="dialog-body-slot"
+                style={{
                   paddingHorizontal: tokens.space.pageX,
                   paddingBottom: tokens.space.pageX,
-                },
-              ]}
-            >
-              {body}
-            </Text>
+                }}
+              >
+                {body}
+              </View>
+            )}
             <View style={dialogActionsStyle}>
               {cancel ? (
                 <View style={dialogCancelStyle}>

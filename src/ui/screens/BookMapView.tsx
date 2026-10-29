@@ -66,12 +66,7 @@ function MapRows({
                 style={[
                   s.nodeLabel,
                   node.level === 3 ? s.nodeSubLabel : undefined,
-                  {
-                    color: node.current ? t.color.accentInk : t.color.ink,
-                    fontWeight: node.current
-                      ? t.type.headline.fontWeight
-                      : t.type.body.fontWeight,
-                  },
+                  node.current && s.nodeCurrentLabel,
                 ]}
               >
                 {node.label}
@@ -522,7 +517,7 @@ const useStyles = makeStyles(t => ({
   searchBox: {
     height: 40,
     borderWidth: t.layout.groupedLists ? 0 : 1,
-    borderColor: t.color.line,
+    borderColor: t.layout.groupedLists ? t.color.line : t.color.fieldBorder,
     borderRadius: t.layout.groupedLists ? t.shape.sm + 2 : t.shape.pill,
     backgroundColor: t.layout.groupedLists
       ? t.color.surfaceAlt
@@ -573,7 +568,7 @@ const useStyles = makeStyles(t => ({
   },
   resultTitle: {
     ...t.type.label,
-    fontWeight: '600',
+    fontWeight: t.layout.groupedLists ? '600' : '500',
     color: t.color.ink,
     flex: 1,
   },
@@ -590,11 +585,14 @@ const useStyles = makeStyles(t => ({
   },
   nodeLabel: {
     ...(t.layout.groupedLists ? t.type.label : t.type.body),
+    color: t.color.ink,
+    fontWeight: t.type.body.fontWeight,
     lineHeight:
       (t.layout.groupedLists ? t.type.label : t.type.body).fontSize *
       (t.layout.groupedLists ? 1.35 : 1.5),
     flexShrink: 1,
   },
+  nodeCurrentLabel: { color: t.color.accentInk, fontWeight: '600' },
   nodeSubLabel: {
     ...t.type.label,
     lineHeight: t.type.label.fontSize * (t.layout.groupedLists ? 1.35 : 1.5),

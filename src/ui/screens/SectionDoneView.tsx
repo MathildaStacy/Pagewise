@@ -1,4 +1,12 @@
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import {
+  Animated,
+  Easing,
+  Pressable,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import {
   AppBar,
   Button,
@@ -14,6 +22,7 @@ import {
   ToastHost,
   makeStyles,
   usePresentation,
+  useTokens,
 } from '@ui/kit';
 import type {
   SectionDoneIntents,
@@ -27,15 +36,50 @@ export function SectionDoneView({
   intents: SectionDoneIntents;
 }) {
   const s = useStyles();
-  const { groupedLists } = usePresentation();
+  const t = useTokens();
+  const { groupedLists, reduceMotion } = usePresentation();
+  const pop = useRef(
+    new Animated.Value(groupedLists && !reduceMotion ? 0 : 1),
+  ).current;
+  useEffect(() => {
+    if (!groupedLists || reduceMotion) {
+      pop.setValue(1);
+      return;
+    }
+    pop.setValue(0);
+    const animation = Animated.timing(pop, {
+      toValue: 1,
+      duration: 500,
+      easing: Easing.bezier(...t.motion.easing),
+      useNativeDriver: true,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [groupedLists, reduceMotion, pop, t.motion.easing]);
   return (
     <Screen scroll edges={['top', 'left', 'right', 'bottom']}>
       <AppBar variant="push" title="本节小结" onBack={intents.back} />
       <View style={s.hero}>
         {groupedLists ? (
-          <View style={s.complete}>
+          <Animated.View
+            testID="section-done-complete"
+            style={[
+              s.complete,
+              {
+                opacity: pop,
+                transform: [
+                  {
+                    scale: pop.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.9, 1],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
             <Icon name="check" size={32} color={s.complete.color} />
-          </View>
+          </Animated.View>
         ) : null}
         <Text style={s.kicker}>{state.hero.kicker}</Text>
         <Text style={s.title}>{state.hero.title}</Text>
@@ -197,6 +241,7 @@ const useStyles = makeStyles(t => ({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
+    boxShadow: `0 10px 24px ${t.color.ok}66`,
   },
   kicker: {
     ...t.type.caption,
@@ -208,12 +253,15 @@ const useStyles = makeStyles(t => ({
     color: t.layout.groupedLists ? t.color.ink : t.color.continueInk,
     marginTop: 2,
     marginBottom: t.layout.groupedLists ? 4 : 0,
+    letterSpacing: t.layout.groupedLists
+      ? -t.type.continueTitle.fontSize * 0.01
+      : 0,
   },
   stats: {
     ...t.type.caption,
     color: t.layout.groupedLists ? t.color.ink2 : t.color.continueInk,
     opacity: t.layout.groupedLists ? 1 : 0.85,
-    marginTop: 4,
+    marginTop: t.layout.groupedLists ? 0 : 4,
   },
   editor: {
     ...t.type.body,

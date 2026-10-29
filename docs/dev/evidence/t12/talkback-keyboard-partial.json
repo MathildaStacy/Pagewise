@@ -1,0 +1,22 @@
+{
+  "date": "2026-10-29",
+  "device": "Pixel_10_Pro Android17 arm64 emulator",
+  "build": "debug+Metro",
+  "service": "com.google.android.marvin.talkback/com.google.android.marvin.talkback.TalkBackService",
+  "serviceBound": true,
+  "scope": {
+    "keyboardTabFocusObserved": true,
+    "shelfContinueOpenedStudy": true,
+    "studyMenuAndQuickActionsFocused": true,
+    "composerQuestionSubmitted": false,
+    "returnMainCompleted": false,
+    "spokenAudioReviewed": false
+  },
+  "result": "partial-not-accepted",
+  "limitation": "Tab focus moved through header and quick actions, but keyboard input did not reliably enter the composer; no full question and return-main path claimed. UIAutomator interfered with TalkBack, later observation used screenshots and keyboard.",
+  "cleanup": {
+    "enabled_accessibility_services": "null (deleted original absent setting)",
+    "accessibility_enabled": 0
+  },
+  "screenshots": "Private outside repo; real study content not committed."
+}

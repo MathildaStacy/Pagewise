@@ -239,6 +239,7 @@ it.each([false, true])(
     expect(vm().state.header.title).toBe(
       [section.no, section.title].filter(Boolean).join(' '),
     );
+    expect(vm().state.header.subtitle).toMatch(/^p\.[^·]+$/);
     expect(vm().state.read.loading).toBe(false);
     const blocks = vm().state.read.items.filter(item => item.kind === 'block');
     expect(blocks.map(block => block.seq)).toEqual(
@@ -334,9 +335,18 @@ it('theme changes preserve composer, overlay and the same session', async () => 
   await act(() => vm.intents.openContext());
   const session = getStudySession(c, 'aima'),
     count = session.store.getState().messages.length;
+  const source = session.store
+    .getState()
+    .blocks.find(block => block.type === 'text')!;
+  await act(() => session.setQuote(source.seq));
+  const quote = vm.state.listen.composer.quote!;
+  expect(quote.excerpt).toBe(source.text);
+  expect(quote.page).toMatch(/^p\./);
+  expect(quote.label).toBe(`引用 ${quote.page} · ${source.text.slice(0, 70)}`);
   await act(() => renderer!.update(tree('glass')));
   expect(vm.state.listen.composer.value).toBe('关于 f 的问题');
   expect(vm.state.overlay?.kind).toBe('context');
+  expect(vm.state.listen.composer.quote).toEqual(quote);
   expect(getStudySession(c, 'aima')).toBe(session);
   expect(session.store.getState().messages).toHaveLength(count);
 });

@@ -1,0 +1,315 @@
+{
+  "bookSha256": "ddcbddd989a5813d16a4e7da0969d6f38b0e2629dac04a7b13c7c0ab21cd16f0",
+  "selection": {
+    "seed": 20261029,
+    "method": "Random sample of 30 stored MinerU blocks with non-null box and height > .012, PDF pages42..820"
+  },
+  "render": "Poppler 125dpi; original PDF, stored normalized top-left coordinates",
+  "visuallyReviewed": 30,
+  "withinOneTextLine": 30,
+  "wrongTargets": 0,
+  "nativeUiScope": "Existing native PageOrig normalized transform regression plus release search target on PDF529; 30 full native click paths not executed",
+  "privateCrops": "Stored outside repository under /tmp/pagewise-test-2t59_pmt/bbox-review; no book excerpts committed",
+  "samples": [
+    {
+      "seq": 710005,
+      "page": 710,
+      "x0": 0.125,
+      "y0": 0.394,
+      "x1": 0.907,
+      "y1": 0.451,
+      "type": "title",
+      "result": "within-one-line"
+    },
+    {
+      "seq": 361006,
+      "page": 361,
+      "x0": 0.1,
+      "y0": 0.321,
+      "x1": 0.872,
+      "y1": 0.4,
+      "type": "text",
+      "result": "within-one-line"
+    },
+    {
+      "seq": 545006,
+      "page": 545,
+      "x0": 0.077,
+      "y0": 0.412,
+      "x1": 0.633,
+      "y1": 0.439,
+      "type": "title",
+      "result": "within-one-line"
+    },
+    {
+      "seq": 742006,
+      "page": 742,
+      "x0": 0.127,
+      "y0": 0.328,
+      "x1": 0.338,
+      "y1": 0.346,
+      "type": "text",
+      "result": "within-one-line"
+    },
+    {
+      "seq": 454006,
+      "page": 454,
+      "x0": 0.155,
+      "y0": 0.394,
+      "x1": 0.211,
+      "y1": 0.433,
+      "type": "image",
+      "result": "within-one-line"
+    },
+    {
+      "seq": 289005,
+      "page": 289,
+      "x0": 0.105,
+      "y0": 0.31,
+      "x1": 0.744,
+      "y1": 0.348,
+      "type": "code",
+      "result": "within-one-line"
+    },
+    {
+      "seq": 740003,
+      "page": 740,
+      "x0": 0.235,
+      "y0": 0.243,
+      "x1": 0.894,
+      "y1": 0.319,
+      "type": "text",
+      "result": "within-one-line"
+    },
+    {
+      "seq": 680009,
+      "page": 680,
+      "x0": 0.125,
+      "y0": 0.573,
+      "x1": 0.918,
+      "y1": 0.695,
+      "type": "text",
+      "result": "within-one-line"
+    },
+    {
+      "seq": 157003,
+      "page": 157,
+      "x0": 0.079,
+      "y0": 0.205,
+      "x1": 0.816,
+      "y1": 0.225,
+      "type": "text",
+      "result": "within-one-line"
+    },
+    {
+      "seq": 436004,
+      "page": 436,
+      "x0": 0.125,
+      "y0": 0.515,
+      "x1": 0.916,
+      "y1": 0.635,
+      "type": "text",
+      "result": "within-one-line"
+    },
+    {
+      "seq": 422012,
+      "page": 422,
+      "x0": 0.146,
+      "y0": 0.861,
+      "x1": 0.918,
+      "y1": 0.921,
+      "type": "text",
+      "result": "within-one-line"
+    },
+    {
+      "seq": 245005,
+      "page": 245,
+      "x0": 0.1,
+      "y0": 0.337,
+      "x1": 0.868,
+      "y1": 0.376,
+      "type": "text",
+      "result": "within-one-line"
+    },
+    {
+      "seq": 680001,
+      "page": 680,
+      "x0": 0.127,
+      "y0": 0.07,
+      "x1": 0.666,
+      "y1": 0.094,
+      "type": "title",
+      "result": "within-one-line"
+    },
+    {
+      "seq": 370003,
+      "page": 370,
+      "x0": 0.125,
+      "y0": 0.199,
+      "x1": 0.918,
+      "y1": 0.321,
+      "type": "text",
+      "result": "within-one-line"
+    },
+    {
+      "seq": 794002,
+      "page": 794,
+      "x0": 0.127,
+      "y0": 0.123,
+      "x1": 0.246,
+      "y1": 0.139,
+      "type": "title",
+      "result": "within-one-line"
+    },
+    {
+      "seq": 224012,
+      "page": 224,
+      "x0": 0.125,
+      "y0": 0.774,
+      "x1": 0.916,
+      "y1": 0.855,
+      "type": "text",
+      "result": "within-one-line"
+    },
+    {
+      "seq": 408002,
+      "page": 408,
+      "x0": 0.233,
+      "y0": 0.085,
+      "x1": 0.894,
+      "y1": 0.162,
+      "type": "text",
+      "result": "within-one-line"
+    },
+    {
+      "seq": 567013,
+      "page": 567,
+      "x0": 0.101,
+      "y0": 0.675,
+      "x1": 0.588,
+      "y1": 0.693,
+      "type": "text",
+      "result": "within-one-line"
+    },
+    {
+      "seq": 182003,
+      "page": 182,
+      "x0": 0.125,
+      "y0": 0.232,
+      "x1": 0.918,
+      "y1": 0.333,
+      "type": "text",
+      "result": "within-one-line"
+    },
+    {
+      "seq": 393006,
+      "page": 393,
+      "x0": 0.079,
+      "y0": 0.289,
+      "x1": 0.872,
+      "y1": 0.391,
+      "type": "text",
+      "result": "within-one-line"
+    },
+    {
+      "seq": 153010,
+      "page": 153,
+      "x0": 0.1,
+      "y0": 0.588,
+      "x1": 0.872,
+      "y1": 0.648,
+      "type": "text",
+      "result": "within-one-line"
+    },
+    {
+      "seq": 488004,
+      "page": 488,
+      "x0": 0.125,
+      "y0": 0.543,
+      "x1": 0.52,
+      "y1": 0.564,
+      "type": "text",
+      "result": "within-one-line"
+    },
+    {
+      "seq": 447009,
+      "page": 447,
+      "x0": 0.188,
+      "y0": 0.801,
+      "x1": 0.851,
+      "y1": 0.933,
+      "type": "text",
+      "result": "within-one-line"
+    },
+    {
+      "seq": 309001,
+      "page": 309,
+      "x0": 0.079,
+      "y0": 0.07,
+      "x1": 0.542,
+      "y1": 0.093,
+      "type": "title",
+      "result": "within-one-line"
+    },
+    {
+      "seq": 705005,
+      "page": 705,
+      "x0": 0.1,
+      "y0": 0.429,
+      "x1": 0.868,
+      "y1": 0.466,
+      "type": "text",
+      "result": "within-one-line"
+    },
+    {
+      "seq": 634017,
+      "page": 634,
+      "x0": 0.146,
+      "y0": 0.86,
+      "x1": 0.52,
+      "y1": 0.876,
+      "type": "text",
+      "result": "within-one-line"
+    },
+    {
+      "seq": 317015,
+      "page": 317,
+      "x0": 0.079,
+      "y0": 0.647,
+      "x1": 0.872,
+      "y1": 0.728,
+      "type": "text",
+      "result": "within-one-line"
+    },
+    {
+      "seq": 313009,
+      "page": 313,
+      "x0": 0.079,
+      "y0": 0.603,
+      "x1": 0.87,
+      "y1": 0.705,
+      "type": "text",
+      "result": "within-one-line"
+    },
+    {
+      "seq": 812001,
+      "page": 812,
+      "x0": 0.125,
+      "y0": 0.067,
+      "x1": 0.444,
+      "y1": 0.921,
+      "type": "text",
+      "result": "within-one-line"
+    },
+    {
+      "seq": 206008,
+      "page": 206,
+      "x0": 0.146,
+      "y0": 0.624,
+      "x1": 0.885,
+      "y1": 0.642,
+      "type": "text",
+      "result": "within-one-line"
+    }
+  ]
+}

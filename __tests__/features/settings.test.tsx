@@ -44,6 +44,7 @@ import {
 } from '@features/settings/samples';
 import * as storageUsecases from '@app/usecases/storage';
 import { ImportInputError, reparseBook } from '@app/usecases/importBooks';
+import { version } from '../../package.json';
 
 jest.mock('@app/ContainerProvider', () => ({ useContainer: jest.fn() }));
 jest.mock('@features/nav', () => ({ useAppNav: jest.fn() }));
@@ -110,6 +111,31 @@ it('shows the Me summaries and routes each setting from the current library', as
   expect(vm().state.groups[0][1].subtitle).toContain('还没有配置讲解模型');
   vm().intents.open('MePrefs');
   expect(nav.open).toHaveBeenCalledWith({ name: 'MePrefs' });
+});
+
+it('keeps Me appearance and version summaries current without refreshing the page', async () => {
+  await patchPrefs(c, { bilingual: false });
+  const vm = await mountVM(useMeVM);
+  const row = (key: string) =>
+    vm()
+      .state.groups.flat()
+      .find(item => item.key === key)!;
+  expect(row('MeAppearance').subtitle).toBe('纸感 · 跟随系统 · 正文中');
+  expect(row('About').subtitle).toBe(`版本 ${version} · GPL-3.0`);
+  expect(row('MePrefs').subtitle).toContain('只用中文术语');
+  await act(async () => {
+    await c.appearance.update({
+      skin: 'glass',
+      scheme: 'dark',
+      readingSize: 'l',
+    });
+  });
+  expect(row('MeAppearance').subtitle).toBe('苹果风 · 深色 · 正文大');
+  await act(async () => {
+    await c.appearance.update({ scheme: 'light', readingSize: 's' });
+  });
+  expect(row('MeAppearance').subtitle).toBe('苹果风 · 浅色 · 正文小');
+  expect(row('About').subtitle).toBe(`版本 ${version} · GPL-3.0`);
 });
 
 it('saves MinerU credentials only in KeyStore and reloads model, confirmation and expiry', async () => {

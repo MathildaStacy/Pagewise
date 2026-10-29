@@ -5,6 +5,12 @@ import {
   seedDemo,
 } from '@app/demo/seed';
 import { prototypeSource } from '@app/demo/source';
+import { createHash } from 'node:crypto';
+import { demoFigureAssets } from '@app/demo/figures';
+import { loadStudyReader } from '@app/usecases/studyReader';
+import { resolveStudyBlockImage } from '@app/bookImages';
+import { parse } from '@core/markup';
+import { validateCitations } from '@core/citations';
 
 it('seeds the complete prototype map, stable marked blocks, four lesson steps and learning records', async () => {
   const c = await createTestDemoContainer();
@@ -95,6 +101,54 @@ it('refuses to seed an existing library and rolls back a partially written batch
     });
     await expect(seedDemo(c.db, c.clock)).rejects.toThrow('已有正式书籍');
     expect(await c.repos.books.list()).toHaveLength(1);
+  } finally {
+    await c.close();
+  }
+});
+
+it('supplies local native PNG figures from the exact prototype SVGs while preserving source captions and citation checks', async () => {
+  const c = await createTestDemoContainer();
+  try {
+    for (const [figureId, sourceId, sectionId] of [
+      ['f318', 'b6', '3.5.2'],
+      ['f310', 'b0903', '3.4.2'],
+    ] as const) {
+      const asset = demoFigureAssets[figureId],
+        svg = prototypeSource.FIGS[figureId].svg,
+        reader = await loadStudyReader(c, 'aima', sectionId),
+        figure = reader.blocks.find(
+          block => block.seq === demoRefBySourceId[sourceId],
+        )!;
+      expect(figure.type).toBe('image');
+      expect(figure.text).toMatch(/^\[示意内容\] 图/);
+      expect(figure.image_path).toBe(asset.uri);
+      expect(resolveStudyBlockImage(c, 'aima', figure)).toBe(figure);
+      expect(asset.svgSha256).toBe(
+        createHash('sha256').update(svg).digest('hex'),
+      );
+      const png = Buffer.from(
+        asset.uri.slice('data:image/png;base64,'.length),
+        'base64',
+      );
+      expect(png.subarray(0, 8)).toEqual(
+        Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+      );
+      expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([
+        asset.width,
+        asset.height,
+      ]);
+      expect(asset.width).toBe(960);
+      const doc = parse(`[[fig:${figure.seq}]]`);
+      const verified = validateCitations(doc, {
+        allowedRefs: [figure.seq],
+        blocks: reader.blocks,
+      });
+      expect(verified.doc[0]).toMatchObject({ t: 'figure', verified: true });
+      expect(
+        validateCitations(doc, { allowedRefs: [], blocks: reader.blocks })
+          .invalidCitations,
+      ).toBe(1);
+    }
   } finally {
     await c.close();
   }

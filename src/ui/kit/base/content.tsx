@@ -83,12 +83,21 @@ function Inline({
   );
 }
 
-export function RichView({ doc, onCite, onFigure }: KitProps['RichView']) {
+export function RichView({
+  doc,
+  typography,
+  onCite,
+  onFigure,
+}: KitProps['RichView']) {
   const s = useStyles();
   const book = useContext(BookTypography);
   const study = useContext(StudyTypography);
   const textStyle =
-    study === 'source'
+    typography === 'dialogQuote'
+      ? s.dialogQuoteText
+      : typography === 'sheetQuote'
+      ? s.sheetQuoteText
+      : study === 'source'
       ? s.sourceText
       : study === 'aux'
       ? s.auxText
@@ -1123,7 +1132,7 @@ export function GuideBar({
   );
 }
 
-export function ReadEnd({ label, onPress }: KitProps['ReadEnd']) {
+export function ReadEnd({ label, hint, onPress }: KitProps['ReadEnd']) {
   const s = useStyles();
   return (
     <View
@@ -1132,12 +1141,8 @@ export function ReadEnd({ label, onPress }: KitProps['ReadEnd']) {
       accessibilityLabel={label}
       accessibilityState={{}}
     >
-      <Kit.Button
-        variant="primary"
-        label={label}
-        icon="check"
-        onPress={onPress}
-      />
+      <Kit.Button variant="primary" label={label} onPress={onPress} />
+      {hint ? <Text style={s.readEndHint}>{hint}</Text> : null}
     </View>
   );
 }
@@ -1367,6 +1372,20 @@ const useStyles = makeStyles(t => ({
   caption: { ...t.type.caption, color: t.color.ink2 },
   aiText: { ...t.type.aiBody, color: t.color.ink },
   bookText: { ...t.type.bookBody, color: t.color.paperInk },
+  dialogQuoteText: {
+    ...studyType(t, 13, 23.4),
+    fontFamily: t.type.serifFamily,
+    color: t.color.ink2,
+  },
+  sheetQuoteText: {
+    ...studyType(
+      t,
+      t.layout.groupedLists ? 15 : 13,
+      t.layout.groupedLists ? 27 : 23.4,
+    ),
+    fontFamily: t.type.serifFamily,
+    color: t.color.ink2,
+  },
   bookCaption: {
     ...t.type.caption,
     fontFamily: t.type.serifFamily,
@@ -1826,7 +1845,21 @@ const useStyles = makeStyles(t => ({
     alignSelf: 'flex-start',
     gap: 6,
   },
-  readEnd: { paddingVertical: 22, paddingHorizontal: 16, alignItems: 'center' },
+  readEnd: {
+    paddingTop: 22,
+    paddingHorizontal: 16,
+    paddingBottom: t.layout.groupedLists ? 8 : 22,
+    alignItems: 'center',
+    gap: 8,
+  },
+  readEndHint: {
+    ...t.type.caption,
+    fontSize: t.type.caption.fontSize * (t.layout.groupedLists ? 12 / 13 : 1),
+    lineHeight:
+      t.type.caption.lineHeight * (t.layout.groupedLists ? 12 / 13 : 1),
+    color: t.color.ink2,
+    textAlign: 'center',
+  },
   flashTarget: { minHeight: 300 },
   flash: {
     minHeight: 300,

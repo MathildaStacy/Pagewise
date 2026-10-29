@@ -378,26 +378,29 @@ export function useStudyVM(
               }
             })(),
         );
+  const quoteBlock =
+    raw.pendingQuote === null ? undefined : blocks.get(raw.pendingQuote);
+  const quotePage = blockPage(quoteBlock, raw.book);
+  const quoteExcerpt = quoteBlock?.text ?? '原文';
+  const readSubtitle = (() => {
+    const section =
+      mode === 'read' ? readSection : activeSection ?? raw.section;
+    if (!section?.page_from) return undefined;
+    const offset = raw.book?.page_offset ?? 0;
+    const from = section.page_from - offset;
+    const to = (section.page_to ?? section.page_from) - offset;
+    return from === to ? `p.${from}` : `p.${from}–${to}`;
+  })();
   const state: StudyState = {
     header: {
       title:
         mode === 'read'
           ? sectionLabel(readSection)
           : sectionLabel(activeSection ?? raw.section),
-      subtitle: [
-        raw.book?.title,
-        (() => {
-          const section =
-            mode === 'read' ? readSection : activeSection ?? raw.section;
-          if (!section?.page_from) return undefined;
-          const offset = raw.book?.page_offset ?? 0;
-          const from = section.page_from - offset;
-          const to = (section.page_to ?? section.page_from) - offset;
-          return from === to ? `p.${from}` : `p.${from}–${to}`;
-        })(),
-      ]
+      subtitle: [standalone ? undefined : raw.book?.title, readSubtitle]
         .filter(Boolean)
         .join(' · '),
+      readSubtitle,
       backLabel: '地图',
     },
     mode,
@@ -435,12 +438,9 @@ export function useStudyVM(
         quote:
           raw.pendingQuote !== null
             ? {
-                label: `引用 ${blockPage(
-                  blocks.get(raw.pendingQuote),
-                  raw.book,
-                )} · ${
-                  blocks.get(raw.pendingQuote)?.text.slice(0, 70) ?? '原文'
-                }`,
+                label: `引用 ${quotePage} · ${quoteExcerpt.slice(0, 70)}`,
+                page: quotePage,
+                excerpt: quoteExcerpt,
               }
             : null,
       },

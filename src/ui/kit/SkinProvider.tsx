@@ -54,11 +54,21 @@ export function SkinProvider({
     const skin = skins[skinId];
     const original = skin.tokens[resolvedScheme];
     const size = readingSize === 's' ? 0.92 : readingSize === 'l' ? 1.125 : 1;
+    const appleSizes = {
+      aiBody: { s: 15, m: 17, l: 19 },
+      bookBody: { s: 15, m: 17, l: 19.5 },
+    };
     const type = { ...original.type };
     for (const [key, style] of Object.entries(type)) {
       if (typeof style === 'object' && 'fontSize' in style) {
-        const factor =
-          fontScale * (key === 'aiBody' || key === 'bookBody' ? size : 1);
+        let readingFactor = 1;
+        if (key === 'aiBody' || key === 'bookBody') {
+          readingFactor =
+            skinId === 'glass'
+              ? appleSizes[key][readingSize] / style.fontSize
+              : size;
+        }
+        const factor = fontScale * readingFactor;
         (type as unknown as Record<string, TypeStyle>)[key] = {
           ...style,
           fontSize: style.fontSize * factor,

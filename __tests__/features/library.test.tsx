@@ -1,5 +1,5 @@
 import ReactTestRenderer from 'react-test-renderer';
-import { AccessibilityInfo } from 'react-native';
+import { AccessibilityInfo, StyleSheet, Text } from 'react-native';
 import { createTestDemoContainer } from '@app/testing';
 import type { Container } from '@app/container';
 import { ContainerProvider } from '@app/ContainerProvider';
@@ -538,6 +538,20 @@ it.each(['paper', 'glass'] as const)(
         );
       });
       expect(renderer!.toJSON()).toBeTruthy();
+      if (view.type === BookMapView && view.props.state === mapSamples.normal) {
+        const label = (value: string) =>
+          renderer!.root
+            .findAllByType(Text)
+            .find(node => node.props.children === value)!;
+        expect(
+          StyleSheet.flatten(label('3.5.2 A*搜索').props.style).fontWeight,
+        ).toBe('600');
+        expect(
+          StyleSheet.flatten(
+            label('3.5 有信息的（启发式）搜索策略').props.style,
+          ).fontWeight,
+        ).toBe('400');
+      }
       await ReactTestRenderer.act(async () => renderer!.unmount());
       renderer = undefined;
     }

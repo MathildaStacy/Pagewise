@@ -3,6 +3,7 @@ import {
   Animated,
   Easing,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,6 +11,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { BlurView } from '@react-native-community/blur';
 import type {
   AppBarProps,
   ButtonProps,
@@ -45,9 +47,46 @@ function AppBar({
   backLabel = '返回',
   right,
   scrollY = 0,
+  part = 'all',
 }: AppBarProps) {
   const t = useTokens();
   const root = variant === 'root';
+  const { reduceMotion, blurEnabled } = useSkin();
+  const compactVisible = !root || scrollY > 36;
+  const opacity = useRef(new Animated.Value(compactVisible ? 1 : 0)).current;
+  useEffect(() => {
+    if (reduceMotion) {
+      opacity.setValue(compactVisible ? 1 : 0);
+      return;
+    }
+    const animation = Animated.timing(opacity, {
+      toValue: compactVisible ? 1 : 0,
+      duration: 200,
+      useNativeDriver: true,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [compactVisible, opacity, reduceMotion]);
+  const largeTitle = root ? (
+    <Text
+      testID="glass-appbar-large-title"
+      accessibilityRole="header"
+      style={[
+        t.type.largeTitle,
+        StyleSheet.create({
+          title: {
+            color: t.color.ink,
+            paddingHorizontal: 20,
+            paddingBottom: 12,
+            letterSpacing: 0.34,
+          },
+        }).title,
+      ]}
+    >
+      {title}
+    </Text>
+  ) : null;
+  if (part === 'largeTitle') return largeTitle;
   return (
     <View accessibilityRole="header" accessibilityLabel={title}>
       <View
@@ -60,11 +99,47 @@ function AppBar({
               flexDirection: 'row',
               alignItems: 'center',
               gap: 2,
-              backgroundColor: scrollY > 0 ? t.color.header : undefined,
             },
           }).root
         }
       >
+        {scrollY > 2 ? (
+          <View
+            testID="glass-appbar-material"
+            pointerEvents="none"
+            style={[
+              StyleSheet.absoluteFill,
+              StyleSheet.create({
+                material: {
+                  overflow: 'hidden',
+                  borderBottomWidth: 0.5,
+                  borderBottomColor: t.color.line,
+                },
+              }).material,
+            ]}
+          >
+            {blurEnabled &&
+            (Platform.OS === 'android' || Platform.OS === 'ios') ? (
+              <BlurView
+                testID="glass-appbar-blur"
+                style={StyleSheet.absoluteFill}
+                blurType={t.scheme === 'dark' ? 'dark' : 'light'}
+                blurAmount={20}
+                reducedTransparencyFallbackColor={t.color.surface}
+              />
+            ) : null}
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                {
+                  backgroundColor: blurEnabled
+                    ? t.color.header
+                    : t.color.surface,
+                },
+              ]}
+            />
+          </View>
+        ) : null}
         <View
           style={
             StyleSheet.create({
@@ -105,21 +180,25 @@ function AppBar({
             </Pressable>
           ) : null}
         </View>
-        <View
-          style={
-            StyleSheet.create({
-              root: {
-                flex: 1,
-                minWidth: 0,
-                alignItems: 'center',
-                opacity: root && scrollY < 44 ? 0 : 1,
-              },
-            }).root
+        <Animated.View
+          testID="glass-appbar-compact-title"
+          accessibilityElementsHidden={!compactVisible}
+          importantForAccessibility={
+            compactVisible ? 'auto' : 'no-hide-descendants'
           }
+          style={[
+            StyleSheet.create({
+              title: { flex: 1, minWidth: 0, alignItems: 'center' },
+            }).title,
+            { opacity },
+          ]}
         >
           <Text
             numberOfLines={1}
-            style={[t.type.title, StyleSheet.create({root:{ color: t.color.ink }}).root]}
+            style={[
+              t.type.title,
+              StyleSheet.create({ root: { color: t.color.ink } }).root,
+            ]}
           >
             {title}
           </Text>
@@ -135,7 +214,7 @@ function AppBar({
               {subtitle}
             </Text>
           ) : null}
-        </View>
+        </Animated.View>
         <View
           style={
             StyleSheet.create({
@@ -150,21 +229,7 @@ function AppBar({
           {right}
         </View>
       </View>
-      {root ? (
-        <View style={StyleSheet.create({root:{height:Math.max(0,53*(1-scrollY/56)),overflow:'hidden'}}).root}><Text
-          style={[
-            t.type.largeTitle,
-            StyleSheet.create({root:{
-              color: t.color.ink,
-              paddingHorizontal: 20,
-              paddingBottom: 12,
-              letterSpacing: 0.34,
-            }}).root,
-          ]}
-        >
-          {title}
-        </Text></View>
-      ) : null}
+      {part === 'all' ? largeTitle : null}
     </View>
   );
 }
@@ -379,11 +444,17 @@ function GlassSegmented({
 }
 
 function ModeSwitch({ value, onChange }: ModeSwitchProps) {
-  const t=useTokens();
+  const t = useTokens();
   return (
     <View
       testID="glass-mode-switch"
-      style={StyleSheet.create({ root: { width:4+2*Math.max(46,t.type.caption.fontSize*2+12) } }).root}
+      style={
+        StyleSheet.create({
+          root: {
+            width: 4 + 2 * Math.max(46, t.type.caption.fontSize * 2 + 12),
+          },
+        }).root
+      }
     >
       <Segmented
         accessibilityLabel="学习方式"
@@ -506,7 +577,8 @@ function Button({
           style={
             StyleSheet.create({
               root: {
-                fontSize: size === 'sm' ? t.type.label.fontSize : t.type.body.fontSize,
+                fontSize:
+                  size === 'sm' ? t.type.label.fontSize : t.type.body.fontSize,
                 lineHeight: size === 'sm' ? 21.75 : 24.65,
                 fontWeight: '600',
                 color: fg,
@@ -522,11 +594,19 @@ function Button({
   );
 }
 
-function ListSection({ title, subtitle, note, children,plain }: ListSectionProps) {
+function ListSection({
+  title,
+  subtitle,
+  note,
+  children,
+  plain,
+}: ListSectionProps) {
   const t = useTokens();
   return (
     <View
-      accessibilityRole="none" accessibilityState={{}} accessibilityLabel={title ?? '分组'}
+      accessibilityRole="none"
+      accessibilityState={{}}
+      accessibilityLabel={title ?? '分组'}
       style={
         StyleSheet.create({ root: { marginHorizontal: 16, marginBottom: 24 } })
           .root
@@ -548,12 +628,20 @@ function ListSection({ title, subtitle, note, children,plain }: ListSectionProps
         >
           <Text
             accessibilityRole="header"
-            style={[t.type.caption, StyleSheet.create({root:{ color: t.color.ink2 }}).root]}
+            style={[
+              t.type.caption,
+              StyleSheet.create({ root: { color: t.color.ink2 } }).root,
+            ]}
           >
             {title}
           </Text>
           {subtitle ? (
-            <Text style={[t.type.caption, StyleSheet.create({root:{ color: t.color.ink2 }}).root]}>
+            <Text
+              style={[
+                t.type.caption,
+                StyleSheet.create({ root: { color: t.color.ink2 } }).root,
+              ]}
+            >
               {subtitle}
             </Text>
           ) : null}
@@ -564,7 +652,7 @@ function ListSection({ title, subtitle, note, children,plain }: ListSectionProps
           StyleSheet.create({
             root: {
               borderRadius: 20,
-              backgroundColor: plain?undefined:t.color.surface,
+              backgroundColor: plain ? undefined : t.color.surface,
               overflow: 'hidden',
             },
           }).root
@@ -576,7 +664,13 @@ function ListSection({ title, subtitle, note, children,plain }: ListSectionProps
         <Text
           style={[
             t.type.caption,
-            StyleSheet.create({root:{ color: t.color.ink2, paddingTop: 7, paddingHorizontal: 16 }}).root,
+            StyleSheet.create({
+              root: {
+                color: t.color.ink2,
+                paddingTop: 7,
+                paddingHorizontal: 16,
+              },
+            }).root,
           ]}
         >
           {note}
@@ -622,7 +716,11 @@ function Row({ title, subtitle, right, chevron, onPress, tone }: RowProps) {
     <>
       <View style={rowTextStyle}>
         <Text
-          style={[tokens.type.body, StyleSheet.create({root:{ color: foreground, lineHeight: 22.1 }}).root]}
+          style={[
+            tokens.type.body,
+            StyleSheet.create({ root: { color: foreground, lineHeight: 22.1 } })
+              .root,
+          ]}
         >
           {title}
         </Text>
@@ -630,7 +728,13 @@ function Row({ title, subtitle, right, chevron, onPress, tone }: RowProps) {
           <Text
             style={[
               tokens.type.caption,
-              StyleSheet.create({root:{ color: tokens.color.ink2, lineHeight: 18.2, marginTop: 2 }}).root,
+              StyleSheet.create({
+                root: {
+                  color: tokens.color.ink2,
+                  lineHeight: 18.2,
+                  marginTop: 2,
+                },
+              }).root,
             ]}
           >
             {subtitle}
@@ -727,11 +831,15 @@ function StepProgress({
         horizontal
         showsHorizontalScrollIndicator={false}
         style={StyleSheet.create({ root: { flexGrow: 0 } }).root}
-        contentContainerStyle={StyleSheet.create({root:{
-          gap: 8,
-          paddingHorizontal: 16,
-          paddingBottom: 10,
-        }}).root}
+        contentContainerStyle={
+          StyleSheet.create({
+            root: {
+              gap: 8,
+              paddingHorizontal: 16,
+              paddingBottom: 10,
+            },
+          }).root
+        }
       >
         {steps.map((step, i) => {
           const now = step.state === 'current',
@@ -829,11 +937,15 @@ function QuickActions({ items, onPress }: QuickActionsProps) {
       style={StyleSheet.create({ root: { flexGrow: 0, flexShrink: 0 } }).root}
       showsHorizontalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
-      contentContainerStyle={StyleSheet.create({root:{
-        gap: 8,
-        paddingHorizontal: 16,
-        paddingBottom: 10,
-      }}).root}
+      contentContainerStyle={
+        StyleSheet.create({
+          root: {
+            gap: 8,
+            paddingHorizontal: 16,
+            paddingBottom: 10,
+          },
+        }).root
+      }
     >
       {items.map(item => {
         const solid = item.kind === 'primary' || item.kind === 'detour',
@@ -933,6 +1045,7 @@ function Composer({
               StyleSheet.create({
                 root: {
                   minHeight: 38,
+                  paddingVertical: 4,
                   paddingLeft: 14,
                   paddingRight: 4,
                   flexDirection: 'row',
@@ -942,16 +1055,55 @@ function Composer({
               }).root
             }
           >
-            <Text
-              numberOfLines={1}
-              style={
-                StyleSheet.create({
-                  root: { flex: 1, fontSize: 13, color: t.color.ink2 },
-                }).root
-              }
-            >
-              {quote.label}
-            </Text>
+            {quote.page && quote.excerpt !== undefined ? (
+              <>
+                <Text
+                  style={
+                    StyleSheet.create({
+                      root: {
+                        fontSize: t.type.caption.fontSize,
+                        color: t.color.accent,
+                        fontWeight: '600',
+                        flexShrink: 0,
+                      },
+                    }).root
+                  }
+                >
+                  引用 {quote.page}
+                </Text>
+                <Text
+                  numberOfLines={1}
+                  style={
+                    StyleSheet.create({
+                      root: {
+                        flex: 1,
+                        minWidth: 0,
+                        fontSize: t.type.caption.fontSize,
+                        fontFamily: t.type.serifFamily,
+                        color: t.color.ink2,
+                      },
+                    }).root
+                  }
+                >
+                  {quote.excerpt}
+                </Text>
+              </>
+            ) : (
+              <Text
+                numberOfLines={1}
+                style={
+                  StyleSheet.create({
+                    root: {
+                      flex: 1,
+                      fontSize: t.type.caption.fontSize,
+                      color: t.color.ink2,
+                    },
+                  }).root
+                }
+              >
+                {quote.label}
+              </Text>
+            )}
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="取消引用"
@@ -1170,6 +1322,7 @@ function Dialog({
       paddingHorizontal: 18,
       paddingBottom: 18,
     },
+    bodySlot: { paddingTop: 6, paddingHorizontal: 18, paddingBottom: 18 },
     actions: {
       flexDirection: 'row',
       borderTopWidth: 0.5,
@@ -1220,6 +1373,8 @@ function Dialog({
             style={s.scroll}
             keyboardShouldPersistTaps="handled"
             bounces={false}
+            automaticallyAdjustKeyboardInsets
+            keyboardDismissMode="interactive"
           >
             <Glass strength="strong" style={s.surface}>
               <View
@@ -1232,7 +1387,13 @@ function Dialog({
                 <Text accessibilityRole="header" style={s.title}>
                   {title}
                 </Text>
-                <Text style={s.body}>{body}</Text>
+                {typeof body === 'string' ? (
+                  <Text style={s.body}>{body}</Text>
+                ) : (
+                  <View testID="dialog-body-slot" style={s.bodySlot}>
+                    {body}
+                  </View>
+                )}
                 <View testID="glass-dialog-actions" style={s.actions}>
                   {cancel ? (
                     <Pressable

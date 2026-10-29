@@ -88,6 +88,7 @@ export interface AppBarProps {
   backLabel?: string;
   right?: ReactNode;
   scrollY?: number;
+  part?: 'all' | 'navigation' | 'largeTitle';
 }
 export interface TabBarProps {
   items: {
@@ -141,13 +142,18 @@ export interface QuickActionsProps {
   }[];
   onPress(key: string): void;
 }
+export interface ComposerQuote {
+  label: string;
+  page?: string;
+  excerpt?: string;
+}
 export interface ComposerProps {
   value: string;
   onChange(value: string): void;
   placeholder: string;
   onSend(): void;
   sendDisabled: boolean;
-  quote?: { label: string; onClear(): void };
+  quote?: ComposerQuote & { onClear(): void };
   micAvailable: boolean;
   onMic?(): void;
   busy?: boolean;
@@ -229,14 +235,19 @@ export interface SheetProps {
   title: string;
   subtitle?: string;
   onClose(): void;
-  actions?: { label: string; kind: ButtonVariant; onPress(): void }[];
+  actions?: {
+    label: string;
+    kind: ButtonVariant;
+    disabled?: boolean;
+    onPress(): void;
+  }[];
   detent?: 'auto' | 'half' | 'full';
   children?: ReactNode;
 }
 export interface DialogProps {
   visible: boolean;
   title: string;
-  body: string;
+  body: ReactNode;
   confirm: string;
   cancel?: string;
   danger?: boolean;
@@ -302,6 +313,7 @@ export type RichBlock =
 export type RichDoc = RichBlock[];
 export interface RichViewProps {
   doc: RichDoc;
+  typography?: 'dialogQuote' | 'sheetQuote';
   onCite?(ref: number): void;
   onFigure?(ref: number): void;
 }
@@ -441,6 +453,7 @@ export interface GuideBarProps {
 }
 export interface ReadEndProps {
   label: string;
+  hint?: string;
   onPress(): void;
 }
 export interface FlashCardProps {

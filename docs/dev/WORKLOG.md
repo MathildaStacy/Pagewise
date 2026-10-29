@@ -163,7 +163,7 @@ EPUB + 真实 AI + 原生 Downloads 导出通过：Alice 17节/858块/1图片全
 
 使用修复后的真实原生导出：2本原件+552个图片资源，新ZIP47,943,402bytes。逐个manifest图片存在，快照无安装绝对image_path，真实凭据字节不存在；Markdown已为第03章目录，不再有第136章，Anki文件15张/每张3列。证据 `evidence/t11/native-storage-epub-with-images.json`、`native-export-inspection.json`。
 
-将ZIP保存到App外后，实际卸载、重装debug，观察空书库，再用生产restoreBackup恢复并自动重载。13张书籍/解析/学习表与ZIP快照逐行一致，2原件及552图片全部哈希匹配；恢复后MinerU未配置Token、AI编辑Key栏为空，需重新填写。证据 `native-uninstall-restore.json`。后续release恢复重启单独验证。
+将ZIP保存到App外后，实际卸载、重装debug，观察空书库，再用生产restoreBackup恢复并自动重载。13张书籍/解析/学习表与ZIP快照逐行一致，2原件及552图片全部哈希匹配；恢复后MinerU未配置Token、AI编辑Key栏为空，需重新填写。证据 `native-uninstall-restore.json`。另在release的正式设置页打开系统文件选择器选择新版备份，实际完成生产restoreBackup与ReactHost.reload；回到书架后原地换debug仅作run-as检查，13表、2原件、552图再次全匹配。证据 `native-release-restore.json`。
 
 最终check曾有queue-full测试5000ms超时；单测仍需3913ms，确认是Jest时钟与注入clock独立，提前推进造成1ms重调度循环。仅修测试同步时钟，并等attempt/stage/error/next_poll_at完整状态；59.999秒不重试、边界1ms触发、5次后失败断言均保留，未增加timeout或改生产语义。修后整套中该case5ms。最新完整check79 suites /1153 tests /15 snapshots通过；Android debug/release arm64构建54s通过。
 
@@ -171,14 +171,36 @@ EPUB + 真实 AI + 原生 Downloads 导出通过：Alice 17节/858块/1图片全
 
 已安装真实release APK（不依赖Metro），Android am start -W 三次COLD为9320/3828/4323ms；首个为安装后首次启动。该值是Activity首帧，不是完全可交互时间，更不能代表实体机达标。证据 `evidence/t12/release-cold-start-emulator.json`。不将此次性能标为通过，需实体机剖析/验证。
 
+### 19. 最后标题行为和30块源坐标核对
+
+第二轮源码审查发现我的页用普通View手写标题，未进入Screen的固定AppBar处理，Apple滚动后缺紧凑标题；已改共享AppBar。地图当前节点700改回原型600。我的页外观摘要改为当前皮肤/主题/正文档，关于显示真实版本，双语关闭文案改为“只用中文术语”。独立Reader按Paper加“原文 · ”前缀，两套副标题均只页码，与听讲副标题书名分开；文档明确两套mode顺序不同。
+
+用固定seed20261029从真实MinerU块中随机抽30块，Poppler125dpi渲染原书叠加库中归一化bbox，逐块目视核对：30/30对应正确内容，偏差不超过一行。证据 `evidence/t9/bbox-source-review.json` 仅保存坐标/类型/结论，完整书页与裁图在仓库外。此项证明源坐标；不冒称已走完30条原生点击路径。
+
+### 20. 最终双原型细节与原生复查
+
+继续按两份原型修正实际差异：Apple 大标题移入滚动正文，顶栏覆盖正文，超过36dp显示紧凑标题，超过2dp启用20 blur与0.5分隔；Paper保持固定48dp导航。Apple设置分段复用已有滑块，正文小/中/大精确为AI 15/17/19、原文15/17/19.5。Paper模式选中背景在设备上出现方角，改为原型独立圆角滑块与260ms过渡；Paper学习页切原文补页码副标题。
+
+学习浮层将操作放入Sheet.actions，Apple固定纵向footer、Paper保持正文内横排；笔记使用Dialog，补键盘适配、serif引用、草稿保持和空白拦截。补原文顶栏占位/返回、Apple thread上下距、ReadEnd单层padding；Composer拆开引用标签与serif摘录；小结完成图标补原型阴影/500ms pop并遵循reduceMotion。Demo图由两份原型相同SVG精确栅格化为本地PNG data URI，避免原生Image不显示SVG；仅影响隔离演示库。
+
+本轮使用ego-browser获准新建space2，打开两份本地prototype捕获参考画面；Paper/Apple主页面四主题44张重新拍摄。旧Apple浅色Notes/Review截图各有一行深色底残留；JS同实例dark/light三轮样式均正确，最新原生dark→light复现两页均无残留，未臆测根因或加remount。实际截图索引见evidence/t4/final/README.md，浏览器参考见evidence/t4/reference/。
+
+TalkBack服务已实际绑定，Tab绿色焦点、书架继续进入听讲已观察；输入问题和回主线没有可靠完成，语音未人工听验，故仅记partial。原始关闭设置已恢复并读回null/0，证据evidence/t12/talkback-keyboard-partial.json。
+
+最终本地npm run check为80 suites/1191 tests/15 snapshots，通过；Paper页码副标题追加断言后Reader26项再次通过。arm64 debug/release最终构建49s通过。最新release安装并启动真实书架成功；release隐藏开发Demo入口，故原型示意截图仍用debug，避免为验收新增产品入口。
+
+最后串行执行Apple深色Demo的“地图→书架→我的”，实际层级确认书架和我的页均正确出现。此前并发UIAutomator与错误页面状态导致的无响应判断未复现为产品问题；未为此新增导航重置或remount。
+
+用户要求使用stop-that-shit skill：按change责任仅修已确认原型差异与必要调用者/测试，不新增产品功能。用户选择先完成模拟器可验证项目；实体机与Anthropic专项继续独立列未验证。
+
 ## 待完成 / 不得提前宣称通过
 
 - 地图27/27正文章首页、章号与偏移已确认；全图1342节层级及845个黄色核对项仍需人工质量复核。长词全文搜索→Reader原版/重排已设备通过，短词路径仍待补验。
 - 真实三节生产会话已通过；原生公式SVG、30个引用框位置、高亮/便签及杀进程恢复的最终界面走查仍待完成。
 - EPUB设备导入与真实AI、清缓存/重解析严格迁移已通过；目录/图片的完整阅读界面走查仍待完成。
-- 新版Markdown/Anki原生文件已生成，章号已修；Anki程序实际导入和Markdown样例确认仍待完成。卸载重装恢复已严格通过；release恢复重启正在实测。
+- 新版Markdown/Anki原生文件已生成，章号已修；Anki程序实际导入和Markdown样例确认仍待完成。卸载重装恢复与release正式入口恢复/自动重载均已严格通过。
 - 两皮肤×浅深色最终逐页截图、TalkBack实际操作、隔3天续学与滚动性能仍待补；模拟器冷启动未达标，不能替代中端实体机结论；Anthropic专项需可用服务。
-- 最新完整check和debug/release构建已通过；仍需按范围提交、push并检查最后PR CI。
+- 最新完整check和debug/release构建已通过；最终提交的GitHub CI状态以PR #1最新提交检查为准。
 
 ## Review 建议
 

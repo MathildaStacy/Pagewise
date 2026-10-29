@@ -1,9 +1,34 @@
-import Renderer, { act } from 'react-test-renderer';
-import { FlatList, StyleSheet, Text } from 'react-native';
-import { SkinProvider } from '@ui/kit';
-import { ReaderContent } from '@ui/screens/ReaderView';
-import { readerSamples } from '@features/study/samples';
-import type { ReaderState, StudyIntents } from '@features/study/types';
+import { useState } from 'react';
+import Renderer, { act, type ReactTestInstance } from 'react-test-renderer';
+import {
+  FlatList,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+} from 'react-native';
+import {
+  AppBar,
+  Button,
+  Dialog,
+  IconButton,
+  ReadEnd,
+  RichView,
+  Sheet,
+  SkinProvider,
+} from '@ui/kit';
+import {
+  ReaderContent,
+  ReaderView,
+  StudyOverlays,
+} from '@ui/screens/ReaderView';
+import { StudyView } from '@ui/screens/StudyView';
+import { readerSamples, studySamples } from '@features/study/samples';
+import type {
+  ReaderState,
+  StudyIntents,
+  StudyOverlay,
+} from '@features/study/types';
 
 const no = () => {};
 const intents: StudyIntents = {
@@ -283,3 +308,339 @@ it('includes measured guide height in original-page offsets', async () => {
     root.findByType(FlatList).props.getItemLayout(undefined, 0).offset,
   ).toBe(70);
 });
+
+it.each(['paper', 'glass'] as const)(
+  'keeps the standalone Reader header from the %s prototype',
+  async skin => {
+    await act(async () => {
+      renderer = Renderer.create(
+        <SkinProvider skinId={skin} scheme="light" reduceMotion>
+          <ReaderView state={readerSamples.normal} intents={intents} />
+        </SkinProvider>,
+      );
+    });
+    const bar = renderer.root.findByType(AppBar);
+    expect(bar.props.title).toBe(
+      skin === 'paper' ? '原文 · 3.5.2 A*搜索' : '3.5.2 A*搜索',
+    );
+    expect(bar.props.subtitle).toBe('p.103–105');
+    expect(
+      StyleSheet.flatten(
+        renderer.root.findByProps({ testID: 'reader-header-spacer' }).props
+          .style,
+      ),
+    ).toMatchObject({ width: skin === 'paper' ? 40 : 44, flexShrink: 0 });
+  },
+);
+
+it.each(['paper', 'glass'] as const)(
+  'keeps the %s Study reading header and return action from its prototype',
+  async skin => {
+    const setMode = jest.fn(),
+      back = jest.fn();
+    await act(async () => {
+      renderer = Renderer.create(
+        <SkinProvider skinId={skin} scheme="light" reduceMotion>
+          <StudyView
+            state={{ ...studySamples.normal, mode: 'read' }}
+            intents={{ ...intents, setMode, back }}
+          />
+        </SkinProvider>,
+      );
+    });
+    const bar = renderer.root.findByType(AppBar);
+    expect(bar.props.title).toBe(
+      skin === 'paper'
+        ? `原文 · ${studySamples.normal.header.title}`
+        : studySamples.normal.header.title,
+    );
+    expect(bar.props.subtitle).toBe(
+      skin === 'paper' ? 'p.103–105' : studySamples.normal.header.subtitle,
+    );
+    expect(
+      renderer.root
+        .findAllByType(IconButton)
+        .filter(button => button.props.icon === 'more'),
+    ).toHaveLength(skin === 'paper' ? 0 : 1);
+    expect(
+      renderer.root.findAllByProps({ testID: 'reader-header-spacer' }).length >
+        0,
+    ).toBe(skin === 'paper');
+    await act(async () => bar.props.onBack());
+    if (skin === 'paper') {
+      expect(setMode).toHaveBeenCalledWith('listen');
+      expect(back).not.toHaveBeenCalled();
+    } else expect(back).toHaveBeenCalledTimes(1);
+  },
+);
+
+it('keeps the Apple thread spacing outside the floating dock', async () => {
+  await act(async () => {
+    renderer = Renderer.create(
+      <SkinProvider skinId="glass" scheme="light" reduceMotion>
+        <StudyView state={studySamples.normal} intents={intents} />
+      </SkinProvider>,
+    );
+  });
+  const list = () => renderer.root.findByType(FlatList);
+  expect(StyleSheet.flatten(list().props.contentContainerStyle)).toMatchObject({
+    paddingTop: 4,
+    paddingHorizontal: 20,
+    paddingBottom: 32,
+    gap: 12,
+  });
+  const dock = renderer.root.findAll(
+    node =>
+      node.props.pointerEvents === 'box-none' &&
+      typeof node.props.onLayout === 'function',
+  )[0];
+  await act(async () => dock.props.onLayout(layout(0, 100)));
+  expect(
+    StyleSheet.flatten(list().props.contentContainerStyle).paddingBottom,
+  ).toBe(132);
+});
+
+it.each(['flow', 'orig'] as const)(
+  'uses one Apple read-end spacing container in %s mode',
+  async view => {
+    const finishReading = jest.fn();
+    const root = await render(
+      'glass',
+      {
+        ...readerSamples.normal.read,
+        view,
+        original: { available: true, loading: false, pages: [] },
+        readEnd: { visible: true, label: '读完了', hint: '生成本节小结' },
+      },
+      { ...intents, finishReading },
+    );
+    expect(root.findByType(FlatList).props.ListFooterComponent.type).toBe(
+      ReadEnd,
+    );
+    const end = root.findByType(ReadEnd);
+    const region = end.findByProps({
+      accessibilityRole: 'none',
+      accessibilityLabel: '读完了',
+    });
+    expect(StyleSheet.flatten(region.props.style)).toMatchObject({
+      paddingTop: 22,
+      paddingHorizontal: 16,
+      paddingBottom: 8,
+      gap: 8,
+      alignItems: 'center',
+    });
+    const button = end.findByType(Button);
+    expect(button.props.icon).toBeUndefined();
+    const hint = end
+      .findAllByType(Text)
+      .find(node => node.props.children === '生成本节小结')!;
+    expect(StyleSheet.flatten(hint.props.style)).toMatchObject({
+      fontSize: 12,
+      textAlign: 'center',
+    });
+    await act(async () => button.props.onPress());
+    expect(finishReading).toHaveBeenCalledTimes(1);
+  },
+);
+
+const explanation: Extract<StudyOverlay, { kind: 'explain' | 'translate' }> = {
+  kind: 'explain',
+  seq: 3,
+  quote: [{ t: 'p', c: [{ t: 'text', v: '书中的原文' }] }],
+  answer: [{ t: 'p', c: [{ t: 'text', v: '这一段的解释' }] }],
+  streaming: false,
+  subtitle: 'p.103 · 3.5.2 A*搜索 · 整理模型',
+};
+async function renderOverlay(
+  skin: 'paper' | 'glass',
+  overlay: StudyOverlay,
+  actions = intents,
+) {
+  await act(async () => {
+    renderer = Renderer.create(
+      <SkinProvider skinId={skin} scheme="light" reduceMotion>
+        <StudyOverlays overlay={overlay} intents={actions} />
+      </SkinProvider>,
+    );
+  });
+  return renderer.root;
+}
+function insideSheetBody(node: ReactTestInstance) {
+  let ancestor = node.parent;
+  while (ancestor) {
+    if (ancestor.props.testID === 'sheet-scroll-body') return true;
+    ancestor = ancestor.parent;
+  }
+  return false;
+}
+it.each(['paper', 'glass'] as const)(
+  'keeps the %s explain actions in their prototype order and sheet region',
+  async skin => {
+    const overlayAction = jest.fn();
+    const root = await renderOverlay(skin, explanation, {
+      ...intents,
+      overlayAction,
+    });
+    const footer = root.findByProps({ testID: 'sheet-actions' });
+    const buttons = footer.findAllByType(Button);
+    expect(buttons.map(button => button.props.label)).toEqual(
+      skin === 'glass'
+        ? ['带到听讲里继续问', '好的', '记为卡点']
+        : ['记为卡点', '带到伴读里继续问'],
+    );
+    expect(buttons.map(button => button.props.variant)).toEqual(
+      skin === 'glass' ? ['primary', 'ghost', 'ghost'] : ['ghost', 'primary'],
+    );
+    expect(StyleSheet.flatten(footer.props.style).flexDirection).toBe(
+      skin === 'glass' ? 'column' : 'row',
+    );
+    expect(insideSheetBody(footer)).toBe(skin === 'paper');
+    const body = root.findByProps({ testID: 'sheet-body' });
+    expect(body.findAllByType(Button)).toHaveLength(0);
+    const quote = body
+      .findAllByType(RichView)
+      .find(node => node.props.typography === 'sheetQuote')!;
+    const quoteText = quote
+      .findAllByType(Text)
+      .find(
+        node => StyleSheet.flatten(node.props.style)?.fontFamily === 'serif',
+      )!;
+    expect(StyleSheet.flatten(quoteText.props.style)).toMatchObject({
+      fontFamily: 'serif',
+      fontSize: skin === 'glass' ? 15 : 13,
+      lineHeight: skin === 'glass' ? 27 : 23.4,
+    });
+    await act(async () => buttons.forEach(button => button.props.onPress()));
+    expect(overlayAction.mock.calls.map(([action]) => action)).toEqual(
+      skin === 'glass' ? ['ask', 'ok', 'stuck'] : ['stuck', 'ask'],
+    );
+  },
+);
+it.each([
+  { ...explanation, answer: null },
+  { ...explanation, streaming: true },
+])('prevents pin confirmation before the answer is ready', async overlay => {
+  const overlayAction = jest.fn();
+  const root = await renderOverlay('glass', overlay, {
+    ...intents,
+    overlayAction,
+  });
+  const okay = root
+    .findByProps({ testID: 'sheet-actions' })
+    .findAllByType(Button)
+    .find(button => button.props.label === '好的')!;
+  expect(okay.props.disabled).toBe(true);
+  const nativeButton = okay.findAll(
+    node =>
+      node.props.accessibilityRole === 'button' &&
+      node.props.accessibilityLabel === '好的' &&
+      typeof node.props.onPress === 'function',
+  )[0];
+  expect(nativeButton.props.accessibilityState.disabled).toBe(true);
+  await act(async () => okay.props.onPress());
+  expect(overlayAction).not.toHaveBeenCalled();
+});
+it.each(['paper', 'glass'] as const)(
+  'uses the %s translation footer from its prototype',
+  async skin => {
+    const closeOverlay = jest.fn();
+    const root = await renderOverlay(
+      skin,
+      { ...explanation, kind: 'translate' },
+      { ...intents, closeOverlay },
+    );
+    const actions = root.findByType(Sheet).props.actions;
+    expect(
+      root
+        .findAllByType(RichView)
+        .some(node => node.props.typography === 'sheetQuote'),
+    ).toBe(true);
+    expect(actions.map((action: { label: string }) => action.label)).toEqual(
+      skin === 'glass' ? ['好的'] : [],
+    );
+    if (skin === 'glass') {
+      expect(actions[0].kind).toBe('primary');
+      await act(async () => actions[0].onPress());
+      expect(closeOverlay).toHaveBeenCalledTimes(1);
+    }
+  },
+);
+it.each(['paper', 'glass'] as const)(
+  'edits a %s note in a keyboard-aware dialog and requires nonempty text',
+  async skin => {
+    const overlayAction = jest.fn(),
+      closeOverlay = jest.fn();
+    function Draft({
+      skinId,
+      scheme,
+    }: {
+      skinId: 'paper' | 'glass';
+      scheme: 'light' | 'dark';
+    }) {
+      const [value, setNoteText] = useState('');
+      return (
+        <SkinProvider skinId={skinId} scheme={scheme} reduceMotion>
+          <StudyOverlays
+            overlay={{
+              kind: 'note',
+              seq: 3,
+              quote: explanation.quote,
+              value,
+              subtitle: 'p.103',
+            }}
+            intents={{ ...intents, setNoteText, overlayAction, closeOverlay }}
+          />
+        </SkinProvider>
+      );
+    }
+    await act(async () => {
+      renderer = Renderer.create(<Draft skinId={skin} scheme="light" />);
+    });
+    const dialog = () => renderer.root.findByType(Dialog);
+    const input = () => renderer.root.findByType(TextInput);
+    expect(renderer.root.findAllByType(Sheet)).toHaveLength(0);
+    expect(dialog().props.title).toBe('记笔记 · p.103');
+    expect(dialog().props.confirm).toBe('保存');
+    expect(dialog().props.cancel).toBe('取消');
+    expect(input().props).toMatchObject({
+      multiline: true,
+      autoFocus: true,
+      placeholder: '写下你的理解',
+    });
+    const quote = renderer.root
+      .findByProps({ testID: 'dialog-body-slot' })
+      .findAllByType(Text)
+      .find(
+        node => StyleSheet.flatten(node.props.style)?.fontFamily === 'serif',
+      )!;
+    expect(StyleSheet.flatten(quote.props.style)).toMatchObject({
+      fontFamily: 'serif',
+      fontSize: 13,
+      lineHeight: 23.4,
+    });
+    const scroll = renderer.root.findByType(ScrollView);
+    expect(scroll.props).toMatchObject({
+      keyboardShouldPersistTaps: 'handled',
+      keyboardDismissMode: 'interactive',
+      automaticallyAdjustKeyboardInsets: true,
+    });
+    await act(async () => input().props.onChangeText('  '));
+    await act(async () => dialog().props.onConfirm());
+    expect(overlayAction).not.toHaveBeenCalled();
+    await act(async () => input().props.onChangeText('保留这段理解'));
+    for (const [skinId, scheme] of [
+      ['glass', 'dark'],
+      ['paper', 'dark'],
+      ['paper', 'light'],
+    ] as const) {
+      await act(async () =>
+        renderer.update(<Draft skinId={skinId} scheme={scheme} />),
+      );
+      expect(input().props.value).toBe('保留这段理解');
+    }
+    await act(async () => dialog().props.onConfirm());
+    expect(overlayAction).toHaveBeenCalledWith('save');
+    await act(async () => dialog().props.onCancel());
+    expect(closeOverlay).toHaveBeenCalledTimes(1);
+  },
+);

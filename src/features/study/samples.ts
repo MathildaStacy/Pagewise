@@ -67,6 +67,7 @@ const normal: StudyState = {
   header: {
     title: '3.5.2 A*搜索',
     subtitle: '人工智能：现代方法 · p.103–105',
+    readSubtitle: 'p.103–105',
     backLabel: '地图',
   },
   mode: 'listen',
@@ -272,27 +273,32 @@ export const readerSamples: Record<
   'normal' | 'empty' | 'loading' | 'error' | 'long',
   ReaderScreenState
 > = {
-  normal: { header: normal.header, read, overlay: null, toast: null },
+  normal: {
+    header: { ...normal.header, subtitle: 'p.103–105' },
+    read,
+    overlay: null,
+    toast: null,
+  },
   empty: {
-    header: normal.header,
+    header: { ...normal.header, subtitle: 'p.103–105' },
     read: { ...read, items: [], guide: null },
     overlay: null,
     toast: null,
   },
   loading: {
-    header: normal.header,
+    header: { ...normal.header, subtitle: 'p.103–105' },
     read: { ...read, loading: true, items: [] },
     overlay: null,
     toast: null,
   },
   error: {
-    header: normal.header,
+    header: { ...normal.header, subtitle: 'p.103–105' },
     read: { ...read, error: '原文加载失败', items: [] },
     overlay: null,
     toast: null,
   },
   long: {
-    header: normal.header,
+    header: { ...normal.header, subtitle: 'p.103–105' },
     read: {
       ...read,
       items: [

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useStore } from 'zustand';
 import { useContainer } from '@app/ContainerProvider';
 import { toAppError } from '@app/errors';
 import {
@@ -57,6 +58,7 @@ import {
   tokenExpiry,
   tokens,
 } from './presenters';
+import { version } from '../../../package.json';
 
 function useStatus() {
   const [status, setStatus] = useState<SettingStatus>({
@@ -100,6 +102,7 @@ function useStatus() {
 export function useMeVM(): { state: MeState; intents: MeIntents } {
   const c = useContainer(),
     nav = useAppNav();
+  const appearance = useStore(c.appearance.store);
   const { status, run } = useStatus();
   const [groups, setGroups] = useState<MeState['groups']>([]);
   const refresh = useCallback(
@@ -142,7 +145,7 @@ export function useMeVM(): { state: MeState; intents: MeIntents } {
                 ' · 每段' +
                 data.prefs.length +
                 ' · ' +
-                (data.prefs.bilingual ? '术语中英对照' : '中文术语'),
+                (data.prefs.bilingual ? '术语中英对照' : '只用中文术语'),
               tone: 'neutral',
             },
           ],
@@ -150,7 +153,7 @@ export function useMeVM(): { state: MeState; intents: MeIntents } {
             {
               key: 'MeAppearance',
               title: '外观',
-              subtitle: '纸感 / 苹果风 · 深浅色 · 正文字号',
+              subtitle: '',
               tone: 'neutral',
             },
             {
@@ -167,7 +170,7 @@ export function useMeVM(): { state: MeState; intents: MeIntents } {
             {
               key: 'About',
               title: '关于 Pagewise',
-              subtitle: '带着整本书的 AI 伴读 · GPL-3.0',
+              subtitle: `版本 ${version} · GPL-3.0`,
               tone: 'neutral',
             },
           ],
@@ -177,7 +180,27 @@ export function useMeVM(): { state: MeState; intents: MeIntents } {
   );
   useEffect(refresh, [refresh]);
   return {
-    state: { ...status, groups },
+    state: {
+      ...status,
+      groups: groups.map(group =>
+        group.map(row =>
+          row.key === 'MeAppearance'
+            ? {
+                ...row,
+                subtitle: `${
+                  appearance.skin === 'glass' ? '苹果风' : '纸感'
+                } · ${
+                  { system: '跟随系统', light: '浅色', dark: '深色' }[
+                    appearance.scheme
+                  ]
+                } · 正文${
+                  { s: '小', m: '中', l: '大' }[appearance.readingSize]
+                }`,
+              }
+            : row,
+        ),
+      ),
+    },
     intents: {
       refresh,
       open: key => {
@@ -644,7 +667,7 @@ export function useAboutVM(): { state: AboutState; intents: AboutIntents } {
       loading: false,
       demo: c.mode === 'demo',
       development: __DEV__,
-      version: '0.0.1',
+      version,
     },
     intents: {
       back: nav.back,
