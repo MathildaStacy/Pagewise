@@ -8,6 +8,7 @@ import { createRecordedFetch } from '../../../src/services/ai/fake';
 import { AiError, redact, type FetchLike } from '../../../src/services/ai/http';
 import type { AiService } from '../../../src/services/ai/types';
 import recorded from '../../../fixtures/ai/t1-teach.json';
+import { sse, aStart, aText, aDelta, aEnd } from './helpers/stream';
 
 const service = (id = 'teach-provider', model = 'teach-model'): AiService => ({
   id,
@@ -65,6 +66,38 @@ function deps(fetchImpl: FetchLike): GatewayDependencies {
     now: () => new Date('2026-10-29T01:02:03.000Z'),
   };
 }
+
+test('a heartbeat-only relay completion retries once with SSE and records one result', async () => {
+  const fetchImpl = jest.fn<ReturnType<FetchLike>, Parameters<FetchLike>>(
+    createRecordedFetch([
+      { status: 200, chunks: [': keepalive\n\n'] },
+      {
+        status: 200,
+        chunks: [sse(aStart, aText, aDelta('完整结果'), ...aEnd)],
+      },
+    ]),
+  );
+  const config = deps(fetchImpl);
+  const result = await createAiGateway(config).complete('tidy', req);
+  expect(result.parts).toContainEqual({ t: 'text', text: '完整结果' });
+  expect(fetchImpl).toHaveBeenCalledTimes(2);
+  expect(JSON.parse(fetchImpl.mock.calls[0][1].body).stream).toBeUndefined();
+  expect(JSON.parse(fetchImpl.mock.calls[1][1].body).stream).toBe(true);
+  expect(config.recordUsage).toHaveBeenCalledTimes(1);
+});
+
+test('a relay that also truncates its streaming retry stops with protocol error', async () => {
+  const fetchImpl = jest.fn<ReturnType<FetchLike>, Parameters<FetchLike>>(
+    createRecordedFetch([
+      { status: 200, chunks: [': keepalive\n\n'] },
+      { status: 200, chunks: [': keepalive\n\n'] },
+    ]),
+  );
+  await expect(
+    createAiGateway(deps(fetchImpl)).complete('tidy', req),
+  ).rejects.toMatchObject({ code: 'protocol' });
+  expect(fetchImpl).toHaveBeenCalledTimes(2);
+});
 
 test('complete 根据purpose取模型，强制非流式并记录一次用量，不传原文或密钥给记录器', async () => {
   const fetchImpl = jest.fn<ReturnType<FetchLike>, Parameters<FetchLike>>(

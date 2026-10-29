@@ -3,3 +3,4 @@ android/
 docs/design/
 .impeccable/
 coverage/
+fixtures/private/

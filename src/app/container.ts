@@ -22,6 +22,8 @@ import {
 import { createEventBus, type EventBus } from './events';
 import { disposeContainerSessions } from './study/registry';
 import { disposeMathRuntime } from './math';
+import { getParseQueue } from './usecases/parseQueue';
+import { disposeReaderRuntime } from './readerRuntime';
 import { createLogger, type Logger } from './log';
 
 /** 所有 IO 和应用设置通过容器注入，Demo 与正式书库使用独立数据库。 */
@@ -121,7 +123,9 @@ export async function createContainer(
       over.close ??
       (() => {
         closing ??= (async () => {
+          await getParseQueue(container).dispose();
           await disposeContainerSessions(container);
+          await disposeReaderRuntime(container);
           disposeMathRuntime(container);
           await appearance.flush();
           await log.flush();
@@ -149,7 +153,7 @@ export async function createDeviceContainer(
     files: createDeviceLogFileStore(),
     clock: systemClock,
   });
-  return createContainer(
+  const container = await createContainer(
     openDeviceDb(),
     {
       log,
@@ -157,4 +161,14 @@ export async function createDeviceContainer(
     },
     options,
   );
+  try {
+    const [{ configureDeviceImports }, { configureDeviceStorage }] =
+      await Promise.all([import('./importDevice'), import('./storageDevice')]);
+    configureDeviceImports(container);
+    configureDeviceStorage(container);
+    return container;
+  } catch (error) {
+    await container.close();
+    throw error;
+  }
 }

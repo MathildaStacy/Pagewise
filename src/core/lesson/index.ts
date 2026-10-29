@@ -75,6 +75,11 @@ function safeCuts(blocks: readonly LessonBlock[]): number[] {
     .map((_, index) => index)
     .filter(index => index > 0 && !forbidden.has(index));
 }
+/** Legal starts after the first block; shared by prompt guidance and validation. */
+export function lessonPlanCuts(blocks: readonly LessonBlock[]): number[] {
+  const ordered = orderedBlocks(blocks);
+  return ordered ? safeCuts(ordered).map(index => ordered[index].seq) : [];
+}
 function fail(reason: LessonPlanIssue): LessonValidation {
   return { valid: false, steps: [], repaired: false, reason };
 }

@@ -20,14 +20,39 @@ jest.mock('@react-native-community/blur', () => {
 jest.mock('@gorhom/bottom-sheet', () => {
   const React = require('react');
   const { View, ScrollView } = require('react-native');
-  const BottomSheet = React.forwardRef(({ children, ...props }, ref) => {
-    React.useImperativeHandle(ref, () => ({
-      close: jest.fn(),
-      snapToIndex: jest.fn(),
-      expand: jest.fn(),
-    }));
-    return React.createElement(View, props, children);
-  });
+  const BottomSheet = React.forwardRef(
+    (
+      {
+        children,
+        handleComponent: Header,
+        footerComponent: Footer,
+        ...props
+      },
+      ref,
+    ) => {
+      React.useImperativeHandle(ref, () => ({
+        close: jest.fn(),
+        snapToIndex: jest.fn(),
+        expand: jest.fn(),
+      }));
+      return React.createElement(
+        View,
+        props,
+        Header
+          ? React.createElement(Header, {
+              animatedIndex: { value: 0 },
+              animatedPosition: { value: 0 },
+            })
+          : null,
+        children,
+        Footer
+          ? React.createElement(Footer, {
+              animatedFooterPosition: { value: 0 },
+            })
+          : null,
+      );
+    },
+  );
   BottomSheet.displayName = 'MockBottomSheet';
   return {
     __esModule: true,
@@ -35,6 +60,8 @@ jest.mock('@gorhom/bottom-sheet', () => {
     BottomSheetView: View,
     BottomSheetScrollView: ScrollView,
     BottomSheetBackdrop: View,
+    BottomSheetFooter: View,
+    useBottomSheetInternal: () => null,
   };
 });
 

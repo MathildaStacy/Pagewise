@@ -176,9 +176,9 @@ for (const skin of ['paper', 'glass'] as const) {
       const toggle = renderer.root.findAll(
         node =>
           node.props.accessibilityRole === 'switch' &&
-          typeof node.props.onValueChange === 'function',
+          typeof node.props.onPress === 'function',
       )[0];
-      await act(async () => toggle.props.onValueChange(false));
+      await act(async () => toggle.props.onPress());
       expect(samples.Switch.onChange).toHaveBeenCalledWith(false);
       await act(async () =>
         action(renderer.root, '保存本节摘要').props.onPress(),

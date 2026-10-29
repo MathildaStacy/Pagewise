@@ -10,6 +10,7 @@ export interface Cover {
 export interface ShelfBook {
   id: string;
   title: string;
+  author?: string;
   meta: string;
   cover: Cover;
   status: { tone: 'accent' | 'stuck' | 'bad' | 'muted'; text: string };
@@ -163,18 +164,22 @@ export interface ParseProgressState extends PageState {
     progress: number;
     stages: { label: string; state: 'done' | 'current' | 'error' | 'todo' }[];
     error?: string;
+    warning?: string;
   }[];
 }
 export interface ParseProgressIntents {
   back(): void;
   refresh(): void;
-  retryPart(number: number): void;
+  retryPart(number: number, ocr?: boolean): void;
+  retryBook?(): void;
   goUpdateToken(): void;
   openMap(): void;
 }
 export interface ImportSettingsState extends PageState {
   title: string;
   subtitle: string;
+  fileName?: string;
+  cover?: Cover;
   format: 'PDF' | 'EPUB';
   facts: { label: string; value: string }[];
   model: 'vlm' | 'pipeline';
@@ -183,6 +188,7 @@ export interface ImportSettingsState extends PageState {
   priorityFrom: string;
   parts: string;
   quota: string;
+  overQuota?: boolean;
   confirmUpload: boolean;
   canStart: boolean;
   overlay: boolean;

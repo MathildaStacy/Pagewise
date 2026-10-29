@@ -276,6 +276,16 @@ export async function callModel(
     );
   }
   if (json == null && !stream) {
+    // Some compatible relays terminate non-streaming calls with only SSE heartbeat
+    // comments. A streaming retry gives the same call a usable completion.
+    if (/^\s*(?::[^\r\n]*(?:\r?\n|$)\s*)+$/.test(text)) {
+      return callModel(
+        service,
+        key,
+        { ...req, body: { ...req.body, stream: true } },
+        opts,
+      );
+    }
     throw new AiError(
       'protocol',
       '响应不是 JSON：' + redact(text.slice(0, 120), key),

@@ -88,14 +88,24 @@ export interface PrefsIntents {
   refresh(): void;
 }
 export interface StorageState extends SettingStatus {
-  books: { id: string; title: string; meta: string }[];
+  books: { id: string; title: string; meta: string; needsReparse: boolean }[];
+  includeOriginals: boolean;
+  confirmClean: string | null;
+  confirmReparse: string | null;
+  confirmRestore: boolean;
 }
 export interface StorageIntents {
   back(): void;
   clean(id: string): void;
+  reparse(id: string): void;
   exportBackup(): void;
   restoreBackup(): void;
   refresh(): void;
+  setIncludeOriginals(value: boolean): void;
+  confirmClean(): void;
+  confirmReparse(): void;
+  confirmRestore(): void;
+  closeOverlay(): void;
 }
 export interface AboutState extends SettingStatus {
   demo: boolean;

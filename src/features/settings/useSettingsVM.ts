@@ -17,7 +17,6 @@ import {
   deleteService,
   readPrefs,
   patchPrefs,
-  readStorage,
   shareLogs,
   type ServiceForm,
   type TeachPrefs,
@@ -25,6 +24,15 @@ import {
   type ServiceCatalog,
 } from '@app/usecases/settings';
 import { useAppNav } from '@features/nav';
+import {
+  loadStorage,
+  clearParseCache,
+  exportBackup,
+  restoreBackup,
+  BackupError,
+} from '@app/usecases/storage';
+import { getParseQueue } from '@app/usecases/parseQueue';
+import { ImportInputError, reparseBook } from '@app/usecases/importBooks';
 import type {
   MeState,
   MeIntents,
@@ -78,7 +86,9 @@ function useStatus() {
             loading: false,
             saving: false,
             error:
-              error instanceof SettingsInputError
+              error instanceof SettingsInputError ||
+              error instanceof BackupError ||
+              error instanceof ImportInputError
                 ? error.message
                 : toAppError(error).message,
           }));
@@ -249,6 +259,9 @@ export function useMineruVM(): { state: MineruState; intents: MineruIntents } {
           );
           setToken('');
           notice('Token 与有效期已保存');
+          await getParseQueue(c)
+            .resume()
+            .catch(() => c.log.warn('解析队列将在下次打开时继续'));
         }, true),
       testConnection: () =>
         notice('连接测试将在解析服务接入后启用；当前设置已可保存'),
@@ -534,20 +547,24 @@ export function useStorageVM(): {
   intents: StorageIntents;
 } {
   const c = useContainer(),
-    nav = useAppNav();
-  const { status, run, notice } = useStatus();
-  const [books, setBooks] = useState<StorageState['books']>([]);
+    nav = useAppNav(),
+    { status, run, notice } = useStatus();
+  const [books, setBooks] = useState<StorageState['books']>([]),
+    [includeOriginals, setIncludeOriginals] = useState(false),
+    [confirmClean, setConfirmClean] = useState<string | null>(null),
+    [confirmReparse, setConfirmReparse] = useState<string | null>(null),
+    [confirmRestore, setConfirmRestore] = useState(false);
   const refresh = useCallback(
     () =>
       run(async () =>
         setBooks(
-          (await readStorage(c)).map(b => ({
-            id: b.id,
-            title: b.title,
-            meta:
-              '原文件 ' +
-              formatBytes(b.sizeBytes) +
-              ' · 解析结果待文件服务统计',
+          (await loadStorage(c)).map(book => ({
+            id: book.id,
+            title: book.title,
+            needsReparse: book.needsReparse,
+            meta: `原文件 ${formatBytes(
+              book.sizeBytes,
+            )} · 解析结果 ${formatBytes(book.parsedBytes)}`,
           })),
         ),
       ),
@@ -555,13 +572,65 @@ export function useStorageVM(): {
   );
   useEffect(refresh, [refresh]);
   return {
-    state: { ...status, books },
+    state: {
+      ...status,
+      books,
+      includeOriginals,
+      confirmClean,
+      confirmReparse,
+      confirmRestore,
+    },
     intents: {
       back: nav.back,
       refresh,
-      clean: () => notice('解析缓存清理将在存储管理接入后启用'),
-      exportBackup: () => notice('备份导出将在存储管理接入后启用'),
-      restoreBackup: () => notice('备份恢复将在存储管理接入后启用'),
+      setIncludeOriginals,
+      clean: id => setConfirmClean(id),
+      reparse: id => setConfirmReparse(id),
+      exportBackup: () =>
+        run(async () => {
+          await exportBackup(c, includeOriginals);
+          notice('备份已保存到下载 / Pagewise导出');
+        }, true),
+      restoreBackup: () => setConfirmRestore(true),
+      confirmClean: () => {
+        if (!confirmClean || status.saving) return;
+        const id = confirmClean;
+        setConfirmClean(null);
+        run(async () => {
+          await clearParseCache(c, id);
+          setBooks(
+            (await loadStorage(c)).map(book => ({
+              id: book.id,
+              title: book.title,
+              needsReparse: book.needsReparse,
+              meta: `原文件 ${formatBytes(
+                book.sizeBytes,
+              )} · 解析结果 ${formatBytes(book.parsedBytes)}`,
+            })),
+          );
+          notice('已清理解析缓存，学习记录已保留');
+        }, true);
+      },
+      confirmReparse: () => {
+        if (!confirmReparse || status.saving) return;
+        const id = confirmReparse;
+        setConfirmReparse(null);
+        run(async () => {
+          await reparseBook(c, id);
+          nav.open({ name: 'ParseProgress', bookId: id });
+        }, true);
+      },
+      confirmRestore: () => {
+        setConfirmRestore(false);
+        run(async () => {
+          await restoreBackup(c);
+        }, true);
+      },
+      closeOverlay: () => {
+        setConfirmClean(null);
+        setConfirmReparse(null);
+        setConfirmRestore(false);
+      },
     },
   };
 }

@@ -1,5 +1,11 @@
-import { useEffect, useRef } from 'react';
-import { FlatList, KeyboardAvoidingView, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import {
+  FlatList,
+  KeyboardAvoidingView,
+  Pressable,
+  Text,
+  View,
+} from 'react-native';
 import {
   AiMessage,
   AppBar,
@@ -25,6 +31,8 @@ import {
   Typing,
   UserBubble,
   makeStyles,
+  usePresentation,
+  BottomFade,
 } from '@ui/kit';
 import type {
   StudyIntents,
@@ -39,6 +47,8 @@ export function StudyView({
   state: StudyState;
   intents: StudyIntents;
 }) {
+  const { groupedLists } = usePresentation();
+  const [dockHeight, setDockHeight] = useState(0);
   const s = useStyles(),
     list = useRef<FlatList<ThreadItem>>(null),
     lastScroll = useRef<number | undefined>(undefined);
@@ -65,7 +75,13 @@ export function StudyView({
   ]);
   const comp = state.listen.composer;
   return (
-    <Screen edges={['top', 'left', 'right', 'bottom']}>
+    <Screen
+      edges={
+        groupedLists
+          ? ['top', 'left', 'right']
+          : ['top', 'left', 'right', 'bottom']
+      }
+    >
       <KeyboardAvoidingView style={s.root} behavior="padding">
         <AppBar
           variant="push"
@@ -90,13 +106,23 @@ export function StudyView({
           <>
             <StepProgress
               steps={state.listen.progress.steps}
-              label={state.listen.progress.label}
+              label={
+                groupedLists
+                  ? state.listen.progress.label
+                  : state.listen.progress.label.replace('步', '段')
+              }
               onPressStep={intents.pressStep}
               onPressBar={intents.openRoadmap}
               right={
-                <Button size="sm" variant="ghost" onPress={intents.openContext}>
-                  AI 看到的内容 ›
-                </Button>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="AI 看到的内容"
+                  hitSlop={12}
+                  onPress={intents.openContext}
+                  style={s.context}
+                >
+                  <Text style={s.contextLabel}>AI 看到的内容 ›</Text>
+                </Pressable>
               }
             />
             {state.listen.detour ? (
@@ -105,56 +131,77 @@ export function StudyView({
                 onBack={() => intents.quick('backMain')}
               />
             ) : null}
-            <FlatList
-              ref={list}
-              style={s.root}
-              contentContainerStyle={s.thread}
-              data={state.listen.thread}
-              keyExtractor={item => item.id}
-              renderItem={({ item }) => (
-                <ThreadCard item={item} intents={intents} />
-              )}
-              ListEmptyComponent={
-                <Empty
-                  body={
-                    state.loading
-                      ? '正在准备本节路线图…'
-                      : '从当前小节开始，一步一步读懂。'
+            <View style={s.listenArea}>
+              <FlatList
+                ref={list}
+                style={s.root}
+                contentContainerStyle={[
+                  s.thread,
+                  groupedLists ? { paddingBottom: dockHeight + 12 } : undefined,
+                ]}
+                data={state.listen.thread}
+                keyExtractor={item => item.id}
+                renderItem={({ item }) => (
+                  <ThreadCard item={item} intents={intents} />
+                )}
+                ListEmptyComponent={
+                  <Empty
+                    body={
+                      state.loading
+                        ? '正在准备本节路线图…'
+                        : '从当前小节开始，一步一步读懂。'
+                    }
+                  />
+                }
+                onContentSizeChange={() => {
+                  if (index < 0)
+                    list.current?.scrollToEnd({ animated: !state.loading });
+                }}
+                onScrollToIndexFailed={info =>
+                  list.current?.scrollToOffset({
+                    offset: Math.max(0, info.averageItemLength * info.index),
+                    animated: true,
+                  })
+                }
+              />
+              <View
+                onLayout={event =>
+                  setDockHeight(event.nativeEvent.layout.height)
+                }
+                style={s.dock}
+                pointerEvents="box-none"
+              >
+                {groupedLists ? <BottomFade /> : null}
+                {state.listen.quickActions.length ? (
+                  <QuickActions
+                    items={state.listen.quickActions.map(item =>
+                      !groupedLists &&
+                      (item.key === 'next' || item.key === 'nextPart')
+                        ? { ...item, label: '懂了，继续' }
+                        : groupedLists && item.kind === 'primary'
+                        ? { ...item, icon: 'next' as const }
+                        : item,
+                    )}
+                    onPress={intents.quick}
+                  />
+                ) : null}
+                <Composer
+                  value={comp.value}
+                  onChange={intents.setText}
+                  placeholder={comp.placeholder}
+                  onSend={intents.send}
+                  sendDisabled={!comp.canSend}
+                  micAvailable={false}
+                  busy={comp.streaming}
+                  onStop={intents.stop}
+                  quote={
+                    comp.quote
+                      ? { ...comp.quote, onClear: intents.clearQuote }
+                      : undefined
                   }
                 />
-              }
-              onContentSizeChange={() => {
-                if (index < 0)
-                  list.current?.scrollToEnd({ animated: !state.loading });
-              }}
-              onScrollToIndexFailed={info =>
-                list.current?.scrollToOffset({
-                  offset: Math.max(0, info.averageItemLength * info.index),
-                  animated: true,
-                })
-              }
-            />
-            {state.listen.quickActions.length ? (
-              <QuickActions
-                items={state.listen.quickActions}
-                onPress={intents.quick}
-              />
-            ) : null}
-            <Composer
-              value={comp.value}
-              onChange={intents.setText}
-              placeholder={comp.placeholder}
-              onSend={intents.send}
-              sendDisabled={!comp.canSend}
-              micAvailable={false}
-              busy={comp.streaming}
-              onStop={intents.stop}
-              quote={
-                comp.quote
-                  ? { ...comp.quote, onClear: intents.clearQuote }
-                  : undefined
-              }
-            />
+              </View>
+            </View>
           </>
         )}
       </KeyboardAvoidingView>
@@ -294,15 +341,40 @@ function ThreadCard({
 }
 const useStyles = makeStyles(t => ({
   root: { flex: 1 },
+  listenArea: { flex: 1 },
+  dock: {
+    position: t.layout.groupedLists ? 'absolute' : 'relative',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingTop: t.layout.groupedLists ? 26 : 0,
+  },
+  context: {
+    paddingHorizontal: t.layout.groupedLists ? 0 : 8,
+    paddingVertical: t.layout.groupedLists ? 0 : 1,
+    borderWidth: t.layout.groupedLists ? 0 : 1,
+    borderColor: t.color.line,
+    borderRadius: t.shape.pill,
+    backgroundColor: t.layout.groupedLists ? undefined : t.color.surface,
+  },
+  contextLabel: {
+    ...t.type.micro,
+    fontSize: t.layout.groupedLists
+      ? t.type.caption.fontSize
+      : t.type.micro.fontSize,
+    fontWeight: t.layout.groupedLists ? '500' : '400',
+    color: t.layout.groupedLists ? t.color.accent : t.color.ink2,
+  },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: t.space.gap,
+    gap: 0,
   },
   thread: {
-    paddingHorizontal: t.space.pageX,
-    paddingBottom: t.space.pageX,
-    gap: t.space.gap,
+    paddingHorizontal: t.layout.groupedLists ? 20 : 14,
+    paddingTop: 12,
+    paddingBottom: t.layout.groupedLists ? 26 : 18,
+    gap: 12,
   },
   detourRun: {
     borderLeftWidth: 3,

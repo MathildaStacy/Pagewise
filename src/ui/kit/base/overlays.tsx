@@ -1,4 +1,11 @@
-import { useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PropsWithChildren,
+} from 'react';
 import {
   Modal,
   Platform,
@@ -6,12 +13,17 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
+  findNodeHandle,
   useWindowDimensions,
 } from 'react-native';
 import BottomSheet, {
+  BottomSheetFooter,
   BottomSheetScrollView,
   type BottomSheetBackgroundProps,
+  type BottomSheetFooterProps,
+  useBottomSheetInternal,
 } from '@gorhom/bottom-sheet';
 import { BlurView } from '@react-native-community/blur';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -25,7 +37,8 @@ import type {
   ToastProps,
 } from '../contracts';
 import { useSkin, useTokens } from '../context';
-import { Button, IconButton } from '../proxy';
+import { Button } from '../proxy';
+import { Icon } from '../Icon';
 
 /** 同一 View 容器切换材质，只替换背景，不重建内容子树。 */
 export function GlassSurface({
@@ -102,10 +115,177 @@ function SheetBackground({ style }: BottomSheetBackgroundProps) {
   );
 }
 
-/**
- * Sheet 在两个皮肤里保持同一个函数引用。这里只切换布局和背景，
- * 保证已经打开的表单、children 内部状态和浮层可见性不因换皮肤丢失。
- */
+function SheetHeader({
+  title,
+  subtitle,
+  onClose,
+}: Pick<SheetProps, 'title' | 'subtitle' | 'onClose'>) {
+  const t = useTokens(),
+    inset = t.layout.groupedLists;
+  const s = StyleSheet.create({
+    grab: {
+      width: 36,
+      height: inset ? 5 : 4,
+      borderRadius: inset ? 3 : 2,
+      backgroundColor: inset ? t.color.ink3 : '#DDD',
+      alignSelf: 'center',
+      marginTop: inset ? 7 : 8,
+    },
+    header: {
+      paddingTop: 10,
+      paddingHorizontal: inset ? 52 : 16,
+      paddingBottom: inset ? 8 : 6,
+      flexShrink: 0,
+    },
+    title: {
+      ...t.type.body,
+      fontSize: inset ? 17 : 16,
+      fontWeight: '600',
+      lineHeight: inset ? 22.1 : 24,
+      color: t.color.ink,
+      textAlign: inset ? 'center' : 'left',
+    },
+    subtitle: {
+      ...t.type.caption,
+      fontSize: 12,
+      lineHeight: inset ? 17.4 : 18,
+      fontWeight: '400',
+      color: inset ? t.color.ink2 : t.color.ink3,
+      textAlign: inset ? 'center' : 'left',
+      marginTop: inset ? 2 : 0,
+    },
+    close: {
+      position: 'absolute',
+      right: 14,
+      top: 6,
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: t.color.surfaceAlt,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    pressed: { backgroundColor: t.color.pressed },
+  });
+  return (
+    <View testID="sheet-header" accessible={false}>
+      <View testID="sheet-grab" style={s.grab} />
+      <View style={s.header}>
+        <Text accessibilityRole="header" style={s.title}>
+          {title}
+        </Text>
+        {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
+        {inset ? (
+          <Pressable
+            testID="sheet-close"
+            accessibilityRole="button"
+            accessibilityLabel="关闭浮层"
+            accessibilityState={{ disabled: false }}
+            onPress={onClose}
+            hitSlop={8}
+            style={({ pressed }) => [s.close, pressed && s.pressed]}
+          >
+            <Icon name="close" size={15} color={t.color.ink2} />
+          </Pressable>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+function SheetActions({
+  actions,
+}: {
+  actions: NonNullable<SheetProps['actions']>;
+}) {
+  const t = useTokens(),
+    inset = t.layout.groupedLists;
+  const ordered = inset
+    ? [...actions].sort(
+        (a, b) => Number(b.kind === 'primary') - Number(a.kind === 'primary'),
+      )
+    : actions;
+  const s = StyleSheet.create({
+    footer: {
+      flexDirection: inset ? 'column' : 'row',
+      flexShrink: 0,
+      gap: 8,
+      paddingTop: inset ? 12 : 8,
+      paddingHorizontal: 16,
+      paddingBottom: inset ? 18 : 4,
+    },
+    cell: { flex: 1 },
+    empty: { height: inset ? 16 : 0 },
+  });
+  return actions.length ? (
+    <View testID="sheet-actions" style={s.footer}>
+      {ordered.map((action, index) => (
+        <View
+          key={`${action.label}-${index}`}
+          style={inset ? undefined : s.cell}
+        >
+          <Button
+            variant={action.kind}
+            size="block"
+            onPress={action.onPress}
+            label={action.label}
+          />
+        </View>
+      ))}
+    </View>
+  ) : (
+    <View testID="sheet-bottom-space" style={s.empty} />
+  );
+}
+
+/** Register ordinary RN inputs without replacing their component or event handlers. */
+function SheetContent({ children }: PropsWithChildren) {
+  const context = useBottomSheetInternal(true);
+  const registered = useRef(new Set<number>());
+  useEffect(() => {
+    const targets = registered.current;
+    return () => {
+      if (!context) return;
+      const state = context.animatedKeyboardState.get();
+      if (state.target !== undefined && targets.has(state.target))
+        context.animatedKeyboardState.set(current => ({
+          ...current,
+          target: undefined,
+        }));
+      for (const target of targets)
+        context.textInputNodesRef.current.delete(target);
+    };
+  }, [context]);
+  return (
+    <View
+      testID="sheet-content"
+      accessible={false}
+      onFocusCapture={event => {
+        if (!context) return;
+        const target = event.nativeEvent.target;
+        registered.current.add(target);
+        context.textInputNodesRef.current.add(target);
+        context.animatedKeyboardState.set(state => ({ ...state, target }));
+      }}
+      onBlurCapture={event => {
+        if (!context) return;
+        const focused = findNodeHandle(TextInput.State.currentlyFocusedInput());
+        const state = context.animatedKeyboardState.get();
+        if (
+          state.target === event.nativeEvent.target &&
+          (!focused || !context.textInputNodesRef.current.has(focused))
+        )
+          context.animatedKeyboardState.set(current => ({
+            ...current,
+            target: undefined,
+          }));
+      }}
+    >
+      {children}
+    </View>
+  );
+}
+
+/** The body keeps the same keyed parent chain while header/footer scroll policy changes. */
 export function Sheet({
   visible,
   title,
@@ -115,71 +295,47 @@ export function Sheet({
   detent = 'auto',
   children,
 }: SheetProps) {
-  const tokens = useTokens();
-  const { skin, reduceMotion } = useSkin();
-  const inset = skin.id === 'glass';
-  const safe = useSafeAreaInsets();
-  const { height } = useWindowDimensions();
+  const tokens = useTokens(),
+    { reduceMotion } = useSkin();
+  const inset = tokens.layout.groupedLists;
+  const safe = useSafeAreaInsets(),
+    { height } = useWindowDimensions();
   const snapPoints = useMemo(
-    () => (detent === 'auto' ? undefined : [detent === 'half' ? '50%' : '90%']),
-    [detent],
+    () =>
+      detent === 'auto'
+        ? undefined
+        : [detent === 'half' ? '50%' : inset ? '84%' : '82%'],
+    [detent, inset],
   );
-  const orderedActions = inset
-    ? [...actions].sort(
-        (a, b) => Number(b.kind === 'primary') - Number(a.kind === 'primary'),
-      )
-    : actions;
-
-  const sheetRootStyle = StyleSheet.create({ root: { flex: 1 } }).root;
-  const sheetContainerStyle = StyleSheet.create({
-    root: { marginHorizontal: inset ? 8 : 0 },
-  }).root;
-  const sheetContentStyle = StyleSheet.create({
-    root: {
-      paddingBottom: inset ? 18 : Math.max(10, safe.bottom),
+  const s = StyleSheet.create({
+    root: { flex: 1 },
+    container: { marginHorizontal: inset ? 8 : 0 },
+    scrollContent: { paddingBottom: inset ? 0 : Math.max(10, safe.bottom) },
+    body: {
+      paddingTop: 4,
+      paddingHorizontal: inset ? 18 : 16,
+      paddingBottom: inset ? 6 : 8,
     },
-  }).root;
-  const sheetHeaderStyle = StyleSheet.create({
-    root: {
-      paddingHorizontal: tokens.space.pageX,
-      paddingBottom: tokens.space.gap,
-      minHeight: 48,
-      justifyContent: 'center',
+    footerSurface: {
+      backgroundColor: tokens.color.glassStrong,
+      borderBottomLeftRadius: tokens.shape.sheet,
+      borderBottomRightRadius: tokens.shape.sheet,
+      overflow: 'hidden',
     },
-  }).root;
-  const sheetTitleStyle = StyleSheet.create({
-    root: {
-      color: tokens.color.ink,
-      textAlign: inset ? 'center' : 'left',
-      paddingRight: 48,
-      paddingLeft: inset ? 48 : 0,
-    },
-  }).root;
-  const sheetSubtitleStyle = StyleSheet.create({
-    root: {
-      color: tokens.color.ink2,
-      textAlign: inset ? 'center' : 'left',
-    },
-  }).root;
-  const sheetCloseStyle = StyleSheet.create({
-    root: {
-      position: 'absolute',
-      right: tokens.space.gap,
-      top: 0,
-    },
-  }).root;
-  const sheetActionsStyle = StyleSheet.create({
-    root: {
-      flexDirection: inset ? 'column' : 'row',
-      flexWrap: 'wrap',
-      gap: tokens.space.gap,
-      paddingHorizontal: tokens.space.pageX,
-      paddingTop: tokens.space.rowY,
-    },
-  }).root;
-  const sheetActionCellStyle = StyleSheet.create({
-    root: { flexGrow: 1 },
-  }).root;
+    scrim: { backgroundColor: tokens.color.scrim },
+  });
+  const renderHeader = useCallback(
+    () => <SheetHeader title={title} subtitle={subtitle} onClose={onClose} />,
+    [title, subtitle, onClose],
+  );
+  const renderFooter = useCallback(
+    (props: BottomSheetFooterProps) => (
+      <BottomSheetFooter {...props} bottomInset={0} style={s.footerSurface}>
+        <SheetActions actions={actions} />
+      </BottomSheetFooter>
+    ),
+    [actions, s.footerSurface],
+  );
   return (
     <Modal
       visible={visible}
@@ -188,33 +344,35 @@ export function Sheet({
       animationType={reduceMotion ? 'none' : 'fade'}
       onRequestClose={onClose}
     >
-      <GestureHandlerRootView style={sheetRootStyle}>
+      <GestureHandlerRootView
+        style={s.root}
+        accessibilityViewIsModal
+        onAccessibilityEscape={onClose}
+      >
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="关闭浮层"
           accessibilityState={{ disabled: false }}
           onPress={onClose}
-          style={[
-            StyleSheet.absoluteFill,
-            { backgroundColor: tokens.color.scrim },
-          ]}
+          style={[StyleSheet.absoluteFill, s.scrim]}
         />
         <BottomSheet
           index={0}
           snapPoints={snapPoints}
           enableDynamicSizing={detent === 'auto'}
-          maxDynamicContentSize={height * (inset ? 0.78 : 0.82)}
+          maxDynamicContentSize={height * (inset ? 0.84 : 0.82)}
           enablePanDownToClose
           animateOnMount={!reduceMotion}
           overrideReduceMotion={
             reduceMotion ? ReduceMotion.Always : ReduceMotion.System
           }
           detached={inset}
-          bottomInset={inset ? Math.max(8, safe.bottom) : 0}
+          bottomInset={inset ? 8 : 0}
           topInset={safe.top}
-          containerStyle={sheetContainerStyle}
+          containerStyle={s.container}
           backgroundComponent={SheetBackground}
-          handleIndicatorStyle={{ backgroundColor: tokens.color.ink3 }}
+          handleComponent={inset ? renderHeader : null}
+          footerComponent={inset ? renderFooter : undefined}
           keyboardBehavior="interactive"
           keyboardBlurBehavior="restore"
           android_keyboardInputMode="adjustResize"
@@ -225,52 +383,30 @@ export function Sheet({
           accessibilityState={{ expanded: visible }}
         >
           <BottomSheetScrollView
+            testID="sheet-scroll-body"
             keyboardShouldPersistTaps="handled"
-            contentContainerStyle={sheetContentStyle}
+            keyboardDismissMode="interactive"
+            automaticallyAdjustKeyboardInsets
+            showsVerticalScrollIndicator={false}
+            enableFooterMarginAdjustment={inset}
+            contentContainerStyle={s.scrollContent}
           >
-            <View
-              accessible={false}
-              accessibilityViewIsModal
-              onAccessibilityEscape={onClose}
-            >
-              <View style={sheetHeaderStyle}>
-                <Text
-                  accessibilityRole="header"
-                  style={[
-                    inset ? tokens.type.title : tokens.type.headline,
-                    sheetTitleStyle,
-                  ]}
-                >
-                  {title}
-                </Text>
-                {subtitle ? (
-                  <Text style={[tokens.type.caption, sheetSubtitleStyle]}>
-                    {subtitle}
-                  </Text>
-                ) : null}
-                <View style={sheetCloseStyle}>
-                  <IconButton icon="close" label="关闭浮层" onPress={onClose} />
-                </View>
-              </View>
-              <View style={{ paddingHorizontal: tokens.space.pageX }}>
+            <SheetContent key="sheet-content">
+              {!inset ? (
+                <SheetHeader
+                  key="paper-header"
+                  title={title}
+                  subtitle={subtitle}
+                  onClose={onClose}
+                />
+              ) : null}
+              <View key="sheet-body" testID="sheet-body" style={s.body}>
                 {children}
               </View>
-              <View style={sheetActionsStyle}>
-                {orderedActions.map((action, index) => (
-                  <View
-                    key={`${action.label}-${index}`}
-                    style={inset ? undefined : sheetActionCellStyle}
-                  >
-                    <Button
-                      variant={action.kind}
-                      size="block"
-                      onPress={action.onPress}
-                      label={action.label}
-                    />
-                  </View>
-                ))}
-              </View>
-            </View>
+              {!inset ? (
+                <SheetActions key="paper-footer" actions={actions} />
+              ) : null}
+            </SheetContent>
           </BottomSheetScrollView>
         </BottomSheet>
       </GestureHandlerRootView>

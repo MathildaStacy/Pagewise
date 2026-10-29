@@ -6,6 +6,7 @@ import { ContainerProvider } from '@app/ContainerProvider';
 import {
   confirmMapFlag,
   createDemoImportDraft,
+  loadBookMap,
   loadShelf,
   splitMapSection,
 } from '@app/usecases/library';
@@ -18,6 +19,8 @@ import {
 } from '@features/library/useLibraryVM';
 import {
   parsePart,
+  pageRange,
+  presentMap,
   presentShelf,
   shelfStatus,
 } from '@features/library/presenters';
@@ -32,6 +35,7 @@ import { BookMapView } from '@ui/screens/BookMapView';
 import { ParseProgressView } from '@ui/screens/ParseProgressView';
 import { ImportSettingsView } from '@ui/screens/ImportSettingsView';
 import { SkinProvider } from '@ui/kit';
+import { listImportDrafts } from '@app/usecases/importBooks';
 
 let c: Container;
 let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
@@ -108,6 +112,158 @@ it('presents ready, studying, parsing and paused states using actual library rec
   expect(presented.continueCard?.stepLabel).toBe('第 2/4 步');
   expect(presented.continueCard?.recap).toContain('上次 3 天前');
 });
+it('bounds the map check notice for a long book while retaining per-row flags', async () => {
+  const record = await loadBookMap(c, 'aima');
+  const section = record.sections.find(value => value.is_leaf)!;
+  const sections = Array.from({ length: 846 }, (_, index) => ({
+    ...section,
+    id: `internal-long-section-${index}`,
+    parent_id: null,
+    ord: index,
+    flag: 'level' as const,
+  }));
+  const map = presentMap({ ...record, sections }, {});
+  expect(map.check.sub).toContain('846 处需要你确认');
+  expect(map.check.text.length + (map.check.sub?.length ?? 0)).toBeLessThan(90);
+  expect(`${map.check.text}${map.check.sub}`).not.toContain(
+    'internal-long-section',
+  );
+  expect(map.chapters).toHaveLength(846);
+});
+it('counts numbered chapters while retaining unnumbered front matter in the map', async () => {
+  const record = await loadBookMap(c, 'aima');
+  const root = record.sections.find(value => !value.parent_id)!;
+  const map = presentMap(
+    {
+      ...record,
+      sections: [
+        { ...root, id: 'cover', no: null, title: 'Cover' },
+        { ...root, id: 'chapter-1', no: '1' },
+        { ...root, id: 'chapter-2', no: '2' },
+      ],
+    },
+    {},
+  );
+  expect(map.check.text).toContain('2 章');
+  expect(map.chapters).toHaveLength(3);
+});
+it('uses the current section chapter ancestor rather than an earlier unnumbered Cover root', async () => {
+  const record = (await loadShelf(c)).find(value => value.book.id === 'aima')!;
+  const template = record.sections[0];
+  const sections = [
+    {
+      ...template,
+      id: 'cover',
+      parent_id: null,
+      level: 1 as const,
+      no: null,
+      title: 'Cover',
+      ord: 0,
+      block_to: null,
+    },
+    {
+      ...template,
+      id: 'body-chapter',
+      parent_id: null,
+      level: 1 as const,
+      no: '3',
+      title: '正文第三章',
+      ord: 100,
+    },
+    {
+      ...template,
+      id: 'body-parent',
+      parent_id: 'body-chapter',
+      level: 2 as const,
+      no: '3.1',
+      title: '第一节',
+      ord: 101,
+    },
+    {
+      ...template,
+      id: 'u91001',
+      parent_id: 'body-parent',
+      level: 3 as const,
+      no: null,
+      title: '当前小节',
+      ord: 102,
+      page_from: 91,
+      page_to: 92,
+    },
+  ];
+  const current = {
+    ...record,
+    sections,
+    study: { ...record.study!, main_section: 'u91001' },
+    book: { ...record.book, page_offset: 41 },
+  };
+  expect(presentShelf([current], c.clock.now(), false).continueCard?.meta).toBe(
+    '第 3 章 正文第三章 · p.50–51',
+  );
+  const unnamed = {
+    ...current,
+    sections: sections.map(value =>
+      value.id === 'body-chapter'
+        ? { ...value, no: null, title: '正文卷首' }
+        : value,
+    ),
+  };
+  expect(presentShelf([unnamed], c.clock.now(), false).continueCard?.meta).toBe(
+    '正文卷首 · p.50–51',
+  );
+  const missingAncestor = {
+    ...current,
+    sections: sections.filter(value => value.id !== 'body-chapter'),
+  };
+  expect(
+    presentShelf([missingAncestor], c.clock.now(), false).continueCard?.meta,
+  ).toBe('p.50–51');
+});
+it('uses printed page labels in map, section ranges and continue cards while retaining PDF coordinates', async () => {
+  const labels = Array.from({ length: 827 }, (_, index) =>
+    index < 41 ? `front-${index + 1}` : String(index + 1 - 41),
+  );
+  await c.repos.settings.set('book.import.aima', { pageLabels: labels });
+  await c.repos.books.update('aima', { page_offset: 41 });
+  const record = await loadBookMap(c, 'aima');
+  const template = record.sections[0];
+  const sections = [
+    {
+      ...template,
+      id: 'quality-chapter',
+      parent_id: null,
+      level: 1 as const,
+      page_from: 88,
+      page_to: 115,
+      is_leaf: false,
+    },
+    {
+      ...template,
+      id: 'quality-child',
+      parent_id: 'quality-chapter',
+      level: 2 as const,
+      page_from: 90,
+      page_to: 92,
+      is_leaf: true,
+    },
+  ];
+  const map = presentMap({ ...record, sections }, {});
+  expect(map.chapters[0].meta).toContain('p.47–74');
+  expect(map.chapters[0].children[0].pageLabel).toBe('p.49');
+  expect(pageRange({ page_from: 1, page_to: 1 }, record.book)).toBe(
+    'p.front-1',
+  );
+  expect(sections[0].page_from).toBe(88);
+  const shelf = (await loadShelf(c)).find(value => value.book.id === 'aima')!;
+  shelf.sections = shelf.sections.map(section =>
+    section.id === shelf.study?.main_section
+      ? { ...section, page_from: 88, page_to: 115 }
+      : section,
+  );
+  expect(
+    presentShelf([shelf], c.clock.now(), true).continueCard?.meta,
+  ).toContain('p.47–74');
+});
 it('shelf searches by author and routes parsing books and regular books correctly', async () => {
   const current = await mount(useShelfVM);
   expect(current().state.books).toHaveLength(3);
@@ -138,6 +294,12 @@ it('shelf searches by author and routes parsing books and regular books correctl
   });
 });
 it('map section sheet, literal search and start confirmation preserve prior progress', async () => {
+  await c.repos.settings.set('book.import.aima', {
+    pageLabels: Array.from(
+      { length: 1136 },
+      (_, index) => `folio-${index + 1}`,
+    ),
+  });
   const current = await mount(() => useBookMapVM('aima'));
   expect(current().state.chapters).toHaveLength(3);
   expect(current().state.chapters[2].expanded).toBe(true);
@@ -162,6 +324,8 @@ it('map section sheet, literal search and start confirmation preserve prior prog
   const overlay = current().state.overlay;
   if (overlay?.kind !== 'search') throw new Error('expected search');
   expect(overlay.results.length).toBeGreaterThan(0);
+  expect(overlay.results[0].page).toMatch(/^p\.folio-\d+$/u);
+  expect(overlay.results[0].title).toMatch(/^\d/u);
   await act(() => current().intents.openResult(overlay.results[0].ref));
   expect(nav.open).toHaveBeenCalledWith({
     name: 'Reader',
@@ -199,6 +363,50 @@ it('map flags save manual confirmation and refuse a split without a second sourc
   });
   await confirmMapFlag(c, 'aima', '3.5.4');
 });
+it('omits empty question records and unavailable notes from section details', async () => {
+  const current = await mount(() => useBookMapVM('aima'));
+  await act(() => current().intents.openSection('3.5.3'));
+  const overlay = current().state.overlay;
+  if (overlay?.kind !== 'section') throw new Error('expected section');
+  expect(overlay.facts).not.toContainEqual({ k: '问答', v: '0 条' });
+  expect(overlay.actions.map(action => action.key)).not.toContain('notes');
+  await c.repos.notes.userText.set('aima', '3.5.3', '保留自己的便签入口');
+  await act(() => current().intents.openSection('3.5.3'));
+  const withNote = current().state.overlay;
+  if (withNote?.kind !== 'section') throw new Error('expected section');
+  expect(withNote.actions.map(action => action.key)).toContain('notes');
+});
+it('keeps the source filename and PDF metadata available for the import preview', async () => {
+  await c.repos.drafts.insert({
+    id: 'fidelity-draft',
+    file_path: 'demo://preview.pdf',
+    info: {
+      name: 'source-filename.pdf',
+      title: 'PDF metadata title',
+      author: 'Author',
+      pages: 421,
+      size_bytes: 10485760,
+      format: 'pdf',
+      has_text_layer: true,
+      has_outline: true,
+    },
+    created_at: c.clock.now().toISOString(),
+  });
+  expect(
+    (await listImportDrafts(c)).find(file => file.key === 'fidelity-draft'),
+  ).toMatchObject({
+    name: 'source-filename.pdf',
+    meta: '10.0 MB · 421 页',
+  });
+  const current = await mount(() => useImportSettingsVM('fidelity-draft'));
+  expect(current().state).toMatchObject({
+    title: 'PDF metadata title',
+    subtitle: 'Author',
+    fileName: 'source-filename.pdf',
+    cover: { title: 'PDF metadata title' },
+    overQuota: false,
+  });
+});
 it('splits only at an existing source heading while keeping block references and notes intact', async () => {
   const section = (await c.repos.sections.get('aima', '3.5.2'))!;
   const blocks = await c.repos.blocks.bySection('aima', section.id);
@@ -233,6 +441,7 @@ it('parse progress and import options use real persisted metadata without starti
   let current = await mount(() => useParseProgressVM('slm'));
   expect(current().state.parts).toHaveLength(3);
   expect(current().state.parts[0].statusText).toBe('解析 61%');
+  expect(current().state.meta).toMatch(/^470 页 · MinerU · /u);
   await act(() => current().intents.goUpdateToken());
   expect(nav.open).toHaveBeenCalledWith({ name: 'MeMineru' });
   const part = (await c.repos.parts.list('slm'))[0];

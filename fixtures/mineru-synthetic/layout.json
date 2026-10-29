@@ -1,0 +1,27 @@
+{
+  "pdf_info": [
+    {
+      "page_idx": 0,
+      "page_size": [612, 792],
+      "para_blocks": [
+        {
+          "type": "text",
+          "bbox": [61.2, 158.4, 306, 198],
+          "lines": [{ "spans": [{ "content": "点坐标段落" }] }]
+        }
+      ],
+      "discarded_blocks": [
+        { "type": "page_number", "lines": [{ "spans": [{ "content": "1" }] }] }
+      ]
+    },
+    { "page_idx": 1, "page_size": [1224, 1584] },
+    {
+      "page_idx": 2,
+      "page_size": [612, 792],
+      "discarded_blocks": [
+        { "type": "page_number", "lines": [{ "spans": [{ "content": "3" }] }] }
+      ]
+    },
+    { "page_idx": 3, "page_size": [612, 792] }
+  ]
+}

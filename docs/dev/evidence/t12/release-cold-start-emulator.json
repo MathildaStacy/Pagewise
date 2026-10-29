@@ -1,0 +1,27 @@
+{
+  "device": "Pixel_10_Pro Android 17 arm64 emulator",
+  "build": "release",
+  "metric": "Android am start -W activity TTID; not app fully interactive",
+  "samples": [
+    {
+      "TotalTime": 9320,
+      "WaitTime": 9416,
+      "LaunchState": "COLD",
+      "firstAfterInstall": true
+    },
+    {
+      "TotalTime": 3828,
+      "WaitTime": 3876,
+      "LaunchState": "COLD",
+      "firstAfterInstall": false
+    },
+    {
+      "TotalTime": 4323,
+      "WaitTime": 4326,
+      "LaunchState": "COLD",
+      "firstAfterInstall": false
+    }
+  ],
+  "physicalDeviceAcceptance": "unavailable",
+  "thresholdMs": 1500
+}

@@ -41,11 +41,31 @@ const pairs: Pair[] = [
   { fg: 'badInk', bg: 'badBg', min: 4.5, use: 'small error label' },
 ];
 
-describe.each(variants)('%s contrast', (_, tokens) => {
+// Exact prototype colors take precedence per user instruction (2026-10-29).
+// These pairs deliberately preserve the source and report the contrast debt.
+const prototypeExceptions: Record<string, string[]> = {
+  'glass light': [
+    'ink2/surface',
+    'onAccent/accent',
+    'stuck/stuckBg',
+    'ok/surface',
+    'bad/badBg',
+    'derive/deriveBg',
+    'example/exampleBg',
+  ],
+  'glass dark': ['onAccent/accent', 'detour/detourBg', 'bad/badBg'],
+};
+describe.each(variants)('%s contrast', (variant, tokens) => {
   it.each(pairs)('$fg/$bg reaches $min for $use', ({ fg, bg, min }) => {
-    expect(
-      contrastRatio(tokens.color[fg], tokens.color[bg], tokens.color.surface),
-    ).toBeGreaterThanOrEqual(min);
+    const ratio = contrastRatio(
+      tokens.color[fg],
+      tokens.color[bg],
+      tokens.color.surface,
+    );
+    if (prototypeExceptions[variant]?.includes(`${fg}/${bg}`)) {
+      expect(ratio).toBeLessThan(min);
+      expect(ratio).toBeGreaterThanOrEqual(2);
+    } else expect(ratio).toBeGreaterThanOrEqual(min);
   });
 });
 

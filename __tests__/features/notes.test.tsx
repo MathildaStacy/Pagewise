@@ -1,5 +1,7 @@
 import TestRenderer, { act } from 'react-test-renderer';
 import { AccessibilityInfo } from 'react-native';
+import { configureStorageRuntime } from '@app/usecases/storage';
+import type { StorageIO } from '@app/usecases/storage';
 import { createTestDemoContainer } from '@app/testing';
 import type { Container } from '@app/container';
 import { useContainer } from '@app/ContainerProvider';
@@ -98,7 +100,7 @@ it('groups chapter notes and presents answers, highlights and the current source
     bookId: 'aima',
   });
 });
-it('opens note detail and persists export controls without claiming a file was written', async () => {
+it('opens note detail, persists export controls and exports the selected format', async () => {
   const current = await mount(() => useNotesBookVM('aima'));
   current().intents.openSection('3.5.2');
   expect(nav.open).toHaveBeenLastCalledWith({
@@ -123,8 +125,24 @@ it('opens note detail and persists export controls without claiming a file was w
     format: 'anki',
     strip: false,
   });
-  await act(async () => current().intents.exportNow());
-  expect(current().state.notice).toContain('导出预览');
+  const saveDownloads = jest.fn(async () => '/downloads/cards.csv');
+  configureStorageRuntime(c, {
+    cacheDir: '/cache',
+    mkdir: jest.fn(async () => {}),
+    writeText: jest.fn(async () => {}),
+    remove: jest.fn(async () => {}),
+    saveDownloads,
+  } as unknown as StorageIO);
+  await act(async () => {
+    current().intents.exportNow();
+    await new Promise(resolve => setImmediate(resolve));
+  });
+  expect(current().state.notice).toContain('已保存到下载');
+  expect(saveDownloads).toHaveBeenCalledWith(
+    expect.any(String),
+    expect.stringContaining('闪卡.csv'),
+    'text/csv',
+  );
 });
 it('flushes the newest note before unmount and immediately reloads it on reentry', async () => {
   let current = await mount(() => useNoteDetailVM('aima', '3.5.2'));

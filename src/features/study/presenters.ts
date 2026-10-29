@@ -481,7 +481,9 @@ export function presentReaderItems(
         ...(now ? ['now' as const] : []),
         ...(highlights.has(b.seq) ? ['highlight' as const] : []),
         ...(selected === b.seq ? ['selected' as const] : []),
-        ...(flash === b.seq ? ['flash' as const] : []),
+        ...(flash === b.seq || (raw.flashRef === flash && now)
+          ? ['flash' as const]
+          : []),
       ],
       pin: pins.get(b.seq),
       uri: b.image_path ?? undefined,
@@ -489,4 +491,68 @@ export function presentReaderItems(
     });
   }
   return result;
+}
+
+export function presentOriginalPages(
+  blocks: Block[],
+  book: Book | null,
+  section: Section | null,
+  raw: SessionState,
+  highlights: Set<number>,
+  pins: Map<number, { id: string; label: string }>,
+  images: Map<number, { uri: string; w: number; h: number }>,
+  sizes: { w: number; h: number }[] = [],
+  selected?: number,
+  flash?: number,
+): import('./types').ReaderOriginalPage[] {
+  if (!section || !book || book.format !== 'pdf') return [];
+  const pageNumbers = blocks.flatMap(b => (b.page === null ? [] : [b.page]));
+  const first = section.page_from ?? Math.min(...pageNumbers);
+  const last = section.page_to ?? Math.max(...pageNumbers);
+  if (
+    !Number.isFinite(first) ||
+    !Number.isFinite(last) ||
+    first < 1 ||
+    last < first
+  )
+    return [];
+  const presented = new Map(
+    presentReaderItems(blocks, book, raw, highlights, pins, selected, flash)
+      .filter(
+        (b): b is Extract<ReaderItem, { kind: 'block' }> => b.kind === 'block',
+      )
+      .map(b => [b.seq, b]),
+  );
+  return Array.from({ length: last - first + 1 }, (_, i) => {
+    const page = first + i;
+    return {
+      page,
+      label: blockPage({ page } as Block, book),
+      image: images.get(page) ?? null,
+      size: sizes[page - 1] ?? { w: 612, h: 792 },
+      blocks: blocks
+        .filter(
+          b =>
+            b.page === page &&
+            [b.x0, b.y0, b.x1, b.y1].every(
+              n => n !== null && Number.isFinite(n),
+            ) &&
+            b.x1! > b.x0! &&
+            b.y1! > b.y0!,
+        )
+        .map(b => ({
+          ref: b.seq,
+          x0: b.x0!,
+          y0: b.y0!,
+          x1: b.x1!,
+          y1: b.y1!,
+          marks: presented.get(b.seq)?.marks ?? [],
+          selectable: b.type !== 'title',
+          label: b.text.slice(0, 100) || `内容块 b${b.seq}`,
+          pin: pins.has(b.seq),
+          pinId: pins.get(b.seq)?.id,
+          pinLabel: pins.get(b.seq)?.label,
+        })),
+    };
+  });
 }

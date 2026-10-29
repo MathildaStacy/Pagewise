@@ -6,8 +6,18 @@ export interface ColorTokens {
   bg: string;
   surface: string;
   surfaceAlt: string;
+  surfaceFill: string;
+  header: string;
+  editor: string;
+  fieldBorder: string;
+  switchOff: string;
+  mapFlagBg: string;
+  proposalBorder: string;
+  thumb: string;
   paper: string;
   paperInk: string;
+  readerPageLabel: string;
+  readerPageRule: string;
   pressed: string;
   line: string;
   scrim: string;
@@ -16,6 +26,14 @@ export interface ColorTokens {
   ink3: string;
   onAccent: string;
   accent: string;
+  accentEnd: string;
+  brandStart: string;
+  brandEnd: string;
+  continueStart: string;
+  continueMid: string;
+  continueEnd: string;
+  continueOverlay: string;
+  continueInk: string;
   accentBg: string;
   accentInk: string;
   detour: string;
@@ -24,6 +42,7 @@ export interface ColorTokens {
   stuckBg: string;
   stuckInk: string;
   ok: string;
+  okInk: string;
   okBg: string;
   bad: string;
   badBg: string;
@@ -53,6 +72,12 @@ export interface TypeStyle {
 
 export interface TypeTokens {
   largeTitle: TypeStyle;
+  continueTitle: TypeStyle;
+  bookTitle: TypeStyle;
+  fileTitle: TypeStyle;
+  mapTitle: TypeStyle;
+  parsePartTitle: TypeStyle;
+  factValue: TypeStyle;
   title: TypeStyle;
   headline: TypeStyle;
   body: TypeStyle;
@@ -97,6 +122,8 @@ export interface ElevationTokens {
   card: ShadowStyle;
   pop: ShadowStyle;
   fab: ShadowStyle;
+  flashcard: ShadowStyle;
+  segment: ShadowStyle;
 }
 
 export interface MotionTokens {
@@ -109,7 +136,17 @@ export interface MotionTokens {
 }
 
 export interface Tokens {
+  settingsIcons: {
+    parser: string;
+    ai: string;
+    preferences: string;
+    appearance: string;
+    storage: string;
+    about: string;
+  };
+
   scheme: Scheme;
+  layout: { groupedLists: boolean; flashcards: 'expand' | 'flip' };
   color: ColorTokens;
   type: TypeTokens;
   shape: ShapeTokens;

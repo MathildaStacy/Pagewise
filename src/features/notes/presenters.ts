@@ -1,4 +1,5 @@
 import type { Section } from '@core/types';
+import { pageLabel } from '@core/ids';
 import type { BookNotesData, NoteDetailData } from '@app/usecases/notes';
 import type { NotesState, NotesBookState, NoteDetailState } from './types';
 
@@ -101,8 +102,13 @@ export function presentNoteDetail(
     title: s ? `${s.no ?? ''} ${s.title}`.trim() : sectionId,
     subtitle: `笔记${
       s?.page_from != null
-        ? ` · p.${s.page_from}${
-            s.page_to !== s.page_from ? `–${s.page_to}` : ''
+        ? ` · ${pageLabel(data.book ?? { page_offset: 0 }, s.page_from)}${
+            s.page_to !== s.page_from
+              ? `–${pageLabel(
+                  data.book ?? { page_offset: 0 },
+                  s.page_to,
+                ).replace(/^p[.]/, '')}`
+              : ''
           }`
         : ''
     }`,
@@ -122,19 +128,21 @@ export function presentNoteDetail(
         return {
           ref: `b${b.seq}`,
           text: b.text,
-          page: b.page != null ? `p.${b.page}` : b.loc ?? '原文',
+          page: pageLabel(data.book ?? { page_offset: 0 }, b.page, b.loc),
         };
       }),
     pins: data.pins
       .filter(p => p.section_id === sectionId)
-      .map(p => ({
-        ref: `b${p.block_seq}`,
-        q: p.question,
-        page:
-          data.sectionBlocks.find(b => b.seq === p.block_seq)?.page != null
-            ? `p.${data.sectionBlocks.find(b => b.seq === p.block_seq)!.page}`
+      .map(p => {
+        const block = data.sectionBlocks.find(b => b.seq === p.block_seq);
+        return {
+          ref: `b${p.block_seq}`,
+          q: p.question,
+          page: block
+            ? pageLabel(data.book ?? { page_offset: 0 }, block.page, block.loc)
             : '原文',
-      })),
+        };
+      }),
     userText: data.userNote?.user_text ?? '',
     loading: false,
     saveStatus: '已保存',
@@ -147,8 +155,8 @@ export function exportPreview(
 ): { tree: string; desc: string } {
   return format === 'md'
     ? {
-        tree: `Pagewise导出/${title}/\n  README.md\n  第01章/\n    1.1-小节名.md\n  …`,
-        desc: '每节一个文件：摘要、问答、岔路记录、卡点、高亮、我的笔记。',
+        tree: `Pagewise导出/${title}/\n  README.md\n  课程讲义/第01章-章名/\n    1.1-小节名.md\n  …`,
+        desc: '每节一个文件，目录结构和 aima4e-markdown 的「课程讲义」一致：摘要、问答、岔路记录、卡点、高亮、我的笔记。',
       }
     : {
         tree: `Pagewise导出/${title}-闪卡.csv\n  正面,背面,标签`,

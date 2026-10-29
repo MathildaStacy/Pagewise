@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 import { useContainer } from '@app/ContainerProvider';
+import { resolveStudyBlockImage } from '@app/bookImages';
 import { getStudySession } from '@app/study/registry';
 import type {
   SectionDraft,
@@ -11,6 +12,8 @@ import {
   addStudyStuck,
   loadStudyBlock,
   loadStudyReader,
+  loadOriginalReaderWindow,
+  loadOriginalReaderInfo,
   saveStudyBlockNote,
   saveStudyPin,
   toggleStudyHighlight,
@@ -23,6 +26,7 @@ import {
   blockPage,
   messageDoc,
   presentReaderItems,
+  presentOriginalPages,
   presentThread,
   quickActions,
   sectionLabel,
@@ -87,10 +91,24 @@ export function useStudyVM(
   const [text, setText] = useState(''),
     [overlay, setOverlay] = useState<StudyOverlay | null>(null),
     [toast, setToast] = useState<string | null>(null);
-  const [reader, setReader] = useState<ReaderData | null>(null),
+  const [loadedReader, setReader] = useState<ReaderData | null>(null),
     [readerError, setReaderError] = useState<string | null>(null),
     [readerLoading, setReaderLoading] = useState(true);
+  const [readerTarget, setReaderTarget] = useState<{
+    bookId: string;
+    blockRef: string;
+    sectionId: string;
+  } | null>(null);
   const [cache, setCache] = useState<Map<number, Block>>(new Map());
+  const [pageImages, setPageImages] = useState<
+    Map<number, { uri: string; w: number; h: number }>
+  >(new Map());
+  const [pageSizes, setPageSizes] = useState<{ w: number; h: number }[]>([]);
+  const [pageError, setPageError] = useState<string>();
+  const [pageLoading, setPageLoading] = useState(false);
+  const pageRequest = useRef(0),
+    readerRequest = useRef(0),
+    anchorRef = useRef<number | null>(null);
   const [selection, setSelection] = useState<{
       seq: number;
       anchor: Rect;
@@ -103,14 +121,56 @@ export function useStudyVM(
     [localScroll, setLocalScroll] = useState<
       { ref: string; token: number } | undefined
     >();
+  const restoredReader = useRef<string | undefined>(undefined);
   const mounted = useRef(true),
     explainRequest = useRef(0),
     anchorTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingRefs = useRef(new Set<number>());
   const mode = standalone ? 'read' : raw.mode;
+  const blockTarget =
+    readerTarget?.bookId === bookId &&
+    readerTarget.blockRef === options.blockRef
+      ? readerTarget.sectionId
+      : null;
   const readerId = standalone
-    ? options.sectionId ?? raw.readerSectionId ?? raw.main.sectionId
+    ? options.blockRef
+      ? blockTarget
+      : options.sectionId ?? raw.readerSectionId ?? raw.main.sectionId
     : raw.readerSectionId ?? raw.main.sectionId;
+  const reader =
+    loadedReader?.book.id === bookId && loadedReader.section.id === readerId
+      ? loadedReader
+      : null;
+  useEffect(() => {
+    const restoreKey = `${bookId}:${readerId}:${
+      standalone ? options.blockRef ?? '' : ''
+    }`;
+    if (
+      mode !== 'read' ||
+      !readerId ||
+      !reader ||
+      reader.section.id !== readerId ||
+      restoredReader.current === restoreKey
+    )
+      return;
+    restoredReader.current = restoreKey;
+    const anchor =
+      standalone && options.blockRef
+        ? parseBlockRef(options.blockRef)
+        : raw.readAnchor;
+    if (anchor !== null && reader.blocks.some(b => b.seq === anchor)) {
+      anchorRef.current = anchor;
+      setLocalScroll({ ref: `b${anchor}`, token: Date.now() });
+    }
+  }, [
+    bookId,
+    standalone,
+    options.blockRef,
+    mode,
+    readerId,
+    reader,
+    raw.readAnchor,
+  ]);
   const fail = useCallback((error: unknown) => {
     if (mounted.current) setToast(errorText(error));
   }, []);
@@ -131,18 +191,45 @@ export function useStudyVM(
     autoStart,
   } = options;
   useEffect(() => {
-    session
-      .open({
+    let active = true;
+    const open = async () => {
+      let targetSection = sectionId;
+      if (standalone && blockRef) {
+        setReaderLoading(true);
+        setReaderError(null);
+        const seq = parseBlockRef(blockRef);
+        if (seq === null) throw new Error('找不到引用的原文');
+        const block = await loadStudyBlock(c, bookId, seq);
+        if (!active) return;
+        if (!block.section_id) throw new Error('这段原文还没有对应的小节');
+        targetSection = block.section_id;
+        setReaderTarget({ bookId, blockRef, sectionId: targetSection });
+      }
+      if (!active) return;
+      await session.open({
         mode: standalone ? 'read' : initialMode,
-        sectionId,
+        sectionId: targetSection,
         blockRef,
         question,
         stuckId,
         preserveMain: standalone || preserveMain,
         autoStart: standalone ? false : autoStart,
-      })
-      .catch(fail);
+      });
+    };
+    open().catch(error => {
+      if (!active) return;
+      if (standalone && blockRef) {
+        setReaderError(errorText(error));
+        setReaderLoading(false);
+      }
+      fail(error);
+    });
+    return () => {
+      active = false;
+    };
   }, [
+    c,
+    bookId,
     session,
     standalone,
     initialMode,
@@ -155,18 +242,19 @@ export function useStudyVM(
     fail,
   ]);
   const refreshReader = useCallback(() => {
+    const request = ++readerRequest.current;
     if (!readerId) return;
     setReaderLoading(true);
     loadStudyReader(c, bookId, readerId)
       .then(data => {
-        if (mounted.current) {
+        if (mounted.current && request === readerRequest.current) {
           setReader(data);
           setReaderError(null);
           setReaderLoading(false);
         }
       })
       .catch(error => {
-        if (mounted.current) {
+        if (mounted.current && request === readerRequest.current) {
           setReaderError(errorText(error));
           setReaderLoading(false);
         }
@@ -184,10 +272,14 @@ export function useStudyVM(
     () =>
       new Map([
         ...cache,
-        ...raw.blocks.map(b => [b.seq, b] as const),
-        ...(reader?.blocks ?? []).map(b => [b.seq, b] as const),
+        ...raw.blocks.map(
+          b => [b.seq, resolveStudyBlockImage(c, bookId, b)] as const,
+        ),
+        ...(reader?.originalBlocks ?? reader?.blocks ?? []).map(
+          b => [b.seq, b] as const,
+        ),
       ]),
-    [cache, raw.blocks, reader],
+    [c, bookId, cache, raw.blocks, reader],
   );
   useEffect(() => {
     const refs = new Set([
@@ -225,8 +317,10 @@ export function useStudyVM(
     return () => clearTimeout(timer);
   }, [toast, raw.notice, session]);
   useEffect(() => {
-    if (raw.flashRef !== null)
+    if (raw.flashRef !== null) {
+      anchorRef.current = raw.flashRef;
       setLocalScroll({ ref: `b${raw.flashRef}`, token: Date.now() });
+    }
   }, [raw.flashRef]);
   useEffect(() => {
     if (!localScroll) return;
@@ -234,7 +328,7 @@ export function useStudyVM(
     const timer = setTimeout(
       () =>
         setLocalScroll(value => (value?.token === token ? undefined : value)),
-      1600,
+      2000,
     );
     return () => clearTimeout(timer);
   }, [localScroll]);
@@ -258,6 +352,7 @@ export function useStudyVM(
     ? raw.sections.find(s => s.id === active.sectionId)
     : null;
   const readSection = reader?.section;
+  const originalAvailable = c.mode !== 'demo' && reader?.book.format === 'pdf';
   const guide = guideText(readSection?.guide ?? null);
   const flashSeq = localScroll
     ? parseBlockRef(localScroll.ref) ?? undefined
@@ -291,9 +386,15 @@ export function useStudyVM(
           : sectionLabel(activeSection ?? raw.section),
       subtitle: [
         raw.book?.title,
-        mode === 'read' && reader?.blocks[0]
-          ? blockPage(reader.blocks[0], raw.book)
-          : undefined,
+        (() => {
+          const section =
+            mode === 'read' ? readSection : activeSection ?? raw.section;
+          if (!section?.page_from) return undefined;
+          const offset = raw.book?.page_offset ?? 0;
+          const from = section.page_from - offset;
+          const to = (section.page_to ?? section.page_from) - offset;
+          return from === to ? `p.${from}` : `p.${from}–${to}`;
+        })(),
       ]
         .filter(Boolean)
         .join(' · '),
@@ -372,6 +473,29 @@ export function useStudyVM(
         selection?.seq,
         flashSeq,
       ),
+      original: {
+        available: originalAvailable,
+        reason:
+          c.mode === 'demo'
+            ? 'Demo 只有示意原文，真实 PDF 导入后可用原版阅读'
+            : reader?.book.format === 'epub'
+            ? 'EPUB 只有重排模式'
+            : undefined,
+        loading: pageLoading,
+        error: pageError,
+        pages: presentOriginalPages(
+          reader?.originalBlocks ?? [],
+          raw.book,
+          readSection ?? null,
+          raw,
+          highlights,
+          pins,
+          pageImages,
+          pageSizes,
+          selection?.seq,
+          flashSeq,
+        ),
+      },
       scrollTo: localScroll ? { ...localScroll, flash: true } : undefined,
       readEnd: {
         visible: readSection?.id === raw.main.sectionId,
@@ -426,6 +550,13 @@ export function useStudyVM(
   };
   const setMode = (next: 'listen' | 'read') => {
     setSelection(null);
+    if (next === 'read')
+      anchorRef.current =
+        raw.plan?.steps[raw.main.step]?.block_from ?? raw.readAnchor;
+    if (next === 'listen' && anchorRef.current !== null) {
+      if (anchorTimer.current) clearTimeout(anchorTimer.current);
+      session.reportAnchor(anchorRef.current);
+    }
     if (standalone && next === 'listen') {
       run(session.setMode('listen'));
       nav.replace({ name: 'Study', bookId });
@@ -706,7 +837,44 @@ export function useStudyVM(
     },
     setView: view => {
       setSelection(null);
+      if (view === 'orig' && !originalAvailable) {
+        setToast(
+          c.mode === 'demo'
+            ? 'Demo 只有示意原文，真实 PDF 导入后可用原版阅读'
+            : 'EPUB 只有重排模式',
+        );
+        return;
+      }
+      const anchor = anchorRef.current ?? raw.readAnchor;
+      if (anchor !== null) {
+        session.reportAnchor(anchor);
+        setLocalScroll({ ref: `b${anchor}`, token: Date.now() });
+      }
       run(session.setReaderView(view));
+    },
+    requestPage: (page, width) => {
+      if (!originalAvailable) return;
+      const revision = ++pageRequest.current;
+      setPageLoading(true);
+      setPageError(undefined);
+      Promise.all([
+        loadOriginalReaderInfo(c, bookId),
+        loadOriginalReaderWindow(c, bookId, page, width),
+      ])
+        .then(([info, results]) => {
+          if (mounted.current && pageRequest.current === revision) {
+            setPageSizes(info?.sizes ?? []);
+            setPageImages(new Map(results.map(r => [r.page, r.image])));
+          }
+        })
+        .catch(error => {
+          if (mounted.current && pageRequest.current === revision)
+            setPageError(errorText(error));
+        })
+        .finally(() => {
+          if (mounted.current && pageRequest.current === revision)
+            setPageLoading(false);
+        });
     },
     toggleGuide: () => {
       setGuideExpanded(old => !old);
@@ -730,6 +898,7 @@ export function useStudyVM(
     reportAnchor: ref => {
       const seq = parseBlockRef(ref);
       if (seq === null) return;
+      anchorRef.current = seq;
       if (anchorTimer.current) clearTimeout(anchorTimer.current);
       anchorTimer.current = setTimeout(() => session.reportAnchor(seq), 500);
     },

@@ -12,6 +12,7 @@ import {
   type BookNotesData,
 } from '@app/usecases/notes';
 import { useAppNav } from '@features/nav';
+import { exportNotes } from '@app/usecases/exportNotes';
 import {
   exportPreview,
   presentNoteDetail,
@@ -150,11 +151,32 @@ export function useNotesBookVM(bookId: string): {
           setPreference(value, state.overlay?.strip ?? true);
       },
       setStrip: strip => setPreference(state.overlay?.format ?? 'md', strip),
-      exportNow: () =>
+      exportNow: () => {
+        if (!state.overlay || state.overlay.busy) return;
+        const { format, strip } = state.overlay;
         setState(s => ({
           ...s,
-          notice: '导出预览已准备好，当前版本暂不支持保存文件。',
-        })),
+          error: undefined,
+          overlay: s.overlay ? { ...s.overlay, busy: true } : null,
+        }));
+        exportNotes(c, bookId, format, strip)
+          .then(() => {
+            if (alive.current)
+              setState(s => ({
+                ...s,
+                overlay: null,
+                notice: '已保存到下载 / Pagewise导出',
+              }));
+          })
+          .catch(error => {
+            if (alive.current)
+              setState(s => ({
+                ...s,
+                error: toAppError(error).message,
+                overlay: s.overlay ? { ...s.overlay, busy: false } : null,
+              }));
+          });
+      },
     },
   };
 }

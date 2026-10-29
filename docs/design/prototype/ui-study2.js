@@ -4,7 +4,7 @@ function openCite(id) { go('reader', { block: id }); }
 
 SCREENS.study = {
   title: () => { const st = ST(); return esc(secName(st.sec)) + '<span class="sub">人工智能：现代方法 · ' + pagesOf(st.sec) + '</span>'; },
-  navRight: () => '<button class="tb" onclick="' + on(() => go('reader', { sec: ST().detour || ST().sec })) + '">原文</button><button class="ib" aria-label="更多" onclick="studyMenu()">⋯</button>',
+  navRight: () => modeSwitch('study', () => go('reader', { sec: ST().detour || ST().sec })) + '<button class="ib" aria-label="更多" onclick="studyMenu()">⋯</button>',
   top() {
     const st = ST();
     const doneN = st.phase === 'resume' ? 1 : st.part + (st.phase === 'ready' ? 1 : 0);

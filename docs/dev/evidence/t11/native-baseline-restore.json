@@ -1,0 +1,45 @@
+{
+  "purpose": "Restore pre-regression baseline before reparse retest",
+  "restoredTables": {
+    "message": {
+      "snapshot": 90,
+      "restored": 90,
+      "equal": true
+    },
+    "card": {
+      "snapshot": 15,
+      "restored": 15,
+      "equal": true
+    },
+    "stuck": {
+      "snapshot": 2,
+      "restored": 2,
+      "equal": true
+    },
+    "study_state": {
+      "snapshot": 2,
+      "restored": 2,
+      "equal": true
+    },
+    "lesson_plan": {
+      "snapshot": 5,
+      "restored": 5,
+      "equal": true
+    },
+    "section_note": {
+      "snapshot": 0,
+      "restored": 0,
+      "equal": true
+    },
+    "highlight": {
+      "snapshot": 0,
+      "restored": 0,
+      "equal": true
+    },
+    "pin": {
+      "snapshot": 0,
+      "restored": 0,
+      "equal": true
+    }
+  }
+}

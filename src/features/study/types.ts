@@ -1,4 +1,4 @@
-import type { RichDoc } from '@ui/kit';
+import type { PageOrigProps, RichDoc } from '@ui/kit';
 
 export type QuickKey =
   | 'next'
@@ -108,6 +108,13 @@ export interface ReaderBlock {
 export type ReaderItem =
   | ReaderBlock
   | { kind: 'pageBreak'; page: string; id: string };
+export interface ReaderOriginalPage {
+  page: number;
+  label: string;
+  image: { uri: string; w: number; h: number } | null;
+  size: { w: number; h: number };
+  blocks: (PageOrigProps['blocks'][number] & { pinId?: string })[];
+}
 export interface ReaderState {
   view: 'orig' | 'flow';
   hint: string;
@@ -120,6 +127,13 @@ export interface ReaderState {
     loading: boolean;
   } | null;
   items: ReaderItem[];
+  original?: {
+    available: boolean;
+    reason?: string;
+    pages: ReaderOriginalPage[];
+    error?: string;
+    loading: boolean;
+  };
   scrollTo?: { ref: string; flash: boolean; token: number };
   readEnd: { visible: boolean; label: string; hint: string };
   selection: null | {
@@ -238,6 +252,7 @@ export interface StudyIntents {
   resumeAction(key: string): void;
   retry(id?: string): void;
   setView(view: 'orig' | 'flow'): void;
+  requestPage?(page: number, widthPx: number): void;
   toggleGuide(): void;
   pressBlock(ref: string, anchor: Rect): void;
   menuAction(key: string): void;

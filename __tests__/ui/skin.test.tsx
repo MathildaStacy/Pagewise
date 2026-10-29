@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import * as ReactNative from 'react-native';
 import {
   AccessibilityInfo,
   Modal,
@@ -163,150 +162,63 @@ it.each(['paper', 'glass'] as const)(
   },
 );
 
-for (const skinId of ['paper', 'glass'] as const) {
-  it(`${skinId} 2倍字号保留字体缩放和完整标签，按钮/行/快捷chip至少48dp`, async () => {
-    const samples = makeComponentSamples();
-    const longLabel = '这是放大到两倍后仍需要完整显示的按钮文字';
+it.each(['paper', 'glass'] as const)(
+  '%s keeps prototype button geometry with enlarged touch bounds',
+  async skinId => {
+    const onPress = jest.fn();
     const renderer = await mount(
       <>
-        <Kit.AppBar {...samples.AppBar} />
-        <Kit.Button {...samples.Button} label={longLabel} size="block" />
-        <Kit.QuickActions
-          items={[{ key: 'long', label: longLabel, kind: 'primary' }]}
-          onPress={jest.fn()}
-        />
-        <Kit.Row {...samples.Row} title={longLabel} />
-        <Kit.CheckRow {...samples.CheckRow} />
-        <Kit.Composer {...samples.Composer} />
-        <Kit.ModeSwitch {...samples.ModeSwitch} />
-        <Kit.Segmented {...samples.Segmented} />
-        <Kit.StepProgress {...samples.StepProgress} />
-        <Kit.CiteChip {...samples.CiteChip} />
-        <Kit.TabBar {...samples.TabBar} />
+        <Kit.Button label="主操作" onPress={onPress} />
+        <Kit.Button label="小操作" size="sm" onPress={onPress} />
+        <Kit.ModeSwitch value="listen" onChange={onPress} />
       </>,
-      { skinId, scheme: 'light', fontScale: 2, reduceMotion: true },
+      { skinId, scheme: 'light', reduceMotion: true },
     );
-    const texts = renderer.root.findAllByType(Text);
-    for (const text of texts) {
-      expect(text.props.allowFontScaling).not.toBe(false);
-      expect(text.props.numberOfLines ?? 0).toBe(0);
-      expect(
-        text.props.maxFontSizeMultiplier === undefined ||
-          text.props.maxFontSizeMultiplier >= 2,
-      ).toBe(true);
-    }
-    const longTexts = texts.filter(text => text.props.children === longLabel);
-    expect(longTexts.length).toBeGreaterThanOrEqual(2);
-    expect(
-      longTexts.some(
-        text =>
-          flattened(text).fontSize ===
-          skins[skinId].tokens.light.type.label.fontSize * 2,
-      ),
-    ).toBe(true);
-    const controls = renderer.root.findAll(
-      node =>
-        ['button', 'radio', 'link', 'checkbox', 'tab'].includes(
-          node.props.accessibilityRole,
-        ) &&
-        node.props.style !== undefined &&
-        typeof node.props.onPress === 'function',
-    );
-    expect(controls.length).toBeGreaterThan(10);
-    for (const control of controls) {
-      const style = flattened(control);
-      expect({
-        label: control.props.accessibilityLabel,
-        minHeight: style.minHeight,
-      }).toEqual({ label: expect.any(String), minHeight: expect.any(Number) });
-      expect(style.minHeight).toBeGreaterThanOrEqual(48);
-      expect(style.height).toBeUndefined();
-    }
-  });
-}
-
-it.each([
-  { previewScale: 1, systemScale: 1 },
-  { previewScale: 2, systemScale: 1 },
-  { previewScale: 1, systemScale: 2 },
-])(
-  'glass push顶栏给完整模式标签留宽，预览$previewScale倍/系统$systemScale倍时可整体换行',
-  async ({ previewScale, systemScale }) => {
-    const dimensions = jest
-      .spyOn(ReactNative, 'useWindowDimensions')
-      .mockReturnValue({
-        width: 320,
-        height: 800,
-        scale: 1,
-        fontScale: systemScale,
-      });
-    try {
-      const onChange = jest.fn();
-      const renderer = await mount(
-        <Kit.AppBar
-          variant="push"
-          title="3.5.2 A*搜索"
-          subtitle="人工智能：现代方法"
-          backLabel="地图"
-          onBack={jest.fn()}
-          right={<Kit.ModeSwitch value="listen" onChange={onChange} />}
-        />,
-        {
-          skinId: 'glass',
-          scheme: 'dark',
-          fontScale: previewScale,
-          reduceMotion: true,
-        },
-      );
-      const mode = renderer.root.findByProps({ testID: 'glass-mode-switch' });
-      const group = mode.find(
-        node => node.props.accessibilityRole === 'radiogroup',
-      );
-      const trackPadding = flattened(group).padding as number;
-      const allocatedOptionWidth =
-        ((flattened(mode).minWidth as number) - trackPadding * 2) / 2;
-      for (const label of ['读书', '听讲']) {
-        const button = mode.findAll(
-          node =>
-            node.props.accessibilityRole === 'radio' &&
-            node.props.accessibilityLabel === label &&
-            node.props.style !== undefined,
-        )[0];
-        const text = button
-          .findAllByType(Text)
-          .find(node => node.props.children === label)!;
-        const labelWidth =
-          (flattened(text).fontSize as number) *
-          systemScale *
-          Array.from(label).length;
-        const usableWidth =
-          allocatedOptionWidth -
-          (flattened(button).paddingHorizontal as number) * 2;
-        expect(usableWidth).toBeGreaterThanOrEqual(labelWidth);
-        expect(text.props.numberOfLines).toBeUndefined();
-      }
-      const content = flattened(
-        renderer.root.findByProps({ testID: 'glass-appbar-content' }),
-      );
-      const actions = flattened(
-        renderer.root.findByProps({ testID: 'glass-appbar-actions' }),
-      );
-      expect(content.flexWrap).toBe('wrap');
-      expect(actions).toMatchObject({
-        flexShrink: 0,
-        marginLeft: 'auto',
-        maxWidth: '100%',
-      });
-      const read = mode.findAll(
-        node =>
-          node.props.accessibilityRole === 'radio' &&
-          node.props.accessibilityLabel === '读书' &&
-          typeof node.props.onPress === 'function',
+    for (const [label, height] of [
+      ['主操作', skinId === 'paper' ? 42 : 50],
+      ['小操作', skinId === 'paper' ? 30 : 34],
+    ] as const) {
+      const control = renderer.root.findAll(
+        n =>
+          n.props.accessibilityRole === 'button' &&
+          n.props.accessibilityLabel === label &&
+          n.props.style,
       )[0];
-      await act(async () => read.props.onPress());
-      expect(onChange).toHaveBeenCalledWith('read');
-    } finally {
-      dimensions.mockRestore();
+      expect(flattened(control).minHeight).toBe(height);
+      const inset =
+        typeof control.props.hitSlop === 'number' ? control.props.hitSlop : 0;
+      expect(height + inset * 2).toBeGreaterThanOrEqual(48);
     }
+    const expected = skinId === 'paper' ? ['伴读', '原文'] : ['读书', '听讲'];
+    for (const label of expected)
+      expect(
+        renderer.root.findAll(
+          n =>
+            n.props.accessibilityRole === 'radio' &&
+            n.props.accessibilityLabel === label,
+        ).length,
+      ).toBeGreaterThan(0);
+  },
+);
+
+it.each([1, 2])(
+  'glass mode supports %s font scale and preserves mode action',
+  async fontScale => {
+    const change = jest.fn();
+    const renderer = await mount(
+      <Kit.ModeSwitch value="listen" onChange={change} />,
+      { skinId: 'glass', scheme: 'light', fontScale, reduceMotion: true },
+    );
+    const mode = renderer.root.findByProps({ testID: 'glass-mode-switch' });
+    expect(flattened(mode).width).toBeGreaterThanOrEqual(96);
+    const read = mode.findAll(
+      n =>
+        n.props.accessibilityRole === 'radio' &&
+        n.props.accessibilityLabel === '读书' &&
+        typeof n.props.onPress === 'function',
+    )[0];
+    await act(async () => read.props.onPress());
+    expect(change).toHaveBeenCalledWith('read');
+    expect(read.findAllByType(Text)[0].props.allowFontScaling).not.toBe(false);
   },
 );

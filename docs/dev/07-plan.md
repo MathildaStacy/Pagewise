@@ -4,7 +4,7 @@
 
 顺序的考虑：**先把皮肤和页面用演示数据做出来**（T2–T6），负责人能尽早在手机上看 UI、比较两套皮肤；再接真 AI（T7）和真书（T8–T10）。
 
-UI 验收基准（用户 2026-10-29 补充）：几乎完整按照 `docs/design/prototype.html` 与其源文件 `docs/design/prototype/*` 实现，保留布局、文案、层次、间距、控件与交互；Paper 不另行重新设计。双皮肤和引擎文档用于补全原型没有覆盖的状态。
+UI 验收基准（用户 2026-10-29 补充）：严格按照 `docs/design/prototype.html`（Paper）和 `docs/design/prototype-apple.html`（Apple）及各自源文件实现，保留布局、文案、层次、间距、控件与交互；两套均不得另行重新设计。双皮肤和引擎文档用于补全原型没有覆盖的状态。
 
 ## 任务总览
 
@@ -123,7 +123,7 @@ T4a–c 在 T3 通过后同批实现，T4d 负责集成。VM 通过 `app/usecase
 
 验收：
 - [ ] Demo 模式下，原型控制台里的这些场景都能在 App 里走通：书架 → 地图 → 小节浮层；复习闪卡（翻面、三种评分、做完页）；卡点「已掌握」；笔记按节 → 详情 → 写自己的笔记（重进还在）；我的各子页开关和分段能改并持久化。
-- [ ] 两套皮肤下逐页截图对照原型（paper）/ 02 §7（glass），放 PR 描述。
+- [ ] 两套皮肤下逐页截图严格对照 prototype.html（paper）/ prototype-apple.html（glass），放 PR 描述。
 - [ ] VM 测试：每个 VM 至少测 presenter 文案（如书架状态行的 4 种情况、我的页 Token 将过期变色）和一个意图（调用了正确的用例 / 导航）。
 
 实施检查（2026-10-29）：T4/T6/T7a 集成后 `npm run check` 全通过，56 suites / 917 tests / 15 snapshots；含真实 SQLite 会话、全部演示页面双皮肤样例、数学缓存/桥接/失败兜底、AI 设置请求与取消。WebView 原生依赖加入后 Android arm64 debug 构建成功（58s）。外围页与学习页的原生走查、逐页原型对照仍在进行，以下视觉/交互验收不提前勾选。
@@ -191,7 +191,7 @@ T4a–c 在 T3 通过后同批实现，T4d 负责集成。VM 通过 `app/usecase
 - 导入流程、解析设置页、解析队列、结果包适配器、地图构建、书签核对、页码偏移、全文搜索（地图页搜索 + `search_book` 工具）。
 - 先做 06 §2.5 的「T8 第一件事」：抓真实样本。
 
-实施文件分工：T8a 根代理负责原生 PDF/FileTools/Intake、平台 IO、依赖与导入集成；T8b 主目标 `src/services/mineru/client.ts`，辅助 `src/services/mineru/{types,adapter,split}.ts`、`__tests__/services/mineru/**`、`fixtures/mineru-synthetic/**`；T8c 主目标 `src/core/map/index.ts`，辅助 `src/core/map/{types,migration}.ts`、`src/core/ids.ts`（页码标签）、`__tests__/core/{map,migration}.test.ts`。T8c 可在学习页原生验收时并行执行纯函数，不依赖原生模块或新包。T8d 导入/队列的文件集合在平台接口确定后补充。
+实施文件分工：T8a 根代理负责原生 PDF/FileTools/Intake、平台 IO、依赖与导入集成；T8b 主目标 `src/services/mineru/client.ts`，辅助 `src/services/mineru/{types,adapter,split}.ts`、`__tests__/services/mineru/**`、`fixtures/mineru-synthetic/**`；T8c 主目标 `src/core/map/index.ts`，辅助 `src/core/map/{types,migration}.ts`、`src/core/ids.ts`（页码标签）、`__tests__/core/{map,migration}.test.ts`。T8c 可在学习页原生验收时并行执行纯函数，不依赖原生模块或新包。T8d 主目标 `src/app/usecases/parseQueue.ts`，辅助 `src/app/usecases/{importBooks,importResults}.ts`、`src/features/library/{useLibraryVM,types,presenters}.ts`、`__tests__/app/import/**`；在既有 UI 上接系统选择器、真实草稿、导入与队列状态，根代理负责原生/IO 绑定及应用生命周期。
 
 验收：
 - [ ] 合成夹具测试：适配器、地图构建、偏移、分片顺序、阶段推进（假 MinerU 客户端按脚本返回各种 state 和错误码）。
@@ -216,6 +216,8 @@ T4a–c 在 T3 通过后同批实现，T4d 负责集成。VM 通过 `app/usecase
 ### T10 EPUB（M1）
 
 依据：06 §4。
+
+实施文件分工：T10a 主目标 `src/services/epub/parser.ts`，辅助 `src/services/epub/{types,index}.ts`、`__tests__/services/epub/**`、`fixtures/epub-synthetic/**`。注入文件/解压接口，采用 htmlparser2，根代理安装依赖、取得公开 EPUB 并与导入流程集成。
 
 验收：
 - [ ] 用一本公版 EPUB（如 Project Gutenberg 的书，作为可提交夹具）测试：目录树、块、图片、表格；导入后能听讲、读书（重排）、引用显示位置标签。
@@ -274,3 +276,5 @@ T4a–c 在 T3 通过后同批实现，T4d 负责集成。VM 通过 `app/usecase
 ## 不在 V1 范围（M5）
 
 语音提问与朗读（通勤模式）、自建 MinerU 服务、扫描版专项打磨、块内文字范围选择、后台解析（WorkManager）、更多皮肤、iOS。架构上已留好接口（皮肤、`MathRenderer`、`MineruClient` 可换实现），不要提前实现。
+
+2026-10-29 最新约束：两套 UI 均逐页严格依据对应 prototype，见 WORKLOG.md §12。真实三节学习会话通过见 evidence/t7/native-real-study.json；不得据此提前勾选手工引用框/TalkBack/性能验收。

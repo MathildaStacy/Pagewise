@@ -1,11 +1,19 @@
-import { Component, type PropsWithChildren, useMemo } from 'react';
-import { View } from 'react-native';
+import {
+  Component,
+  type PropsWithChildren,
+  useMemo,
+  useEffect,
+  useState,
+  useRef,
+} from 'react';
+import { View, StyleSheet } from 'react-native';
 import {
   CommonActions,
   DefaultTheme,
   NavigationContainer,
   StackActions,
   createNavigationContainerRef,
+  useIsFocused,
   type RouteProp,
 } from '@react-navigation/native';
 import {
@@ -145,7 +153,13 @@ function MainTabBar({ state, navigation, insets }: BottomTabBarProps) {
   const due = useReviewBadge();
   return (
     <View
-      style={{ paddingBottom: insets.bottom, backgroundColor: t.color.surface }}
+      style={
+        t.layout.groupedLists
+          ? StyleSheet.create({
+              root: { position: 'absolute', left: 0, right: 0, bottom: 0 },
+            }).root
+          : { paddingBottom: insets.bottom, backgroundColor: t.color.surface }
+      }
     >
       <TabBar
         items={tabItems.map(item =>
@@ -167,15 +181,17 @@ function MainTabBar({ state, navigation, insets }: BottomTabBarProps) {
   );
 }
 const renderTabBar = (props: BottomTabBarProps) => <MainTabBar {...props} />;
+const hiddenTabBar = () => null;
 function MainTabs() {
   const t = useTokens();
+  const focused = useIsFocused();
   return (
     <Tabs.Navigator
       screenOptions={{
         headerShown: false,
         sceneStyle: { backgroundColor: t.color.bg },
       }}
-      tabBar={renderTabBar}
+      tabBar={focused ? renderTabBar : hiddenTabBar}
     >
       <Tabs.Screen name="Shelf" component={ShelfTab} />
       <Tabs.Screen name="Review" component={ReviewTab} />
@@ -268,12 +284,39 @@ export function RootNavigator({
   exitDemo,
   fontScale,
   onScale,
+  incomingImport,
 }: {
   enterDemo(): void;
   exitDemo(): void;
   fontScale: number;
   onScale(value: number): void;
+  incomingImport?: {
+    token: number;
+    selection:
+      | { kind: 'draft'; draftId: string }
+      | { kind: 'duplicate'; bookId: string };
+  } | null;
 }) {
+  const [ready, setReady] = useState(false);
+  const appliedImport = useRef<number | null>(null);
+  useEffect(() => {
+    if (
+      !ready ||
+      !incomingImport ||
+      appliedImport.current === incomingImport.token
+    )
+      return;
+    appliedImport.current = incomingImport.token;
+    const selection = incomingImport.selection;
+    navRef.dispatch(
+      CommonActions.navigate(
+        selection.kind === 'draft' ? 'ImportSettings' : 'BookMap',
+        selection.kind === 'draft'
+          ? { draftId: selection.draftId }
+          : { bookId: selection.bookId },
+      ),
+    );
+  }, [ready, incomingImport]);
   const { skin, tokens } = useSkin();
   const navigation = useMemo<AppNav>(
     () => ({
@@ -312,7 +355,11 @@ export function RootNavigator({
   const theme = { ...DefaultTheme, ...skin.navigationTheme(tokens) };
   return (
     <AppNavProvider value={navigation}>
-      <NavigationContainer ref={navRef} theme={theme}>
+      <NavigationContainer
+        ref={navRef}
+        theme={theme}
+        onReady={() => setReady(true)}
+      >
         <Stack.Navigator
           screenOptions={{
             headerShown: false,

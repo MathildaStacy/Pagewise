@@ -1,18 +1,15 @@
 import { useState } from 'react';
-import { View } from 'react-native';
-import {
-  Field,
-  ListSection,
-  CheckRow,
-  Button,
-  Dialog,
-  Sheet,
-  Note,
-  Row,
-  makeStyles,
-} from '@ui/kit';
+import { Pressable, Text, View } from 'react-native';
+import { CheckRow, Dialog, Sheet, usePresentation } from '@ui/kit';
 import type { AIEditState, AIEditIntents } from '@features/settings/types';
-import { SettingsFrame } from './MeView';
+import {
+  SettingsFrame,
+  SettingsGroup,
+  SettingsField,
+  SettingsAction,
+  SettingsButton,
+  useSettingsStyles,
+} from './MeView';
 import { SettingsSelect } from './MeAIView';
 export function MeAIEditView({
   state,
@@ -21,20 +18,34 @@ export function MeAIEditView({
   state: AIEditState;
   intents: AIEditIntents;
 }) {
-  const s = useStyles();
   const [modelsOpen, setModelsOpen] = useState(false);
+  const { groupedLists } = usePresentation(),
+    s = useSettingsStyles();
   const busy = state.loading || state.saving || Boolean(state.busy);
+  const save = state.saving ? '正在保存…' : '保存';
   return (
-    <SettingsFrame title={state.title} state={state} back={intents.back}>
-      {state.demo ? (
-        <View style={s.demo}>
-          <Note tone="neutral">
-            Demo 演示 · 使用脚本模式，填写的服务不会用于演示讲解
-          </Note>
-        </View>
-      ) : null}
-      <ListSection>
-        <Field
+    <SettingsFrame
+      title={state.title}
+      backLabel="AI 服务"
+      state={state}
+      back={intents.back}
+      right={
+        groupedLists ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={save}
+            accessibilityState={{ disabled: busy }}
+            disabled={busy}
+            hitSlop={10}
+            onPress={intents.save}
+          >
+            <Text style={s.navSave}>{save}</Text>
+          </Pressable>
+        ) : undefined
+      }
+    >
+      <SettingsGroup>
+        <SettingsField
           label="名称"
           value={state.form.name}
           onChange={value => intents.field('name', value)}
@@ -55,7 +66,7 @@ export function MeAIEditView({
           }}
           disabled={state.loading || state.saving}
         />
-        <Field
+        <SettingsField
           label="Base URL"
           value={state.form.baseUrl}
           onChange={value => intents.field('baseUrl', value)}
@@ -63,7 +74,7 @@ export function MeAIEditView({
           error={state.errors.baseUrl}
           placeholder="https://api.anthropic.com"
         />
-        <Field
+        <SettingsField
           label="API Key"
           secure
           value={state.form.key}
@@ -71,26 +82,36 @@ export function MeAIEditView({
           error={state.errors.key}
           placeholder={state.keyLabel}
         />
-        <Field
+        <SettingsField
           label="模型（逗号分隔）"
           value={state.form.model}
           onChange={value => intents.field('model', value)}
           error={state.errors.model}
-          placeholder="例如 claude-sonnet-5-5"
+          placeholder="claude-sonnet-5-5"
         />
-        <Row
-          title={state.busy === 'models' ? '正在读取模型…' : '读取模型列表'}
-          tone="accent"
-          onPress={busy ? undefined : intents.readModels}
+      </SettingsGroup>
+      <SettingsGroup>
+        <SettingsAction
+          label={state.busy === 'models' ? '正在读取模型…' : '读取模型列表'}
+          disabled={busy}
+          onPress={intents.readModels}
         />
         {state.models?.length ? (
-          <Row
-            title={'选择模型（' + state.models.length + ' 个可用）'}
-            chevron
+          <SettingsAction
+            label={'选择模型（' + state.models.length + ' 个可用）'}
             onPress={() => setModelsOpen(true)}
           />
         ) : null}
-        {state.form.protocol === 'anthropic' ? (
+        {groupedLists ? (
+          <SettingsAction
+            label={state.busy === 'test' ? '正在测试…' : '测试连接'}
+            onPress={intents.testConnection}
+            disabled={busy}
+          />
+        ) : null}
+      </SettingsGroup>
+      {state.form.protocol === 'anthropic' ? (
+        <SettingsGroup>
           <SettingsSelect
             label="鉴权方式"
             value={state.form.auth}
@@ -104,36 +125,38 @@ export function MeAIEditView({
             }}
             disabled={state.loading || state.saving}
           />
-        ) : null}
-      </ListSection>
-      <View style={s.actions}>
-        <View style={s.cell}>
-          <Button
-            variant="ghost"
-            label={state.busy === 'test' ? '正在测试…' : '测试连接'}
-            onPress={intents.testConnection}
-            disabled={busy}
-            size="block"
-          />
+        </SettingsGroup>
+      ) : null}
+      {!groupedLists ? (
+        <View style={s.buttonPair}>
+          <View style={s.fill}>
+            <SettingsButton
+              variant="ghost"
+              label={state.busy === 'test' ? '正在测试…' : '测试连接'}
+              onPress={intents.testConnection}
+              disabled={busy}
+              block
+            />
+          </View>
+          <View style={s.fill}>
+            <SettingsButton
+              label={save}
+              onPress={intents.save}
+              disabled={busy}
+              block
+            />
+          </View>
         </View>
-        <View style={s.cell}>
-          <Button
-            label={state.saving ? '正在保存…' : '保存'}
-            onPress={intents.save}
-            disabled={busy}
-            size="block"
-          />
-        </View>
-      </View>
+      ) : null}
       {state.canDelete ? (
-        <View style={s.delete}>
-          <Button
-            variant="danger"
+        <SettingsGroup>
+          <SettingsAction
+            danger
             label="删除服务"
             onPress={intents.remove}
             disabled={busy}
           />
-        </View>
+        </SettingsGroup>
       ) : null}
       <Sheet
         visible={modelsOpen}
@@ -151,6 +174,7 @@ export function MeAIEditView({
         ))}
       </Sheet>
       <Dialog
+        danger
         visible={state.confirmDelete}
         title="删除这个服务？"
         body="保存的 API Key 和模型分配也会移除，需要重新添加后才能使用。"
@@ -162,15 +186,3 @@ export function MeAIEditView({
     </SettingsFrame>
   );
 }
-
-const useStyles = makeStyles(t => ({
-  demo: { paddingHorizontal: t.space.pageX, paddingBottom: 8 },
-  actions: {
-    paddingHorizontal: t.space.pageX,
-    paddingVertical: 6,
-    flexDirection: 'row',
-    gap: 8,
-  },
-  cell: { flex: 1 },
-  delete: { padding: t.space.pageX },
-}));

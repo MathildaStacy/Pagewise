@@ -1,9 +1,24 @@
 import type { Book, BookPart, Section } from '@core/types';
 import { createRepos } from '@data/repos';
 import type { Container } from '../container';
+async function withPageLabels(
+  c: Container,
+  book: Book,
+): Promise<Book & { pageLabels?: string[] }> {
+  const metadata = await c.repos.settings.get<{ pageLabels?: unknown }>(
+    `book.import.${book.id}`,
+    {},
+  );
+  return Array.isArray(metadata.pageLabels) &&
+    metadata.pageLabels.every(label => typeof label === 'string')
+    ? { ...book, pageLabels: metadata.pageLabels }
+    : book;
+}
 
 export async function loadShelf(c: Container) {
-  const books = await c.repos.books.list();
+  const books = await Promise.all(
+    (await c.repos.books.list()).map(book => withPageLabels(c, book)),
+  );
   return Promise.all(
     books.map(async book => {
       const [sections, study, parts, stuck] = await Promise.all([
@@ -34,16 +49,17 @@ export async function loadBookMap(c: Container, id: string) {
     c.repos.notes.stuck.list(id, undefined, { resolved: false }),
   ]);
   if (!book) throw new Error('这本书已经不在书架上了');
-  return { book, sections, study, stuck };
+  return { book: await withPageLabels(c, book), sections, study, stuck };
 }
 export type MapRecord = Awaited<ReturnType<typeof loadBookMap>>;
 export async function loadSection(c: Container, bookId: string, id: string) {
-  const [section, study, qa, stuck, blocks] = await Promise.all([
+  const [section, study, qa, stuck, blocks, userText] = await Promise.all([
     c.repos.sections.get(bookId, id),
     c.repos.study.get(bookId),
     c.repos.notes.qa.list(bookId, id),
     c.repos.notes.stuck.list(bookId, id, { resolved: false }),
     c.repos.blocks.bySection(bookId, id),
+    c.repos.notes.userText.get(bookId, id),
   ]);
   if (!section) throw new Error('找不到这个小节');
   const [parent, plan] = await Promise.all([
@@ -56,7 +72,7 @@ export async function loadSection(c: Container, bookId: string, id: string) {
       study?.main_section === id ? study.main_part : 0,
     ),
   ]);
-  return { section, parent, study, qa, stuck, blocks, plan };
+  return { section, parent, study, qa, stuck, blocks, plan, userText };
 }
 export async function startSection(c: Container, bookId: string, id: string) {
   await c.db.transaction(async tx => {

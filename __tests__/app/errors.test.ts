@@ -1,5 +1,25 @@
 import { toAppError } from '@app/errors';
 import { AiError } from '@services/ai/http';
+import { MineruError } from '@services/mineru/types';
+
+test.each([
+  'A0202',
+  'missing_token',
+  '-60005',
+  '-60009',
+  '-60018',
+  '-60003',
+  'network',
+  'timeout',
+  'cancelled',
+  'protocol',
+])('maps MinerU %s to its actionable message without raw detail', code => {
+  const source = new MineruError(code);
+  const error = toAppError(source);
+  expect(error.code).toBe(`mineru.${source.kind}`);
+  expect(error.message).toBe(source.message);
+  expect(error.detail).toBeUndefined();
+});
 
 test.each([
   ['auth', false],

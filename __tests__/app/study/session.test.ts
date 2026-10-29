@@ -9,6 +9,7 @@ import type { AiGateway, GatewayRequest } from '@services/ai/gateway';
 import type { ParsedResponse } from '@services/ai/protocol';
 import type { Part } from '@services/ai/types';
 import { AiError } from '@services/ai/http';
+import { rateReviewCard } from '@app/usecases/review';
 
 let c: Container, session: StudySession;
 const demo = createDemoGateway({ delayMs: 0 });
@@ -647,6 +648,80 @@ it('loads a quoted block from another section before answering and keeps later d
     .at(-1)!;
   expect(answer.allowed_refs).toContain(ref);
   expect(answer.unverified).toBe(0);
+});
+it('reviews a forgotten card with its original source and resolves the new stuck item only after understood', async () => {
+  let ref = 0;
+  const ai = scripted([
+    () => text(`按原文重新讲解。[[b:${ref}]]`),
+    () => text(`换一种解释。[[b:${ref}]]`),
+  ]);
+  await setup(ai);
+  const pointer = state().main;
+  const source = await c.repos.blocks.bySection('aima', '3.4.2');
+  ref = source[0].seq;
+  const [card] = await c.repos.cards.addMany([
+    {
+      book_id: 'aima',
+      section_id: '3.4.2',
+      front: '怎样选择一致代价搜索的扩展节点？',
+      back: '选择路径代价最小的节点。',
+      due_on: c.clock.today(),
+      origin: 'manual',
+      created_at: c.clock.now().toISOString(),
+    },
+  ]);
+  await rateReviewCard(c, card, 'again');
+  const stuck = (await c.repos.notes.stuck.list('aima')).find(
+    item => item.card_id === card.id,
+  )!;
+  expect(stuck).toMatchObject({ source: 'card', resolved_at: null });
+  await session.open({ stuckId: stuck.id });
+  expect(state().main).toEqual(pointer);
+  expect(state().detours.at(-1)).toMatchObject({
+    sectionId: '3.4.2',
+    reviewStuckId: stuck.id,
+  });
+  const request = jest.mocked(ai.stream).mock.calls[0][1];
+  expect(JSON.stringify(request.history)).toContain(source[0].text);
+  expect(
+    state()
+      .messages.filter(item => item.kind === 'assistant')
+      .at(-1),
+  ).toMatchObject({ unverified: 0 });
+  expect(
+    state()
+      .messages.filter(item => item.kind === 'assistant')
+      .at(-1)?.allowed_refs,
+  ).toContain(ref);
+  await session.act('reviewAgain');
+  expect(
+    (await c.repos.notes.stuck.list('aima')).find(x => x.id === stuck.id)
+      ?.resolved_at,
+  ).toBeNull();
+  await session.act('reviewOk');
+  expect(
+    (await c.repos.notes.stuck.list('aima')).find(x => x.id === stuck.id)
+      ?.resolved_at,
+  ).toBeTruthy();
+  expect(state().detours).toEqual([]);
+  expect(state().main).toEqual(pointer);
+});
+it('opens a review-card question in its own section with source while preserving the main pointer', async () => {
+  const ai = scripted([text('这张卡来自所选小节。')]);
+  await setup(ai);
+  const pointer = state().main;
+  const source = await c.repos.blocks.bySection('aima', '3.4.2');
+  await session.open({
+    sectionId: '3.4.2',
+    question: '关于这张卡：一致代价搜索是什么？',
+  });
+  expect(state().main).toEqual(pointer);
+  expect(state().detours.at(-1)?.sectionId).toBe('3.4.2');
+  const request = jest.mocked(ai.stream).mock.calls[0][1];
+  expect(JSON.stringify(request.history)).toContain(source[0].text);
+  expect(
+    (await c.repos.notes.qa.list('aima', '3.4.2')).at(-1)?.from_section,
+  ).toBe('3.5.2');
 });
 it('retries a failed context summary without appending the same question again', async () => {
   let failed = false;

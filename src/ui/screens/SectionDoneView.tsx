@@ -1,11 +1,11 @@
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
 import {
   AppBar,
   Button,
   CheckRow,
   Empty,
   Field,
-  IconButton,
+  Icon,
   ListSection,
   Note,
   Row,
@@ -13,6 +13,7 @@ import {
   Sheet,
   ToastHost,
   makeStyles,
+  usePresentation,
 } from '@ui/kit';
 import type {
   SectionDoneIntents,
@@ -26,10 +27,16 @@ export function SectionDoneView({
   intents: SectionDoneIntents;
 }) {
   const s = useStyles();
+  const { groupedLists } = usePresentation();
   return (
     <Screen scroll edges={['top', 'left', 'right', 'bottom']}>
       <AppBar variant="push" title="本节小结" onBack={intents.back} />
       <View style={s.hero}>
+        {groupedLists ? (
+          <View style={s.complete}>
+            <Icon name="check" size={32} color={s.complete.color} />
+          </View>
+        ) : null}
         <Text style={s.kicker}>{state.hero.kicker}</Text>
         <Text style={s.title}>{state.hero.title}</Text>
         <Text style={s.stats}>{state.hero.stats}</Text>
@@ -48,22 +55,31 @@ export function SectionDoneView({
               </Button>
             </View>
           ) : null}
-          <ListSection title="摘要" note={state.summary.hint}>
-            <View style={s.panel}>
-              <Field
-                label="本节摘要"
+          <ListSection
+            plain={groupedLists}
+            title="摘要"
+            subtitle="AI 起草，可以改"
+          >
+            <View style={s.summaryPanel}>
+              <TextInput
+                accessibilityLabel="本节摘要"
                 value={state.summary.value}
-                onChange={intents.setSummary}
+                onChangeText={intents.setSummary}
                 multiline
-                placeholder="用自己的话总结这一节"
+                style={s.editor}
               />
             </View>
           </ListSection>
-          <ListSection title="卡点" note="没完全掌握的地方">
+          <ListSection
+            plain={groupedLists}
+            title="卡点"
+            subtitle="没完全掌握的地方"
+          >
             {state.stuck.length ? (
               state.stuck.map(item => (
                 <CheckRow
                   key={item.id}
+                  tone="stuck"
                   checked={item.checked}
                   title={item.text}
                   onToggle={() => intents.toggleStuck(item.id)}
@@ -75,7 +91,13 @@ export function SectionDoneView({
               </View>
             )}
           </ListSection>
-          <ListSection title="闪卡" note="勾选的会加入复习，长按可以修改">
+          <ListSection
+            plain={groupedLists}
+            title={groupedLists ? '闪卡草稿' : '闪卡'}
+            subtitle={
+              groupedLists ? '勾选的会加入复习 · 默认全选' : '勾选的会加入复习'
+            }
+          >
             {state.cards.length ? (
               state.cards.map(card => (
                 <Pressable
@@ -93,11 +115,6 @@ export function SectionDoneView({
                         onToggle={() => intents.toggleCard(card.id)}
                       />
                     </View>
-                    <IconButton
-                      icon="note"
-                      label="编辑闪卡"
-                      onPress={() => intents.openEditCard(card.id)}
-                    />
                   </View>
                 </Pressable>
               ))
@@ -115,15 +132,16 @@ export function SectionDoneView({
             </ListSection>
           ) : null}
           {state.next ? (
-            <View style={s.panel}>
+            <View style={s.savePanel}>
               <Button
                 size="block"
+                variant="primary"
                 onPress={intents.save}
                 disabled={state.saving}
               >
                 {state.saving ? '正在保存…' : state.next.label}
               </Button>
-              <Text style={s.hint}>{state.next.hint}</Text>
+              <Text style={s.saveHint}>{state.next.hint}</Text>
             </View>
           ) : null}
         </>
@@ -164,19 +182,77 @@ export function SectionDoneView({
 }
 const useStyles = makeStyles(t => ({
   hero: {
-    padding: t.space.pageX,
-    gap: t.space.gap,
-    backgroundColor: t.color.ok,
+    paddingTop: t.layout.groupedLists ? 6 : 16,
+    paddingHorizontal: t.layout.groupedLists ? 24 : 16,
+    paddingBottom: t.layout.groupedLists ? 22 : 18,
+    backgroundColor: t.layout.groupedLists ? t.color.bg : t.color.ok,
+    alignItems: t.layout.groupedLists ? 'center' : 'stretch',
   },
-  kicker: { ...t.type.caption, color: t.color.onAccent },
-  title: { ...t.type.title, color: t.color.onAccent },
-  stats: { ...t.type.caption, color: t.color.onAccent, opacity: 0.85 },
+  complete: {
+    width: 64,
+    height: 64,
+    borderRadius: t.shape.pill,
+    backgroundColor: t.color.ok,
+    color: t.color.continueInk,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  kicker: {
+    ...t.type.caption,
+    color: t.layout.groupedLists ? t.color.ink2 : t.color.continueInk,
+    opacity: t.layout.groupedLists ? 1 : 0.85,
+  },
+  title: {
+    ...t.type.continueTitle,
+    color: t.layout.groupedLists ? t.color.ink : t.color.continueInk,
+    marginTop: 2,
+    marginBottom: t.layout.groupedLists ? 4 : 0,
+  },
+  stats: {
+    ...t.type.caption,
+    color: t.layout.groupedLists ? t.color.ink2 : t.color.continueInk,
+    opacity: t.layout.groupedLists ? 1 : 0.85,
+    marginTop: 4,
+  },
+  editor: {
+    ...t.type.body,
+    fontSize: t.layout.groupedLists
+      ? (t.type.body.fontSize * 16) / 17
+      : t.type.body.fontSize,
+    lineHeight: t.layout.groupedLists ? 25.6 : 23.8,
+    color: t.color.ink,
+    backgroundColor: t.color.editor,
+    borderWidth: t.layout.groupedLists ? 0 : 1,
+    borderColor: t.color.line,
+    borderRadius: t.layout.groupedLists ? t.shape.lg - 8 : t.shape.sm,
+    minHeight: 120,
+    paddingVertical: t.layout.groupedLists ? 13 : 9,
+    paddingHorizontal: t.layout.groupedLists ? 16 : 10,
+    textAlignVertical: 'top',
+  },
+  summaryPanel: {
+    paddingHorizontal: t.layout.groupedLists ? 0 : 14,
+    paddingTop: 0,
+    paddingBottom: t.layout.groupedLists ? 0 : 12,
+  },
   panel: { padding: t.space.pageX, gap: t.space.gap },
   hint: { ...t.type.caption, color: t.color.ink2 },
+  savePanel: {
+    paddingTop: t.layout.groupedLists ? 0 : 6,
+    paddingHorizontal: t.layout.groupedLists ? 16 : 14,
+    paddingBottom: t.layout.groupedLists ? 0 : 22,
+  },
+  saveHint: {
+    ...t.type.caption,
+    color: t.color.ink2,
+    textAlign: 'center',
+    marginTop: t.layout.groupedLists ? 10 : 8,
+  },
   grow: { flex: 1 },
   cardRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingRight: t.space.gap,
+    paddingRight: 0,
   },
 }));

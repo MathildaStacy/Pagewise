@@ -1,0 +1,59 @@
+{
+  "book": {
+    "id": "mvsv52kn-2-rvc32ahq",
+    "pages": 827,
+    "status": "ready",
+    "ready_to_page": 827,
+    "page_offset": 41,
+    "tokens_total": 0
+  },
+  "parts": [
+    {
+      "part_no": 1,
+      "page_from": 1,
+      "page_to": 200,
+      "stage": "done",
+      "attempts": 8
+    },
+    {
+      "part_no": 2,
+      "page_from": 201,
+      "page_to": 400,
+      "stage": "done",
+      "attempts": 8
+    },
+    {
+      "part_no": 3,
+      "page_from": 401,
+      "page_to": 600,
+      "stage": "done",
+      "attempts": 0
+    },
+    {
+      "part_no": 4,
+      "page_from": 601,
+      "page_to": 800,
+      "stage": "done",
+      "attempts": 0
+    },
+    {
+      "part_no": 5,
+      "page_from": 801,
+      "page_to": 827,
+      "stage": "done",
+      "attempts": 0
+    }
+  ],
+  "blocks": 8859,
+  "sections": 1343,
+  "types": {
+    "caption": 336,
+    "code": 2,
+    "equation": 227,
+    "footnote": 6,
+    "image": 431,
+    "table": 120,
+    "text": 6397,
+    "title": 1340
+  }
+}

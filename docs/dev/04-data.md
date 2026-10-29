@@ -284,7 +284,7 @@ math:     get(key), put(entry), touch(key), prune(maxRows=5000)
 
 ## 5. 备份与恢复
 
-- 导出：`pagewise-backup-YYYY-MM-DD.zip` = `db.sqlite`（`VACUUM INTO` 生成的副本，**先删掉 setting 里任何密钥相关键**——本来就不该有，导出前再校验一次）+ `manifest.json`（版本、schema 版本、书列表）+ 可选的 `books/` 原文件（导出选项，默认不含，太大）。
+- 导出：`pagewise-backup-YYYY-MM-DD.zip` = `db.sqlite`（`VACUUM INTO` 生成的副本，**先删掉 setting 里任何密钥相关键**——本来就不该有，导出前再校验一次）+ `manifest.json`（版本、schema 版本、书列表）+ `books/<id>/images/` 中被块引用且存在的图片（manifest 可选 `imageFiles`，兼容旧备份）+ 可选的原文件（导出选项，默认不含，太大）。快照里的绝对图片路径转换为书相对路径，活动库不变。
 - 恢复：校验 manifest → schema 版本 ≤ 当前 → 关闭数据库 → 替换 → 迁移 → 重启 JS。缺原文件的书标记为需要重新导入原文件（同 SHA-256 才接受）。
 - V1 做导出和恢复（M5 打磨），但数据格式在 V1 定下来。
 

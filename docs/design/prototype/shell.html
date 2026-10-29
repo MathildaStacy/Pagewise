@@ -38,6 +38,16 @@ input,select,textarea{font:inherit;color:inherit}
 .nav .ib{width:40px;height:40px;display:grid;place-items:center;border-radius:20px;font-size:20px;color:var(--ink2);flex:none}
 .nav .ib:active{background:var(--bg)}
 .nav .tb{height:30px;padding:0 10px;border-radius:15px;font-size:13px;color:var(--acc);flex:none}
+.nav .mode{position:relative;display:flex;flex:none;height:30px;padding:2px;border-radius:15px;background:var(--acc-bg);box-shadow:inset 0 0 0 1px #C6D5EF}
+.nav .mode .thumb{position:absolute;top:2px;bottom:2px;left:2px;width:calc(50% - 2px);border-radius:13px;background:var(--acc);box-shadow:0 1px 3px rgba(30,63,122,.3)}
+.nav .mode .thumb.on-reader{left:50%}
+.nav .mode.slide .thumb.on-study{animation:modeL .26s cubic-bezier(.3,.7,0,1)}
+.nav .mode.slide .thumb.on-reader{animation:modeR .26s cubic-bezier(.3,.7,0,1)}
+@keyframes modeL{from{transform:translateX(100%)}to{transform:none}}
+@keyframes modeR{from{transform:translateX(-100%)}to{transform:none}}
+.nav .mode button{position:relative;width:48px;border-radius:13px;font-size:13px;color:var(--acc);font-weight:500}
+.nav .mode button.on{color:#fff;font-weight:600;cursor:default}
+@media (prefers-reduced-motion:reduce){.nav .mode .thumb{animation:none!important}}
 .nav.root h1{text-align:left;padding-left:10px;font-size:20px}
 #view{flex:1;overflow-y:auto;overflow-x:hidden;min-height:0;scrollbar-width:none}
 #view::-webkit-scrollbar{display:none}

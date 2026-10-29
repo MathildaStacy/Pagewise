@@ -6,13 +6,10 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch as NativeSwitch,
   Text,
   TextInput,
   View,
-  useWindowDimensions,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type {
   AppBarProps,
   ButtonProps,
@@ -33,7 +30,7 @@ import type {
 } from '../../kit/contracts';
 import { useSkin, useTokens } from '../../kit/context';
 import { Icon } from '../../kit/Icon';
-import { Glass, IconButton, Segmented } from '../../kit/proxy';
+import { Glass, Segmented } from '../../kit/proxy';
 import {
   GlassSurface,
   SelectionMenuSurface,
@@ -49,206 +46,220 @@ function AppBar({
   right,
   scrollY = 0,
 }: AppBarProps) {
-  const tokens = useTokens();
-  const { fontScale } = useWindowDimensions();
-  const collapse =
-    variant === 'root' ? Math.min(1, Math.max(0, scrollY / 56)) : 1;
-  const titleType =
-    variant === 'root'
-      ? {
-          ...tokens.type.largeTitle,
-          fontSize:
-            tokens.type.largeTitle.fontSize +
-            (tokens.type.title.fontSize - tokens.type.largeTitle.fontSize) *
-              collapse,
-          lineHeight:
-            tokens.type.largeTitle.lineHeight +
-            (tokens.type.title.lineHeight - tokens.type.largeTitle.lineHeight) *
-              collapse,
-        }
-      : tokens.type.title;
-  const appBarStyle = StyleSheet.create({
-    root: {
-      minHeight: variant === 'root' ? 88 - collapse * 32 : 56,
-      paddingHorizontal: tokens.space.gap,
-      justifyContent: 'center',
-    },
-  }).root;
-  const appBarContentStyle = StyleSheet.create({
-    root: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      alignItems: 'center',
-      gap: tokens.space.gap,
-      paddingVertical: tokens.space.gap,
-    },
-  }).root;
-  const backLabelStyle = StyleSheet.create({
-    root: { color: tokens.color.accent, flexShrink: 1 },
-  }).root;
-  const titleContainerStyle = StyleSheet.create({
-    root: {
-      flexGrow: 1,
-      flexShrink: 1,
-      flexBasis: 0,
-      minWidth: tokens.type.title.fontSize * fontScale * 4,
-      paddingLeft: variant === 'root' ? tokens.space.gap : 0,
-    },
-  }).root;
-  const titleTextStyle = StyleSheet.create({
-    root: {
-      color: tokens.color.ink,
-      textAlign: variant === 'push' ? 'center' : 'left',
-    },
-  }).root;
-  const subtitleTextStyle = StyleSheet.create({
-    root: {
-      color: tokens.color.ink2,
-      textAlign: variant === 'push' ? 'center' : 'left',
-    },
-  }).root;
-  const appBarRightStyle = StyleSheet.create({
-    root: { maxWidth: '100%', flexShrink: 0, marginLeft: 'auto' },
-  }).root;
-  const appBarBalanceStyle = StyleSheet.create({
-    root: { minWidth: onBack ? 48 : 0 },
-  }).root;
+  const t = useTokens();
+  const root = variant === 'root';
   return (
-    <View
-      accessibilityRole="header"
-      accessibilityLabel={title}
-      accessibilityState={{}}
-      style={appBarStyle}
-    >
-      {scrollY > 0 ? (
-        <Glass strength="regular" style={StyleSheet.absoluteFill} />
-      ) : null}
-      <View testID="glass-appbar-content" style={appBarContentStyle}>
-        {onBack ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={backLabel}
-            accessibilityState={{ disabled: false }}
-            onPress={onBack}
-            style={({ pressed }) => ({
-              minHeight: 48,
-              minWidth: 48,
-              maxWidth: '35%',
+    <View accessibilityRole="header" accessibilityLabel={title}>
+      <View
+        testID="glass-appbar-content"
+        style={
+          StyleSheet.create({
+            root: {
+              minHeight: 44,
+              paddingHorizontal: 8,
               flexDirection: 'row',
               alignItems: 'center',
-              paddingRight: tokens.space.gap,
-              opacity: pressed ? 0.6 : 1,
-            })}
+              gap: 2,
+              backgroundColor: scrollY > 0 ? t.color.header : undefined,
+            },
+          }).root
+        }
+      >
+        <View
+          style={
+            StyleSheet.create({
+              root: { minWidth: 88, flexShrink: 0 },
+            }).root
+          }
+        >
+          {onBack ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={backLabel}
+              hitSlop={2}
+              onPress={onBack}
+              style={({ pressed }) => ({
+                minHeight: 44,
+                maxWidth: 120,
+                paddingRight: 4,
+                flexDirection: 'row',
+                alignItems: 'center',
+                opacity: pressed ? 0.5 : 1,
+              })}
+            >
+              <Icon name="back" size={27} color={t.color.accent} />
+              <Text
+                numberOfLines={1}
+                style={
+                  StyleSheet.create({
+                    root: {
+                      fontSize: 17,
+                      color: t.color.accent,
+                      flexShrink: 1,
+                    },
+                  }).root
+                }
+              >
+                {backLabel}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+        <View
+          style={
+            StyleSheet.create({
+              root: {
+                flex: 1,
+                minWidth: 0,
+                alignItems: 'center',
+                opacity: root && scrollY < 44 ? 0 : 1,
+              },
+            }).root
+          }
+        >
+          <Text
+            numberOfLines={1}
+            style={[t.type.title, StyleSheet.create({root:{ color: t.color.ink }}).root]}
           >
-            <Icon name="back" color={tokens.color.accent} size={24} />
-            <Text style={[tokens.type.body, backLabelStyle]}>{backLabel}</Text>
-          </Pressable>
-        ) : null}
-        <View style={titleContainerStyle}>
-          <Text style={[titleType, titleTextStyle]}>{title}</Text>
+            {title}
+          </Text>
           {subtitle ? (
-            <Text style={[tokens.type.micro, subtitleTextStyle]}>
+            <Text
+              numberOfLines={1}
+              style={
+                StyleSheet.create({
+                  root: { fontSize: 11, lineHeight: 13.2, color: t.color.ink2 },
+                }).root
+              }
+            >
               {subtitle}
             </Text>
           ) : null}
         </View>
-        {right ? (
-          <View testID="glass-appbar-actions" style={appBarRightStyle}>
-            {right}
-          </View>
-        ) : variant === 'push' ? (
-          <View style={appBarBalanceStyle} />
-        ) : null}
+        <View
+          style={
+            StyleSheet.create({
+              root: {
+                minWidth: 88,
+                alignItems: 'flex-end',
+                justifyContent: 'center',
+              },
+            }).root
+          }
+        >
+          {right}
+        </View>
       </View>
+      {root ? (
+        <View style={StyleSheet.create({root:{height:Math.max(0,53*(1-scrollY/56)),overflow:'hidden'}}).root}><Text
+          style={[
+            t.type.largeTitle,
+            StyleSheet.create({root:{
+              color: t.color.ink,
+              paddingHorizontal: 20,
+              paddingBottom: 12,
+              letterSpacing: 0.34,
+            }}).root,
+          ]}
+        >
+          {title}
+        </Text></View>
+      ) : null}
     </View>
   );
 }
 
 function TabBar({ items, active, onSelect }: TabBarProps) {
-  const tokens = useTokens();
-  const safe = useSafeAreaInsets();
-  const tabBarItemsStyle = StyleSheet.create({
-    root: { flexDirection: 'row', padding: 5 },
-  }).root;
+  const t = useTokens();
   return (
-    <View
-      style={{
-        paddingHorizontal: tokens.space.pageX,
-        paddingTop: tokens.space.gap,
-        paddingBottom: Math.max(safe.bottom, tokens.space.gap),
-      }}
+    <Glass
+      strength="regular"
+      style={
+        StyleSheet.create({
+          root: {
+            borderRadius: 31,
+            marginHorizontal: 22,
+            marginBottom: 24,
+            minHeight: 62,
+            padding: 4,
+            ...t.elevation.pop,
+          },
+        }).root
+      }
     >
-      <Glass
-        strength="regular"
-        style={{ borderRadius: tokens.shape.pill, ...tokens.elevation.pop }}
+      <View
+        style={
+          StyleSheet.create({ root: { flexDirection: 'row', minHeight: 54 } })
+            .root
+        }
+        accessibilityRole="tablist"
+        accessibilityLabel="主导航"
       >
-        <View
-          accessibilityRole="tablist"
-          accessibilityLabel="主要页面"
-          accessibilityState={{}}
-          style={tabBarItemsStyle}
-        >
-          {items.map(item => {
-            const selected = item.key === active;
-            const color = selected ? tokens.color.accent : tokens.color.ink2;
-            const tabIconRowStyle = StyleSheet.create({
-              root: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-            }).root;
-            const tabBadgeStyle = StyleSheet.create({
-              root: {
-                color: tokens.color.onAccent,
-                backgroundColor: tokens.color.bad,
-                minWidth: 18,
-                textAlign: 'center',
-                borderRadius: tokens.shape.pill,
-                paddingHorizontal: 4,
-              },
-            }).root;
-            const tabLabelStyle = StyleSheet.create({
-              root: { color, textAlign: 'center' },
-            }).root;
-            return (
-              <Pressable
-                key={item.key}
-                accessibilityRole="tab"
-                accessibilityLabel={
-                  item.badge === undefined
-                    ? item.label
-                    : `${item.label}，${item.badge}`
+        {items.map(item => (
+          <Pressable
+            key={item.key}
+            accessibilityRole="tab"
+            accessibilityLabel={item.label}
+            accessibilityState={{ selected: active === item.key }}
+            onPress={() => onSelect(item.key)}
+            style={({ pressed }) => ({
+              flex: 1,
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 1,
+              borderRadius: 27,
+              backgroundColor:
+                active === item.key ? t.color.surfaceFill : undefined,
+              transform: [{ scale: pressed ? 0.94 : 1 }],
+            })}
+          >
+            <Icon
+              name={item.icon}
+              size={24}
+              color={active === item.key ? t.color.accent : t.color.ink}
+            />
+            <Text
+              style={
+                StyleSheet.create({
+                  root: {
+                    fontSize: 10,
+                    lineHeight: 14.5,
+                    fontWeight: '600',
+                    color: active === item.key ? t.color.accent : t.color.ink,
+                  },
+                }).root
+              }
+            >
+              {item.label}
+            </Text>
+            {item.badge != null ? (
+              <Text
+                style={
+                  StyleSheet.create({
+                    root: {
+                      position: 'absolute',
+                      top: 5,
+                      left: '58%',
+                      minWidth: 17,
+                      paddingHorizontal: 5,
+                      borderRadius: 9,
+                      fontSize: 11,
+                      lineHeight: 17,
+                      fontWeight: '600',
+                      textAlign: 'center',
+                      backgroundColor: t.color.bad,
+                      color: t.color.onAccent,
+                    },
+                  }).root
                 }
-                accessibilityState={{ selected }}
-                onPress={() => onSelect(item.key)}
-                style={({ pressed }) => ({
-                  flex: 1,
-                  minWidth: 48,
-                  minHeight: 56,
-                  paddingVertical: tokens.space.gap,
-                  paddingHorizontal: 4,
-                  borderRadius: tokens.shape.pill,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 2,
-                  backgroundColor: selected ? tokens.color.accentBg : undefined,
-                  opacity: pressed ? 0.65 : 1,
-                })}
               >
-                <View style={tabIconRowStyle}>
-                  <Icon name={item.icon} color={color} size={22} />
-                  {item.badge !== undefined ? (
-                    <Text style={[tokens.type.micro, tabBadgeStyle]}>
-                      {item.badge}
-                    </Text>
-                  ) : null}
-                </View>
-                <Text style={[tokens.type.micro, tabLabelStyle]}>
-                  {item.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      </Glass>
-    </View>
+                {item.badge}
+              </Text>
+            ) : null}
+          </Pressable>
+        ))}
+      </View>
+    </Glass>
   );
 }
 
@@ -259,8 +270,7 @@ function GlassSegmented({
   accessibilityLabel = '选项',
 }: SegmentedProps) {
   const tokens = useTokens();
-  const thumbColor =
-    tokens.scheme === 'dark' ? tokens.color.glassStrong : tokens.color.surface;
+  const thumbColor = tokens.color.thumb;
   const { reduceMotion } = useSkin();
   const [width, setWidth] = useState(0);
   const position = useRef(new Animated.Value(0)).current;
@@ -268,7 +278,7 @@ function GlassSegmented({
     0,
     options.findIndex(option => option.key === value),
   );
-  const optionWidth = Math.max(0, width - 6) / Math.max(1, options.length);
+  const optionWidth = Math.max(0, width - 4) / Math.max(1, options.length);
   useEffect(() => {
     const target = index * optionWidth;
     if (reduceMotion || width === 0) {
@@ -295,7 +305,7 @@ function GlassSegmented({
   const segmentedStyle = StyleSheet.create({
     root: {
       flexDirection: 'row',
-      padding: 3,
+      padding: 2,
       backgroundColor: tokens.color.surfaceAlt,
       borderRadius: tokens.shape.pill,
     },
@@ -303,13 +313,13 @@ function GlassSegmented({
   const segmentThumbStyle = StyleSheet.create({
     root: {
       position: 'absolute',
-      top: 3,
-      bottom: 3,
-      left: 3,
+      top: 2,
+      bottom: 2,
+      left: 2,
       width: optionWidth,
       borderRadius: tokens.shape.pill,
       backgroundColor: thumbColor,
-      ...tokens.elevation.card,
+      boxShadow: '0 3px 8px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.04)',
       transform: [{ translateX: position }],
     },
   }).root;
@@ -329,10 +339,10 @@ function GlassSegmented({
         const segmentOptionStyle = StyleSheet.create({
           root: {
             flex: 1,
-            minWidth: 48,
-            minHeight: 48,
-            paddingHorizontal: tokens.space.gap,
-            paddingVertical: tokens.space.gap,
+            minWidth: 0,
+            minHeight: 28,
+            paddingHorizontal: 0,
+            paddingVertical: 0,
             justifyContent: 'center',
             alignItems: 'center',
             borderRadius: tokens.shape.pill,
@@ -342,8 +352,10 @@ function GlassSegmented({
         const segmentLabelStyle = StyleSheet.create({
           root: {
             color: tokens.color.ink,
+            fontSize: tokens.type.caption.fontSize,
+            lineHeight: tokens.type.caption.lineHeight,
             textAlign: 'center',
-            fontWeight: selected ? '600' : '400',
+            fontWeight: selected ? '600' : '500',
           },
         }).root;
         return (
@@ -352,6 +364,7 @@ function GlassSegmented({
             accessibilityRole="radio"
             accessibilityLabel={option.label}
             accessibilityState={{ checked: selected }}
+            hitSlop={8}
             onPress={() => onChange(option.key)}
             style={segmentOptionStyle}
           >
@@ -366,18 +379,12 @@ function GlassSegmented({
 }
 
 function ModeSwitch({ value, onChange }: ModeSwitchProps) {
-  const tokens = useTokens();
-  const { fontScale } = useWindowDimensions();
-  // 两个汉字需要完整字宽，不能只保留48dp触控宽度后再扣掉左右内边距。
-  const optionWidth = Math.max(
-    48,
-    tokens.type.label.fontSize * fontScale * 2 + tokens.space.gap * 2 + 2,
-  );
-  const modeSwitchStyle = StyleSheet.create({
-    root: { minWidth: optionWidth * 2 + 6, maxWidth: '100%' },
-  }).root;
+  const t=useTokens();
   return (
-    <View testID="glass-mode-switch" style={modeSwitchStyle}>
+    <View
+      testID="glass-mode-switch"
+      style={StyleSheet.create({ root: { width:4+2*Math.max(46,t.type.caption.fontSize*2+12) } }).root}
+    >
       <Segmented
         accessibilityLabel="学习方式"
         options={[
@@ -397,28 +404,49 @@ function Switch({
   accessibilityLabel,
   disabled,
 }: SwitchProps) {
-  const tokens = useTokens();
-  const switchStyle = StyleSheet.create({
-    root: { minWidth: 52, minHeight: 48 },
-  }).root;
+  const t = useTokens();
   return (
-    <NativeSwitch
+    <Pressable
       accessibilityRole="switch"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ checked: value, disabled: !!disabled }}
-      value={value}
       disabled={disabled}
-      onValueChange={onChange}
-      trackColor={{ false: tokens.color.surfaceAlt, true: tokens.color.ok }}
-      thumbColor={tokens.color.onAccent}
-      ios_backgroundColor={tokens.color.surfaceAlt}
-      style={switchStyle}
-    />
+      onPress={() => onChange(!value)}
+      hitSlop={9}
+      style={
+        StyleSheet.create({
+          root: {
+            width: 51,
+            height: 31,
+            borderRadius: 16,
+            backgroundColor: value ? t.color.ok : t.color.switchOff,
+            opacity: disabled ? 0.4 : 1,
+          },
+        }).root
+      }
+    >
+      <View
+        style={
+          StyleSheet.create({
+            root: {
+              position: 'absolute',
+              left: value ? 22 : 2,
+              top: 2,
+              width: 27,
+              height: 27,
+              borderRadius: 14,
+              backgroundColor: '#FFFFFF',
+              boxShadow: '0 3px 8px rgba(0,0,0,.15),0 1px 1px rgba(0,0,0,.16)',
+            },
+          }).root
+        }
+      />
+    </Pressable>
   );
 }
 
 function Button({
-  variant = 'primary',
+  variant = 'secondary',
   size = 'md',
   icon,
   disabled,
@@ -427,113 +455,128 @@ function Button({
   label,
   accessibilityLabel,
 }: ButtonProps) {
-  const tokens = useTokens();
-  const solid = variant === 'primary' || variant === 'detour';
-  const backgroundColor =
+  const t = useTokens(),
+    solid = variant === 'primary' || variant === 'detour';
+  const bg =
     variant === 'primary'
-      ? tokens.color.accent
+      ? t.color.accent
       : variant === 'detour'
-      ? tokens.color.detour
-      : variant === 'danger'
-      ? tokens.color.badBg
+      ? t.color.detour
       : variant === 'text'
       ? undefined
-      : variant === 'secondary'
-      ? tokens.color.surfaceAlt
-      : tokens.color.surface;
-  const foreground = solid
-    ? tokens.color.onAccent
+      : t.color.surfaceAlt;
+  const fg = solid
+    ? t.color.onAccent
     : variant === 'danger'
-    ? tokens.color.badInk
-    : variant === 'text'
-    ? tokens.color.accent
-    : tokens.color.ink;
-  const name =
-    accessibilityLabel ??
-    label ??
-    (typeof children === 'string' ? children : '按钮');
-  const buttonLabelStyle = StyleSheet.create({
-    root: { color: foreground, textAlign: 'center', flexShrink: 1 },
-  }).root;
+    ? t.color.bad
+    : t.color.accent;
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={name}
+      accessibilityLabel={
+        accessibilityLabel ??
+        label ??
+        (typeof children === 'string' ? children : '按钮')
+      }
       accessibilityState={{ disabled: !!disabled }}
       disabled={disabled}
+      hitSlop={size === 'sm' ? 7 : 0}
       onPress={onPress}
       style={({ pressed }) => ({
-        minHeight: 48,
-        minWidth: 48,
+        minHeight: size === 'sm' ? 34 : 50,
+        paddingHorizontal: variant === 'text' ? 8 : size === 'sm' ? 14 : 22,
         alignSelf: size === 'block' ? 'stretch' : undefined,
-        paddingVertical: tokens.space.gap,
-        paddingHorizontal:
-          size === 'sm' ? tokens.space.gap : tokens.space.pageX,
         flexDirection: 'row',
-        flexWrap: 'wrap',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: tokens.space.gap,
-        borderRadius: tokens.shape.pill,
-        backgroundColor,
-        opacity: disabled ? 0.45 : pressed ? 0.8 : 1,
-        transform: [
-          { scale: pressed && !disabled ? tokens.motion.pressScale : 1 },
-        ],
+        gap: 6,
+        borderRadius: size === 'sm' ? 17 : 25,
+        backgroundColor: bg,
+        opacity: disabled ? 0.4 : 1,
+        transform: [{ scale: pressed ? 0.97 : 1 }],
       })}
     >
-      {icon ? <Icon name={icon} color={foreground} size={20} /> : null}
-      <Text style={[tokens.type.label, buttonLabelStyle]}>
-        {label ?? children}
-      </Text>
+      {icon ? <Icon name={icon} size={18} color={fg} /> : null}
+      {children &&
+      typeof children !== 'string' &&
+      typeof children !== 'number' ? (
+        children
+      ) : (
+        <Text
+          style={
+            StyleSheet.create({
+              root: {
+                fontSize: size === 'sm' ? t.type.label.fontSize : t.type.body.fontSize,
+                lineHeight: size === 'sm' ? 21.75 : 24.65,
+                fontWeight: '600',
+                color: fg,
+                textAlign: 'center',
+              },
+            }).root
+          }
+        >
+          {label ?? children}
+        </Text>
+      )}
     </Pressable>
   );
 }
 
-function ListSection({ title, note, children }: ListSectionProps) {
-  const tokens = useTokens();
-  const listCardStyle = StyleSheet.create({
-    root: {
-      borderRadius: tokens.shape.lg,
-      backgroundColor: tokens.color.surface,
-      overflow: 'hidden',
-    },
-  }).root;
+function ListSection({ title, subtitle, note, children,plain }: ListSectionProps) {
+  const t = useTokens();
   return (
     <View
-      accessibilityRole="none"
-      accessibilityLabel={title ?? '分组'}
-      accessibilityState={{}}
-      style={{
-        marginHorizontal: tokens.space.pageX,
-        marginBottom: tokens.space.sectionGap,
-      }}
+      accessibilityRole="none" accessibilityState={{}} accessibilityLabel={title ?? '分组'}
+      style={
+        StyleSheet.create({ root: { marginHorizontal: 16, marginBottom: 24 } })
+          .root
+      }
     >
       {title ? (
-        <Text
-          accessibilityRole="header"
-          style={[
-            tokens.type.caption,
-            {
-              color: tokens.color.ink2,
-              paddingHorizontal: tokens.space.pageX,
-              paddingBottom: tokens.space.gap,
-            },
-          ]}
+        <View
+          style={
+            StyleSheet.create({
+              root: {
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'baseline',
+                paddingHorizontal: 16,
+                paddingBottom: 7,
+              },
+            }).root
+          }
         >
-          {title}
-        </Text>
+          <Text
+            accessibilityRole="header"
+            style={[t.type.caption, StyleSheet.create({root:{ color: t.color.ink2 }}).root]}
+          >
+            {title}
+          </Text>
+          {subtitle ? (
+            <Text style={[t.type.caption, StyleSheet.create({root:{ color: t.color.ink2 }}).root]}>
+              {subtitle}
+            </Text>
+          ) : null}
+        </View>
       ) : null}
-      <View style={listCardStyle}>{children}</View>
+      <View
+        style={
+          StyleSheet.create({
+            root: {
+              borderRadius: 20,
+              backgroundColor: plain?undefined:t.color.surface,
+              overflow: 'hidden',
+            },
+          }).root
+        }
+      >
+        {children}
+      </View>
       {note ? (
         <Text
           style={[
-            tokens.type.caption,
-            {
-              color: tokens.color.ink2,
-              paddingHorizontal: tokens.space.pageX,
-              paddingTop: tokens.space.gap,
-            },
+            t.type.caption,
+            StyleSheet.create({root:{ color: t.color.ink2, paddingTop: 7, paddingHorizontal: 16 }}).root,
           ]}
         >
           {note}
@@ -571,35 +614,43 @@ function Row({ title, subtitle, right, chevron, onPress, tone }: RowProps) {
       left: tokens.space.pageX,
       right: 0,
       bottom: 0,
-      height: StyleSheet.hairlineWidth,
+      height: 0.5,
       backgroundColor: tokens.color.line,
     },
   }).root;
   const body = (
     <>
       <View style={rowTextStyle}>
-        <Text style={[tokens.type.body, { color: foreground }]}>{title}</Text>
+        <Text
+          style={[tokens.type.body, StyleSheet.create({root:{ color: foreground, lineHeight: 22.1 }}).root]}
+        >
+          {title}
+        </Text>
         {subtitle ? (
-          <Text style={[tokens.type.caption, { color: tokens.color.ink2 }]}>
+          <Text
+            style={[
+              tokens.type.caption,
+              StyleSheet.create({root:{ color: tokens.color.ink2, lineHeight: 18.2, marginTop: 2 }}).root,
+            ]}
+          >
             {subtitle}
           </Text>
         ) : null}
       </View>
       {right ? <View style={rowRightStyle}>{right}</View> : null}
       {chevron ? (
-        <Icon name="chev" color={tokens.color.ink3} size={18} />
+        <Icon name="chev" color={tokens.color.ink3} size={15} />
       ) : null}
       <View pointerEvents="none" style={rowSeparatorStyle} />
     </>
   );
   const style = {
-    minHeight: 56,
+    minHeight: 50,
     flexDirection: 'row' as const,
-    flexWrap: 'wrap' as const,
     alignItems: 'center' as const,
     gap: tokens.space.gap,
     paddingHorizontal: tokens.space.pageX,
-    paddingVertical: tokens.space.rowY,
+    paddingVertical: 11,
   };
   return onPress ? (
     <Pressable
@@ -637,41 +688,37 @@ function StepProgress({
   onPressBar,
   right,
 }: StepProgressProps) {
-  const tokens = useTokens();
-  const states = {
-    done: '已讲',
-    current: '当前',
-    skipped: '已跳过',
-    todo: '未讲',
-  };
-  const stepCaptionRowStyle = StyleSheet.create({
-    root: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: tokens.space.pageX,
-    },
-  }).root;
-  const stepCaptionStyle = StyleSheet.create({
-    root: { minHeight: 48, minWidth: 48, justifyContent: 'center' },
-  }).root;
+  const t = useTokens();
   return (
-    <View
-      accessibilityRole="none"
-      accessibilityLabel={label}
-      accessibilityState={{}}
-    >
-      <View style={stepCaptionRowStyle}>
+    <View accessibilityLabel={label}>
+      <View
+        style={
+          StyleSheet.create({
+            root: {
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              minHeight: 24,
+              paddingHorizontal: 20,
+              paddingBottom: 6,
+            },
+          }).root
+        }
+      >
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`${label}，查看路线图`}
-          accessibilityState={{ disabled: false }}
           onPress={onPressBar}
-          style={stepCaptionStyle}
+          hitSlop={12}
         >
-          <Text style={[tokens.type.caption, { color: tokens.color.ink2 }]}>
-            {label}
+          <Text
+            style={
+              StyleSheet.create({
+                root: { fontSize: 13, lineHeight: 18, color: t.color.ink2 },
+              }).root
+            }
+          >
+            {label.replace('段', '步')}
           </Text>
         </Pressable>
         {right}
@@ -679,84 +726,91 @@ function StepProgress({
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{
-          gap: tokens.space.gap,
-          paddingHorizontal: tokens.space.pageX,
-          paddingBottom: tokens.space.gap,
-        }}
+        style={StyleSheet.create({ root: { flexGrow: 0 } }).root}
+        contentContainerStyle={StyleSheet.create({root:{
+          gap: 8,
+          paddingHorizontal: 16,
+          paddingBottom: 10,
+        }}).root}
       >
-        {steps.map((step, index) => {
-          const current = step.state === 'current';
-          const done = step.state === 'done';
-          const foreground = current
-            ? tokens.color.onAccent
+        {steps.map((step, i) => {
+          const now = step.state === 'current',
+            done = step.state === 'done';
+          const fg = now
+            ? t.color.onAccent
             : step.state === 'skipped'
-            ? tokens.color.ink2
-            : tokens.color.ink;
-          const stepNumberStyle = StyleSheet.create({
-            root: {
-              minWidth: 30,
-              minHeight: 30,
-              borderRadius: tokens.shape.pill,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: current
-                ? tokens.color.accentBg
-                : done
-                ? tokens.color.accent
-                : tokens.color.surfaceAlt,
-            },
-          }).root;
-          const stepTitleStyle = StyleSheet.create({
-            root: {
-              color: foreground,
-              textDecorationLine:
-                step.state === 'skipped' ? 'line-through' : 'none',
-            },
-          }).root;
+            ? t.color.ink2
+            : t.color.ink;
           return (
             <Pressable
-              key={`${step.title}-${index}`}
+              key={i}
               accessibilityRole="button"
-              accessibilityLabel={`第 ${index + 1} 步，${step.title}，${
-                states[step.state]
-              }`}
-              accessibilityState={{ selected: current }}
-              onPress={() => onPressStep(index)}
+              accessibilityLabel={`第 ${i + 1} 步 ${step.title}`}
+              accessibilityState={{ selected: now }}
+              hitSlop={{ top: 5, bottom: 5, left: 0, right: 0 }}
+              onPress={() => onPressStep(i)}
               style={({ pressed }) => ({
+                minHeight: 38,
+                paddingLeft: 5,
+                paddingRight: 14,
                 flexDirection: 'row',
                 alignItems: 'center',
-                gap: tokens.space.gap,
-                paddingVertical: 5,
-                paddingLeft: 5,
-                paddingRight: tokens.space.pageX,
-                minHeight: 48,
-                minWidth: 48,
-                borderRadius: tokens.shape.pill,
-                backgroundColor: current
-                  ? tokens.color.accent
-                  : tokens.color.surface,
-                transform: [{ scale: pressed ? tokens.motion.pressScale : 1 }],
+                gap: 7,
+                borderRadius: 19,
+                backgroundColor: now ? t.color.accent : t.color.surface,
+                opacity: pressed ? 0.7 : 1,
               })}
             >
-              <View style={stepNumberStyle}>
+              <View
+                style={
+                  StyleSheet.create({
+                    root: {
+                      width: 28,
+                      height: 28,
+                      borderRadius: 14,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: now
+                        ? 'rgba(255,255,255,.24)'
+                        : done
+                        ? t.color.accent
+                        : t.color.surfaceAlt,
+                    },
+                  }).root
+                }
+              >
                 {done || step.state === 'skipped' ? (
                   <Icon
                     name={done ? 'check' : 'skip'}
-                    color={
-                      done || current
-                        ? tokens.color.onAccent
-                        : tokens.color.ink2
-                    }
-                    size={16}
+                    size={15}
+                    color={done ? t.color.onAccent : fg}
                   />
                 ) : (
-                  <Text style={[tokens.type.micro, { color: foreground }]}>
-                    {index + 1}
+                  <Text
+                    style={
+                      StyleSheet.create({
+                        root: { fontSize: 14, fontWeight: '600', color: fg },
+                      }).root
+                    }
+                  >
+                    {i + 1}
                   </Text>
                 )}
               </View>
-              <Text style={[tokens.type.label, stepTitleStyle]}>
+              <Text
+                style={
+                  StyleSheet.create({
+                    root: {
+                      fontSize: 14,
+                      fontWeight: now ? '600' : '400',
+                      lineHeight: 20.3,
+                      color: fg,
+                      textDecorationLine:
+                        step.state === 'skipped' ? 'line-through' : 'none',
+                    },
+                  }).root
+                }
+              >
                 {step.title}
               </Text>
             </Pressable>
@@ -768,58 +822,71 @@ function StepProgress({
 }
 
 function QuickActions({ items, onPress }: QuickActionsProps) {
-  const tokens = useTokens();
+  const t = useTokens();
   return (
     <ScrollView
       horizontal
+      style={StyleSheet.create({ root: { flexGrow: 0, flexShrink: 0 } }).root}
       showsHorizontalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
-      contentContainerStyle={{
-        gap: tokens.space.gap,
-        paddingHorizontal: tokens.space.pageX,
-        paddingVertical: tokens.space.gap,
-      }}
+      contentContainerStyle={StyleSheet.create({root:{
+        gap: 8,
+        paddingHorizontal: 16,
+        paddingBottom: 10,
+      }}).root}
     >
       {items.map(item => {
-        const solid = item.kind === 'primary' || item.kind === 'detour';
-        const foreground = solid ? tokens.color.onAccent : tokens.color.ink;
+        const solid = item.kind === 'primary' || item.kind === 'detour',
+          fg = solid ? t.color.onAccent : t.color.ink;
         return (
           <Glass
             key={item.key}
             strength="regular"
             blurEnabled={!solid}
-            style={{
-              borderRadius: tokens.shape.pill,
-              backgroundColor:
-                item.kind === 'primary'
-                  ? tokens.color.accent
-                  : item.kind === 'detour'
-                  ? tokens.color.detour
-                  : tokens.color.glass,
-              ...tokens.elevation.pop,
-            }}
+            style={
+              StyleSheet.create({
+                root: {
+                  borderRadius: 20,
+                  backgroundColor:
+                    item.kind === 'primary'
+                      ? t.color.accent
+                      : item.kind === 'detour'
+                      ? t.color.detour
+                      : t.color.glass,
+                  ...t.elevation.pop,
+                },
+              }).root
+            }
           >
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={item.label}
-              accessibilityState={{ disabled: false }}
               onPress={() => onPress(item.key)}
+              hitSlop={4}
               style={({ pressed }) => ({
-                minWidth: 48,
-                minHeight: 48,
+                minHeight: 40,
+                paddingHorizontal: 16,
                 flexDirection: 'row',
                 alignItems: 'center',
-                justifyContent: 'center',
-                gap: tokens.space.gap,
-                paddingHorizontal: tokens.space.pageX,
-                paddingVertical: tokens.space.gap,
+                gap: 6,
                 opacity: pressed ? 0.7 : 1,
               })}
             >
               {item.icon ? (
-                <Icon name={item.icon} color={foreground} size={18} />
+                <Icon name={item.icon} color={fg} size={17} />
               ) : null}
-              <Text style={[tokens.type.label, { color: foreground }]}>
+              <Text
+                style={
+                  StyleSheet.create({
+                    root: {
+                      fontSize: 15,
+                      lineHeight: 21.75,
+                      fontWeight: solid ? '600' : '500',
+                      color: fg,
+                    },
+                  }).root
+                }
+              >
                 {item.label}
               </Text>
             </Pressable>
@@ -842,102 +909,152 @@ function Composer({
   busy,
   onStop,
 }: ComposerProps) {
-  const tokens = useTokens();
-  const safe = useSafeAreaInsets();
-  const composerQuoteStyle = StyleSheet.create({
-    root: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingLeft: tokens.space.pageX,
-    },
-  }).root;
-  const composerQuoteTextStyle = StyleSheet.create({
-    root: { flex: 1, color: tokens.color.accent },
-  }).root;
-  const composerInputRowStyle = StyleSheet.create({
-    root: {
-      flexDirection: 'row',
-      alignItems: 'flex-end',
-      paddingLeft: tokens.space.pageX,
-      paddingRight: 4,
-      paddingVertical: 4,
-      gap: 4,
-    },
-  }).root;
-  const composerInputStyle = StyleSheet.create({
-    root: {
-      color: tokens.color.ink,
-      flex: 1,
-      minHeight: 48,
-      maxHeight: tokens.type.body.lineHeight * 5 + 16,
-      paddingVertical: tokens.space.rowY,
-    },
-  }).root;
+  const t = useTokens();
   return (
     <View
-      accessibilityRole="none"
       accessibilityLabel="提问输入区"
       accessibilityState={{ busy: !!busy }}
-      style={{
-        paddingHorizontal: tokens.space.pageX,
-        paddingTop: tokens.space.gap,
-        paddingBottom: Math.max(tokens.space.gap, safe.bottom),
-      }}
+      style={
+        StyleSheet.create({
+          root: { paddingHorizontal: 16, paddingBottom: 30 },
+        }).root
+      }
     >
       {quote ? (
         <Glass
-          strength="strong"
-          style={{
-            borderRadius: tokens.shape.md,
-            marginBottom: tokens.space.gap,
-          }}
+          strength="regular"
+          style={
+            StyleSheet.create({ root: { borderRadius: 19, marginBottom: 8 } })
+              .root
+          }
         >
-          <View style={composerQuoteStyle}>
-            <Text style={[tokens.type.caption, composerQuoteTextStyle]}>
+          <View
+            style={
+              StyleSheet.create({
+                root: {
+                  minHeight: 38,
+                  paddingLeft: 14,
+                  paddingRight: 4,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8,
+                },
+              }).root
+            }
+          >
+            <Text
+              numberOfLines={1}
+              style={
+                StyleSheet.create({
+                  root: { flex: 1, fontSize: 13, color: t.color.ink2 },
+                }).root
+              }
+            >
               {quote.label}
             </Text>
-            <IconButton icon="close" label="取消引用" onPress={quote.onClear} />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="取消引用"
+              hitSlop={9}
+              onPress={quote.onClear}
+              style={
+                StyleSheet.create({
+                  root: {
+                    width: 30,
+                    height: 30,
+                    borderRadius: 15,
+                    backgroundColor: t.color.surfaceAlt,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  },
+                }).root
+              }
+            >
+              <Icon name="close" size={13} color={t.color.ink2} />
+            </Pressable>
           </View>
         </Glass>
       ) : null}
       <Glass
         strength="regular"
-        style={{ borderRadius: tokens.shape.pill, ...tokens.elevation.pop }}
+        style={
+          StyleSheet.create({ root: { borderRadius: 26, ...t.elevation.pop } })
+            .root
+        }
       >
-        <View style={composerInputRowStyle}>
+        <View
+          style={
+            StyleSheet.create({
+              root: {
+                minHeight: 52,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+                paddingLeft: 18,
+                paddingRight: 6,
+              },
+            }).root
+          }
+        >
           <TextInput
             accessibilityLabel={placeholder}
-            accessibilityState={{ disabled: false }}
             value={value}
             onChangeText={onChange}
             placeholder={placeholder}
-            placeholderTextColor={tokens.color.ink2}
-            multiline
-            style={[tokens.type.body, composerInputStyle]}
+            placeholderTextColor={t.color.ink2}
+            style={
+              StyleSheet.create({
+                root: {
+                  flex: 1,
+                  minWidth: 0,
+                  fontSize: 17,
+                  color: t.color.ink,
+                  padding: 0,
+                },
+              }).root
+            }
           />
-          {micAvailable && onMic ? (
-            <IconButton icon="mic" label="语音输入" onPress={onMic} />
-          ) : null}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="语音提问"
+            accessibilityState={{ disabled: !micAvailable }}
+            onPress={onMic}
+            disabled={!micAvailable}
+            hitSlop={4}
+            style={
+              StyleSheet.create({
+                root: {
+                  width: 40,
+                  height: 40,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                },
+              }).root
+            }
+          >
+            <Icon name="mic" size={20} color={t.color.ink2} />
+          </Pressable>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={busy ? '停止' : '发送'}
             accessibilityState={{ disabled: busy ? !onStop : sendDisabled }}
             disabled={busy ? !onStop : sendDisabled}
             onPress={busy ? onStop : onSend}
+            hitSlop={4}
             style={({ pressed }) => ({
-              minWidth: 48,
-              minHeight: 48,
-              borderRadius: tokens.shape.pill,
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: t.color.accent,
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: tokens.color.accent,
-              opacity: !busy && sendDisabled ? 0.4 : pressed ? 0.75 : 1,
+              opacity: pressed ? 0.75 : 1,
             })}
           >
             <Icon
               name={busy ? 'stop' : 'send'}
-              color={tokens.color.onAccent}
-              size={21}
+              color={t.color.onAccent}
+              size={busy ? 14 : 20}
             />
           </Pressable>
         </View>
@@ -952,144 +1069,202 @@ function Dialog({
   body,
   confirm,
   cancel,
+  danger = false,
   onConfirm,
   onCancel,
 }: DialogProps) {
   const tokens = useTokens();
   const { reduceMotion } = useSkin();
-  const dialogMaskStyle = StyleSheet.create({
-    root: {
+  const [presented, setPresented] = useState(visible);
+  const wasVisible = useRef(visible);
+  const opacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+  const scale = useRef(new Animated.Value(reduceMotion ? 1 : 1.12)).current;
+  const scrim = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+  useEffect(() => {
+    const previous = wasVisible.current;
+    wasVisible.current = visible;
+    if (visible) setPresented(true);
+    if (reduceMotion || (!visible && !previous)) {
+      opacity.setValue(visible ? 1 : 0);
+      scale.setValue(visible ? 1 : 1.12);
+      scrim.setValue(visible ? 1 : 0);
+      if (!visible) setPresented(false);
+      return;
+    }
+    if (visible && !previous) {
+      opacity.setValue(0);
+      scale.setValue(1.12);
+      scrim.setValue(0);
+    }
+    const easing = Easing.bezier(...tokens.motion.easing);
+    const transition = Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: visible ? 1 : 0,
+        duration: 200,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scale, {
+        toValue: visible ? 1 : 1.12,
+        duration: 320,
+        easing,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scrim, {
+        toValue: visible ? 1 : 0,
+        duration: 300,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    ]);
+    transition.start(({ finished }) => {
+      if (finished && !visible) setPresented(false);
+    });
+    return () => transition.stop();
+  }, [visible, reduceMotion, opacity, scale, scrim, tokens.motion.easing]);
+  const s = StyleSheet.create({
+    mask: {
       flex: 1,
-      paddingHorizontal: tokens.space.pageX * 2,
+      paddingHorizontal: 40,
       alignItems: 'center',
       justifyContent: 'center',
     },
-  }).root;
-  const dialogScrollStyle = StyleSheet.create({
-    root: {
-      maxHeight: '90%',
-      width: '100%',
-      maxWidth: 360,
-      flexGrow: 0,
+    scrim: {
+      position: 'absolute',
+      top: 0,
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: tokens.color.scrim,
     },
-  }).root;
-  const dialogTitleStyle = StyleSheet.create({
-    root: { color: tokens.color.ink, textAlign: 'center' },
-  }).root;
-  const dialogBodyStyle = StyleSheet.create({
-    root: { color: tokens.color.ink, textAlign: 'center' },
-  }).root;
-  const dialogActionsStyle = StyleSheet.create({
-    root: {
+    scrimTarget: { flex: 1 },
+    card: {
+      width: '100%',
+      maxWidth: 300,
+      maxHeight: '90%',
+      borderRadius: 28,
+      boxShadow: '0 20px 60px rgba(0,0,0,.25)',
+    },
+    scroll: { flexGrow: 0, borderRadius: 28, overflow: 'hidden' },
+    surface: {
+      borderRadius: 28,
+      borderWidth: 0,
+      boxShadow: `inset 0 0 0 .5px ${tokens.color.glassLine}`,
+    },
+    title: {
+      ...tokens.type.body,
+      fontWeight: '600',
+      lineHeight: tokens.type.body.fontSize * 1.3,
+      color: tokens.color.ink,
+      textAlign: 'center',
+      paddingTop: 20,
+      paddingHorizontal: 18,
+      paddingBottom: 2,
+    },
+    body: {
+      ...tokens.type.caption,
+      lineHeight: tokens.type.caption.fontSize * 1.55,
+      color: tokens.color.ink,
+      textAlign: 'center',
+      paddingTop: 6,
+      paddingHorizontal: 18,
+      paddingBottom: 18,
+    },
+    actions: {
       flexDirection: 'row',
-      flexWrap: 'wrap',
-      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopWidth: 0.5,
       borderColor: tokens.color.line,
     },
-  }).root;
-  const dialogCancelStyle = StyleSheet.create({
-    root: { color: tokens.color.accent, textAlign: 'center' },
-  }).root;
-  const dialogConfirmStyle = StyleSheet.create({
-    root: {
-      color: tokens.color.accent,
-      fontWeight: '600',
-      textAlign: 'center',
+    action: {
+      flex: 1,
+      minHeight: 46,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
-  }).root;
+    divider: { borderLeftWidth: 0.5, borderColor: tokens.color.line },
+    pressed: { backgroundColor: tokens.color.pressed },
+    actionText: {
+      ...tokens.type.body,
+      lineHeight: tokens.type.body.fontSize * 1.45,
+      color: tokens.color.accent,
+      textAlign: 'center',
+      fontWeight: '400',
+    },
+    confirmText: {
+      color: danger ? tokens.color.bad : tokens.color.accent,
+      fontWeight: '600',
+    },
+  });
   return (
     <Modal
-      visible={visible}
+      visible={presented}
       transparent
-      animationType={reduceMotion ? 'none' : 'fade'}
+      animationType="none"
       onRequestClose={onCancel}
     >
-      <View style={dialogMaskStyle}>
-        <Pressable
-          style={[
-            StyleSheet.absoluteFill,
-            { backgroundColor: tokens.color.scrim },
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel={cancel ?? '关闭对话框'}
-          accessibilityState={{ disabled: false }}
-          onPress={onCancel}
-        />
-        <ScrollView
-          style={dialogScrollStyle}
-          keyboardShouldPersistTaps="handled"
+      <View style={s.mask} pointerEvents={visible ? 'auto' : 'none'}>
+        <Animated.View style={[s.scrim, { opacity: scrim }]}>
+          <Pressable
+            style={s.scrimTarget}
+            accessibilityRole="button"
+            accessibilityLabel="关闭对话框"
+            accessibilityState={{ disabled: false }}
+            onPress={onCancel}
+          />
+        </Animated.View>
+        <Animated.View
+          testID="glass-dialog-card"
+          style={[s.card, { opacity, transform: [{ scale }] }]}
         >
-          <Glass
-            strength="strong"
-            style={{ borderRadius: tokens.shape.lg, ...tokens.elevation.pop }}
+          <ScrollView
+            style={s.scroll}
+            keyboardShouldPersistTaps="handled"
+            bounces={false}
           >
-            <View
-              accessibilityRole="alert"
-              accessibilityLabel={title}
-              accessibilityState={{ expanded: visible }}
-              accessibilityViewIsModal
-              onAccessibilityEscape={onCancel}
-            >
+            <Glass strength="strong" style={s.surface}>
               <View
-                style={{ padding: tokens.space.pageX, gap: tokens.space.gap }}
+                accessibilityRole="alert"
+                accessibilityLabel={title}
+                accessibilityState={{ expanded: visible }}
+                accessibilityViewIsModal
+                onAccessibilityEscape={onCancel}
               >
-                <Text
-                  accessibilityRole="header"
-                  style={[tokens.type.title, dialogTitleStyle]}
-                >
+                <Text accessibilityRole="header" style={s.title}>
                   {title}
                 </Text>
-                <Text style={[tokens.type.caption, dialogBodyStyle]}>
-                  {body}
-                </Text>
-              </View>
-              <View style={dialogActionsStyle}>
-                {cancel ? (
+                <Text style={s.body}>{body}</Text>
+                <View testID="glass-dialog-actions" style={s.actions}>
+                  {cancel ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={cancel}
+                      accessibilityState={{ disabled: false }}
+                      hitSlop={1}
+                      onPress={onCancel}
+                      style={({ pressed }) => [s.action, pressed && s.pressed]}
+                    >
+                      <Text style={s.actionText}>{cancel}</Text>
+                    </Pressable>
+                  ) : null}
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={cancel}
+                    accessibilityLabel={confirm}
                     accessibilityState={{ disabled: false }}
-                    onPress={onCancel}
-                    style={({ pressed }) => ({
-                      flexGrow: 1,
-                      flexBasis: 100,
-                      minHeight: 48,
-                      padding: tokens.space.gap,
-                      borderRightWidth: StyleSheet.hairlineWidth,
-                      borderColor: tokens.color.line,
-                      justifyContent: 'center',
-                      backgroundColor: pressed
-                        ? tokens.color.pressed
-                        : undefined,
-                    })}
+                    hitSlop={1}
+                    onPress={onConfirm}
+                    style={({ pressed }) => [
+                      s.action,
+                      cancel && s.divider,
+                      pressed && s.pressed,
+                    ]}
                   >
-                    <Text style={[tokens.type.body, dialogCancelStyle]}>
-                      {cancel}
-                    </Text>
+                    <Text style={[s.actionText, s.confirmText]}>{confirm}</Text>
                   </Pressable>
-                ) : null}
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={confirm}
-                  accessibilityState={{ disabled: false }}
-                  onPress={onConfirm}
-                  style={({ pressed }) => ({
-                    flexGrow: 1,
-                    flexBasis: 100,
-                    minHeight: 48,
-                    padding: tokens.space.gap,
-                    justifyContent: 'center',
-                    backgroundColor: pressed ? tokens.color.pressed : undefined,
-                  })}
-                >
-                  <Text style={[tokens.type.body, dialogConfirmStyle]}>
-                    {confirm}
-                  </Text>
-                </Pressable>
+                </View>
               </View>
-            </View>
-          </Glass>
-        </ScrollView>
+            </Glass>
+          </ScrollView>
+        </Animated.View>
       </View>
     </Modal>
   );

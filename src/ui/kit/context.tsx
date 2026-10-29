@@ -18,3 +18,9 @@ export function useSkin(): SkinContextValue {
   return value;
 }
 export const useTokens = (): Tokens => useSkin().tokens;
+
+/** Semantic presentation differences owned by the design system. */
+export function usePresentation() {
+  const { tokens, reduceMotion } = useSkin();
+  return { ...tokens.layout, reduceMotion };
+}

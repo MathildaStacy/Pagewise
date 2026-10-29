@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Animated,
   Image,
   Pressable,
@@ -18,6 +17,24 @@ import * as Kit from '../proxy';
 import { useMathRenderer, type FormulaRender } from '../MathProvider';
 
 const BookTypography = createContext(false);
+const StudyTypography = createContext<
+  'source' | 'aux' | 'check' | 'fold' | null
+>(null);
+
+function studyType(
+  t: ReturnType<typeof useTokens>,
+  size: number,
+  lineHeight: number,
+  fontWeight: '400' | '500' | '600' | '700' = '400',
+) {
+  const scale = t.type.body.fontSize / (t.layout.groupedLists ? 17 : 14);
+  return {
+    ...t.type.body,
+    fontSize: size * scale,
+    lineHeight: lineHeight * scale,
+    fontWeight,
+  };
+}
 
 function Inline({
   nodes,
@@ -69,9 +86,22 @@ function Inline({
 export function RichView({ doc, onCite, onFigure }: KitProps['RichView']) {
   const s = useStyles();
   const book = useContext(BookTypography);
+  const study = useContext(StudyTypography);
+  const textStyle =
+    study === 'source'
+      ? s.sourceText
+      : study === 'aux'
+      ? s.auxText
+      : study === 'check'
+      ? s.studyBody
+      : study === 'fold'
+      ? s.foldText
+      : book
+      ? s.bookText
+      : s.aiText;
   return (
     <View
-      style={s.rich}
+      style={[s.rich, study === 'aux' && s.auxRich]}
       accessibilityRole="none"
       accessibilityLabel="讲解内容"
       accessibilityState={{}}
@@ -80,7 +110,7 @@ export function RichView({ doc, onCite, onFigure }: KitProps['RichView']) {
         switch (block.t) {
           case 'p':
             return (
-              <Text key={index} style={book ? s.bookText : s.aiText}>
+              <Text key={index} style={textStyle}>
                 <Inline nodes={block.c} onCite={onCite} />
               </Text>
             );
@@ -99,10 +129,10 @@ export function RichView({ doc, onCite, onFigure }: KitProps['RichView']) {
               <View key={index} style={s.list}>
                 {block.items.map((items, itemIndex) => (
                   <View key={itemIndex} style={s.listItem}>
-                    <Text style={book ? s.bookText : s.aiText}>
+                    <Text style={textStyle}>
                       {block.ordered ? `${itemIndex + 1}.` : '•'}
                     </Text>
-                    <Text style={[book ? s.bookText : s.aiText, s.grow]}>
+                    <Text style={[textStyle, s.grow]}>
                       <Inline nodes={items} onCite={onCite} />
                     </Text>
                   </View>
@@ -146,7 +176,7 @@ export function RichView({ doc, onCite, onFigure }: KitProps['RichView']) {
           case 'check':
             return (
               <Kit.CheckCard key={index}>
-                <Text style={book ? s.bookText : s.aiText}>
+                <Text style={s.studyBody}>
                   <Inline nodes={block.c} onCite={onCite} />
                 </Text>
               </Kit.CheckCard>
@@ -317,6 +347,7 @@ export function FigureView({ uri, caption, onPress }: KitProps['FigureView']) {
 export function UserBubble({ text, quote, detour }: KitProps['UserBubble']) {
   const s = useStyles();
   const t = useTokens();
+  const nested = useContext(StudyTypography) === 'fold';
   return (
     <View
       style={[
@@ -328,7 +359,7 @@ export function UserBubble({ text, quote, detour }: KitProps['UserBubble']) {
       accessibilityState={{}}
     >
       {quote ? <Text style={s.userQuote}>{quote}</Text> : null}
-      <Text style={s.userText}>{text}</Text>
+      <Text style={[s.userText, nested && s.foldUserText]}>{text}</Text>
     </View>
   );
 }
@@ -354,7 +385,6 @@ export function AiMessage({
 
 export function ToolSteps({ lines, detour }: KitProps['ToolSteps']) {
   const s = useStyles();
-  const t = useTokens();
   return (
     <View
       style={s.tools}
@@ -363,23 +393,65 @@ export function ToolSteps({ lines, detour }: KitProps['ToolSteps']) {
       accessibilityState={{ busy: lines.some(line => line.running) }}
     >
       {lines.map((line, index) => (
-        <View key={index} style={s.inline}>
-          {line.running ? (
-            <ActivityIndicator
-              size="small"
-              color={detour ? t.color.detour : t.color.accent}
-            />
-          ) : (
-            <Icon
-              name="check"
-              size={14}
-              color={detour ? t.color.detour : t.color.ink2}
-            />
-          )}
-          <Text style={[s.caption, s.grow]}>{line.text}</Text>
-        </View>
+        <ToolLine key={index} line={line} detour={detour} />
       ))}
     </View>
+  );
+}
+
+function ToolLine({
+  line,
+  detour,
+}: {
+  line: KitProps['ToolSteps']['lines'][number];
+  detour?: boolean;
+}) {
+  const s = useStyles();
+  const { tokens: t, reduceMotion } = useSkin();
+  const opacity = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    opacity.setValue(1);
+    if (!line.running || !t.layout.groupedLists || reduceMotion) return;
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, {
+          toValue: 0.4,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [line.running, opacity, reduceMotion, t.layout.groupedLists]);
+  return (
+    <Animated.View style={[s.toolLine, { opacity }]}>
+      {t.layout.groupedLists ? (
+        <Icon
+          name="book"
+          size={16}
+          color={detour ? t.color.detour : t.color.ink2}
+        />
+      ) : (
+        <View
+          style={[s.toolDot, detour && { backgroundColor: t.color.detour }]}
+        />
+      )}
+      <Text
+        style={[
+          s.toolText,
+          s.grow,
+          !t.layout.groupedLists && line.running && { color: t.color.ink3 },
+        ]}
+      >
+        {line.text}
+      </Text>
+    </Animated.View>
   );
 }
 
@@ -398,11 +470,11 @@ export function StepHeader({
       accessibilityLabel={`${label}，第 ${step} 步，${title}，${pages}`}
       accessibilityState={{}}
     >
-      <Text style={[s.caption, { color: t.color.accentInk }]}>
-        {label} · {step}
-      </Text>
-      <Text style={s.headline}>{title}</Text>
-      <Text style={s.caption}>{pages}</Text>
+      {t.layout.groupedLists ? (
+        <Text style={s.stepNumber}>第 {step} 步</Text>
+      ) : null}
+      <Text style={[s.stepTitle, s.grow]}>{title}</Text>
+      <Text style={s.stepPages}>{pages}</Text>
     </View>
   );
 }
@@ -416,23 +488,28 @@ export function SourceCard({
   const s = useStyles();
   const body = (
     <>
-      <View style={s.inline}>
-        <Icon name="bookOpen" size={16} />
-        <Text style={s.caption}>{label}</Text>
+      <View style={s.studyLabel}>
+        <Icon name="book" size={15} />
+        <Text style={s.studyLabelText}>{label}</Text>
       </View>
       {doc ? (
         <BookTypography.Provider value>
-          <Kit.RichView doc={doc} />
+          <StudyTypography.Provider value="source">
+            <Kit.RichView doc={doc} />
+          </StudyTypography.Provider>
         </BookTypography.Provider>
       ) : (
-        <Text style={s.bookText}>{text}</Text>
+        <Text style={s.sourceText}>{text}</Text>
       )}
     </>
   );
   return onPress ? (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [s.source, pressed && { opacity: 0.8 }]}
+      style={({ pressed }) => [
+        s.source,
+        pressed && { transform: [{ scale: 0.985 }] },
+      ]}
       accessibilityRole="button"
       accessibilityLabel={`${label}，打开原文`}
       accessibilityState={{}}
@@ -465,11 +542,10 @@ export function AuxBlock({
   return (
     <View
       style={[
-        s.card,
+        s.aux,
         {
           backgroundColor:
             kind === 'derive' ? t.color.deriveBg : t.color.exampleBg,
-          borderColor: kind === 'derive' ? t.color.deriveBg : t.color.exampleBg,
         },
       ]}
       accessibilityRole="none"
@@ -481,17 +557,21 @@ export function AuxBlock({
         accessibilityLabel={`${expanded ? '收起' : '展开'}${label}`}
         accessibilityState={{ expanded }}
         onPress={() => setExpanded(value => !value)}
-        style={s.cardHeader}
+        hitSlop={12}
+        style={s.studyLabel}
       >
         <Icon
           name={kind === 'derive' ? 'derive' : 'spark'}
-          size={16}
+          size={15}
           color={color}
         />
-        <Text style={[s.caption, { color }]}>{label}</Text>
-        <Icon name={expanded ? 'arrowDown' : 'chev'} size={14} color={color} />
+        <Text style={[s.studyLabelText, { color }]}>{label}</Text>
       </Pressable>
-      {expanded ? children : null}
+      {expanded ? (
+        <StudyTypography.Provider value="aux">
+          {children}
+        </StudyTypography.Provider>
+      ) : null}
     </View>
   );
 }
@@ -501,13 +581,22 @@ export function CheckCard({ children, text }: KitProps['CheckCard']) {
   const t = useTokens();
   return (
     <View
-      style={s.card}
+      style={s.studyCard}
       accessibilityRole="none"
       accessibilityLabel="检查一下"
       accessibilityState={{}}
     >
-      <Text style={[s.caption, { color: t.color.accentInk }]}>检查一下</Text>
-      {children ?? <Text style={s.body}>{text}</Text>}
+      <View style={s.studyLabel}>
+        {t.layout.groupedLists ? (
+          <Icon name="help" size={15} color={t.color.accent} />
+        ) : null}
+        <Text style={[s.studyLabelText, { color: t.color.accent }]}>
+          检查一下
+        </Text>
+      </View>
+      <StudyTypography.Provider value="check">
+        {children ?? <Text style={s.studyBody}>{text}</Text>}
+      </StudyTypography.Provider>
     </View>
   );
 }
@@ -520,12 +609,21 @@ function Actions({
   onAction(key: string): void;
 }) {
   const s = useStyles();
+  const t = useTokens();
+  if (!items.length) return null;
   return (
     <View style={s.actions}>
       {items.map(item => (
         <Kit.Button
           key={item.key}
-          variant={item.primary ? 'primary' : 'secondary'}
+          size="sm"
+          variant={
+            item.primary
+              ? 'primary'
+              : t.layout.groupedLists
+              ? 'secondary'
+              : 'ghost'
+          }
           label={item.label}
           onPress={() => onAction(item.key)}
         />
@@ -541,16 +639,25 @@ export function ResumeCard({
   onAction,
 }: KitProps['ResumeCard']) {
   const s = useStyles();
+  const t = useTokens();
+  const displayTitle = t.layout.groupedLists
+    ? title.replace(/^续学(?=\s*·)/, '接着上次')
+    : title.replace(/^接着上次(?=\s*·)/, '续学');
   return (
     <View
-      style={s.card}
+      style={s.studyCard}
       accessibilityRole="none"
-      accessibilityLabel={title}
+      accessibilityLabel={displayTitle}
       accessibilityState={{}}
     >
-      <Text style={s.headline}>{title}</Text>
+      <View style={s.studyLabel}>
+        {t.layout.groupedLists ? (
+          <Icon name="clock" size={15} color={t.color.accent} />
+        ) : null}
+        <Text style={s.resumeLabel}>{displayTitle}</Text>
+      </View>
       {lines.map((line, index) => (
-        <Text key={index} style={s.body}>
+        <Text key={index} style={s.resumeBody}>
           {line}
         </Text>
       ))}
@@ -568,9 +675,10 @@ export function FoldCard({
 }: KitProps['FoldCard']) {
   const s = useStyles();
   const t = useTokens();
+  const history = !count;
   return (
     <View
-      style={s.fold}
+      style={history ? s.history : s.fold}
       accessibilityRole="none"
       accessibilityLabel={title}
       accessibilityState={{ expanded }}
@@ -578,16 +686,55 @@ export function FoldCard({
       <Pressable
         onPress={onToggle}
         accessibilityRole="button"
-        accessibilityLabel={`${title}，${count}`}
+        accessibilityLabel={history ? title : `${title}，${count}`}
         accessibilityState={{ expanded }}
-        style={s.foldHeader}
+        hitSlop={history ? 10 : undefined}
+        style={({ pressed }) => [
+          history ? s.historyHeader : s.foldHeader,
+          pressed && { opacity: 0.6 },
+        ]}
       >
-        <Icon name="check" color={t.color.ok} size={18} />
-        <Text style={[s.body, s.grow]}>{title}</Text>
-        <Text style={s.caption}>{count}</Text>
-        <Icon name={expanded ? 'arrowDown' : 'chev'} size={16} />
+        {!history ? (
+          <View style={s.foldCheck}>
+            <Icon
+              name="check"
+              color={t.layout.groupedLists ? t.color.onAccent : t.color.ok}
+              size={14}
+            />
+          </View>
+        ) : null}
+        <Text
+          numberOfLines={1}
+          style={history ? s.historyLabel : [s.foldTitle, s.grow]}
+        >
+          {title}
+        </Text>
+        {!history ? <Text style={s.foldCount}>{count}</Text> : null}
+        <View
+          style={{
+            transform: [
+              {
+                rotate: history
+                  ? expanded
+                    ? '270deg'
+                    : '90deg'
+                  : expanded
+                  ? '90deg'
+                  : '0deg',
+              },
+            ],
+          }}
+        >
+          <Icon name="chev" size={history ? 14 : 16} color={t.color.ink3} />
+        </View>
       </Pressable>
-      {expanded ? <View style={s.foldBody}>{children}</View> : null}
+      {expanded ? (
+        <View style={history ? s.historyBody : s.foldBody}>
+          <StudyTypography.Provider value={history ? null : 'fold'}>
+            {children}
+          </StudyTypography.Provider>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -601,22 +748,36 @@ export function QuizCard({
 }: KitProps['QuizCard']) {
   const s = useStyles();
   const t = useTokens();
+  const displayTitle = title
+    .replace(
+      /^(检查一下|考考你)/,
+      t.layout.groupedLists ? '考考你' : '检查一下',
+    )
+    .replace(
+      /第\s*(\d+)\s*[步段]/g,
+      `第 $1 ${t.layout.groupedLists ? '步' : '段'}`,
+    );
   return (
     <View
-      style={s.card}
+      style={s.studyCard}
       accessibilityRole="none"
-      accessibilityLabel={title}
+      accessibilityLabel={displayTitle}
       accessibilityState={{}}
     >
-      <Text style={[s.caption, { color: t.color.accentInk }]}>{title}</Text>
-      <Text style={s.headline}>{question}</Text>
+      <View style={s.studyLabel}>
+        {t.layout.groupedLists ? (
+          <Icon name="help" size={15} color={t.color.accent} />
+        ) : null}
+        <Text style={[s.studyLabelText, s.quizLabel]}>{displayTitle}</Text>
+      </View>
+      <Text style={s.quizQuestion}>{question}</Text>
       {options.map((option, index) => {
         const color =
           option.state === 'right'
             ? t.color.ok
             : option.state === 'wrong'
             ? t.color.bad
-            : t.color.line;
+            : t.color.ink2;
         return (
           <Pressable
             key={index}
@@ -639,27 +800,52 @@ export function QuizCard({
             style={({ pressed }) => [
               s.option,
               {
-                borderColor: color,
+                borderColor:
+                  option.state === 'right' || option.state === 'wrong'
+                    ? color
+                    : t.color.line,
                 backgroundColor:
                   option.state === 'right'
                     ? t.color.okBg
                     : option.state === 'wrong'
                     ? t.color.badBg
+                    : t.layout.groupedLists
+                    ? t.color.surfaceFill
                     : t.color.surface,
               },
-              option.state === 'muted' && { opacity: 0.6 },
-              pressed && { backgroundColor: t.color.pressed },
+              option.state === 'muted' &&
+                t.layout.groupedLists && { opacity: 0.5 },
+              pressed && !locked && { transform: [{ scale: 0.985 }] },
             ]}
           >
-            <Text style={s.body}>
-              {String.fromCharCode(65 + index)}. {option.label}
-            </Text>
-            {option.state === 'right' || option.state === 'wrong' ? (
-              <Icon
-                name={option.state === 'right' ? 'check' : 'close'}
-                color={color}
-              />
+            {t.layout.groupedLists ? (
+              <View
+                style={[
+                  s.optionBadge,
+                  (option.state === 'right' || option.state === 'wrong') && {
+                    backgroundColor: color,
+                  },
+                ]}
+              >
+                {option.state === 'right' || option.state === 'wrong' ? (
+                  <Icon
+                    name={option.state === 'right' ? 'check' : 'close'}
+                    color={t.color.onAccent}
+                    size={14}
+                  />
+                ) : (
+                  <Text style={s.optionLetter}>
+                    {String.fromCharCode(65 + index)}
+                  </Text>
+                )}
+              </View>
             ) : null}
+            <Text style={[s.optionText, s.grow]}>
+              {t.layout.groupedLists
+                ? ''
+                : `${String.fromCharCode(65 + index)}. `}
+              {option.label}
+            </Text>
           </Pressable>
         );
       })}
@@ -679,17 +865,28 @@ export function ProposalCard({
   const t = useTokens();
   return (
     <View
-      style={[s.card, s.proposal]}
+      style={[s.studyCard, s.proposal]}
       accessibilityRole="none"
       accessibilityLabel={title}
       accessibilityState={{}}
     >
-      <Text style={[s.headline, { color: t.color.accentInk }]}>{title}</Text>
-      <Text style={s.body}>{body}</Text>
+      <View style={s.studyLabel}>
+        {t.layout.groupedLists ? (
+          <Icon name="flag" size={15} color={t.color.stuckInk} />
+        ) : null}
+        <Text style={[s.studyLabelText, s.proposalLabel]}>{title}</Text>
+      </View>
+      <Text style={s.proposalBody}>{body}</Text>
       {state === 'pending' ? (
-        <Actions items={actions} onAction={onAction} />
+        <Actions
+          items={actions.map((action, index) => ({
+            ...action,
+            primary: index === 0,
+          }))}
+          onAction={onAction}
+        />
       ) : (
-        <Text style={s.caption}>
+        <Text style={s.proposalResult}>
           {resultText ?? (state === 'accepted' ? '已记下' : '已忽略')}
         </Text>
       )}
@@ -700,21 +897,42 @@ export function ProposalCard({
 export function DoneCard({ title, text, onPress }: KitProps['DoneCard']) {
   const s = useStyles();
   const t = useTokens();
+  const displayTitle =
+    t.layout.groupedLists && /^(这一节|本节)(讲|学)完了$/.test(title)
+      ? '本节讲完了'
+      : title;
+  const content = (
+    <>
+      <View style={s.studyLabel}>
+        <Icon name="check" color={t.color.okInk} size={15} />
+        <Text style={[s.studyLabelText, { color: t.color.okInk }]}>
+          {displayTitle}
+        </Text>
+      </View>
+      <Text style={s.studyBody}>{text}</Text>
+    </>
+  );
+  if (onPress) {
+    return (
+      <Pressable
+        style={({ pressed }) => [s.studyCard, pressed && { opacity: 0.6 }]}
+        accessibilityRole="button"
+        accessibilityLabel={`${displayTitle}，查看本节小结`}
+        accessibilityState={{}}
+        onPress={onPress}
+      >
+        {content}
+      </Pressable>
+    );
+  }
   return (
     <View
-      style={s.card}
+      style={s.studyCard}
       accessibilityRole="none"
-      accessibilityLabel={title}
+      accessibilityLabel={displayTitle}
       accessibilityState={{}}
     >
-      <View style={s.inline}>
-        <Icon name="check" color={t.color.ok} />
-        <Text style={s.headline}>{title}</Text>
-      </View>
-      <Text style={s.body}>{text}</Text>
-      {onPress ? (
-        <Kit.Button variant="primary" label="查看本节小结" onPress={onPress} />
-      ) : null}
+      {content}
     </View>
   );
 }
@@ -724,109 +942,78 @@ export function SysDivider({ text, tone }: KitProps['SysDivider']) {
   const t = useTokens();
   return (
     <View
-      style={s.divider}
+      style={[
+        s.divider,
+        t.layout.groupedLists &&
+          tone === 'detour' && { backgroundColor: t.color.detourBg },
+      ]}
       accessibilityRole="text"
       accessibilityLabel={text}
       accessibilityState={{}}
     >
-      <View style={s.line} />
-      <Text style={[s.caption, tone === 'detour' && { color: t.color.detour }]}>
+      {!t.layout.groupedLists ? (
+        <View style={[s.line, tone === 'detour' && s.detourDividerLine]} />
+      ) : null}
+      <Text
+        style={[s.dividerText, tone === 'detour' && { color: t.color.detour }]}
+      >
         {text}
       </Text>
-      <View style={s.line} />
+      {!t.layout.groupedLists ? (
+        <View style={[s.line, tone === 'detour' && s.detourDividerLine]} />
+      ) : null}
     </View>
   );
 }
 
 export function Typing({ label = '正在生成' }: KitProps['Typing']) {
   const s = useStyles();
-  const t = useTokens();
   return (
     <View
-      style={s.inline}
+      style={s.typing}
       accessibilityRole="text"
       accessibilityLabel={label}
       accessibilityState={{ busy: true }}
     >
-      <ActivityIndicator size="small" color={t.color.accent} />
-      <Text style={s.caption}>{label}</Text>
+      {[0, 1, 2].map(index => (
+        <TypingDot key={index} index={index} />
+      ))}
     </View>
   );
 }
 
-export function PageOrig({
-  uri,
-  width,
-  height,
-  blocks,
-  onBlock,
-}: KitProps['PageOrig']) {
+function TypingDot({ index }: { index: number }) {
   const s = useStyles();
-  const t = useTokens();
-  return (
-    <View
-      style={[s.page, { aspectRatio: width / height }]}
-      accessibilityRole="none"
-      accessibilityLabel="原版书页"
-      accessibilityState={{}}
-    >
-      <Image
-        source={{ uri }}
-        resizeMode="contain"
-        style={s.pageImage}
-        accessibilityLabel="原版书页图片"
-      />
-      {blocks.map(block => {
-        const backgroundColor =
-          block.state === 'highlight' || block.state === 'flash'
-            ? t.color.highlight
-            : block.state === 'selected'
-            ? t.color.accentBg
-            : undefined;
-        return (
-          <Pressable
-            key={block.ref}
-            onPress={() => onBlock?.(block.ref)}
-            disabled={!onBlock}
-            accessibilityRole="button"
-            accessibilityLabel={`内容块 b${block.ref}${
-              block.pin ? '，有问答便签' : ''
-            }`}
-            accessibilityState={{
-              disabled: !onBlock,
-              selected: block.state === 'selected' || block.state === 'current',
-            }}
-            style={[
-              s.pageBlock,
-              block.state === 'current' && s.pageCurrent,
-              block.state === 'done' && s.pageDone,
-              {
-                left: `${block.x0 * 100}%`,
-                top: `${block.y0 * 100}%`,
-                width: `${(block.x1 - block.x0) * 100}%`,
-                height: `${(block.y1 - block.y0) * 100}%`,
-                borderLeftColor:
-                  block.state === 'current' ? t.color.accent : t.color.stepCur,
-              },
-            ]}
-          >
-            {backgroundColor ? (
-              <View
-                pointerEvents="none"
-                style={[s.pageHighlight, { backgroundColor }]}
-              />
-            ) : null}
-            {block.pin ? (
-              <View style={s.pagePin}>
-                <Icon name="pin" size={14} color={t.color.pin} />
-              </View>
-            ) : null}
-          </Pressable>
-        );
-      })}
-    </View>
-  );
+  const { reduceMotion } = useSkin();
+  const opacity = useRef(new Animated.Value(0.3)).current;
+  useEffect(() => {
+    opacity.setValue(0.3);
+    if (reduceMotion) return;
+    const animation = Animated.sequence([
+      Animated.delay(index * 180),
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(opacity, {
+            toValue: 1,
+            duration: 440,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacity, {
+            toValue: 0.3,
+            duration: 440,
+            useNativeDriver: true,
+          }),
+          Animated.delay(220),
+        ]),
+      ),
+    ]);
+    animation.start();
+    return () => animation.stop();
+  }, [index, opacity, reduceMotion]);
+  return <Animated.View style={[s.typingDot, { opacity }]} />;
 }
+
+export { PageOrig } from './PageOrig';
 
 export function BlockView({
   doc,
@@ -1210,8 +1397,8 @@ const useStyles = makeStyles(t => ({
     paddingVertical: 10,
   },
   chipTarget: {
-    minHeight: 48,
-    minWidth: 48,
+    minHeight: 21,
+    minWidth: 19,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'flex-start',
@@ -1221,7 +1408,7 @@ const useStyles = makeStyles(t => ({
     ...t.type.num,
     borderRadius: t.shape.pill,
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 1,
   },
   figure: {
     padding: 8,
@@ -1234,91 +1421,367 @@ const useStyles = makeStyles(t => ({
   figureImage: { width: '100%', height: 180 },
   user: {
     alignSelf: 'flex-end',
-    maxWidth: '84%',
+    maxWidth: t.layout.groupedLists ? '80%' : '84%',
     paddingVertical: 9,
-    paddingHorizontal: 12,
-    borderRadius: t.shape.lg,
-    borderBottomRightRadius: t.shape.xs,
-    gap: 4,
+    paddingHorizontal: t.layout.groupedLists ? 15 : 12,
+    borderRadius: t.layout.groupedLists ? 21 : 16,
+    borderBottomRightRadius: t.layout.groupedLists ? 21 : 4,
   },
-  userText: { ...t.type.body, color: t.color.onAccent },
+  userText: {
+    ...studyType(t, t.layout.groupedLists ? 16 : 15, 24),
+    color: t.color.onAccent,
+  },
+  foldUserText: {
+    ...studyType(t, 15, t.layout.groupedLists ? 22.5 : 24),
+  },
   userQuote: {
-    ...t.type.caption,
+    ...studyType(
+      t,
+      t.layout.groupedLists ? 13 : 12,
+      t.layout.groupedLists ? 19.5 : 19.2,
+    ),
     color: t.color.onAccent,
     borderLeftWidth: 2,
     borderLeftColor: t.color.onAccent,
-    paddingLeft: 6,
+    paddingLeft: t.layout.groupedLists ? 7 : 6,
+    marginTop: t.layout.groupedLists ? 2 : 0,
+    marginBottom: t.layout.groupedLists ? 5 : 4,
+    opacity: 0.85,
   },
   detourMessage: {
     borderLeftWidth: 3,
     borderLeftColor: t.color.detour,
     paddingLeft: 10,
   },
-  proposal: { borderStyle: 'dashed', borderColor: t.color.accent },
-  message: { gap: 8 },
-  tools: { gap: 4 },
-  stepHeader: { gap: 4, paddingTop: 8 },
-  source: {
-    backgroundColor: t.color.paper,
-    borderWidth: 1,
-    borderColor: t.color.line,
-    borderRadius: t.shape.md,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    gap: 8,
+  proposal: {
+    borderStyle: 'dashed',
+    borderWidth: t.layout.groupedLists ? 1.5 : 1,
+    borderColor: t.color.proposalBorder,
+    borderRadius: t.layout.groupedLists ? 20 : 12,
+    paddingTop: t.layout.groupedLists ? 13 : 10,
+    paddingBottom: t.layout.groupedLists ? 14 : 10,
+    paddingHorizontal: t.layout.groupedLists ? 16 : 12,
+    backgroundColor: t.layout.groupedLists ? t.color.stuckBg : t.color.surface,
   },
+  proposalLabel: {
+    color: t.layout.groupedLists ? t.color.stuckInk : t.color.accent,
+  },
+  proposalBody: {
+    ...studyType(
+      t,
+      t.layout.groupedLists ? 16 : 13,
+      t.layout.groupedLists ? 25.6 : 19.5,
+    ),
+    color: t.color.ink,
+  },
+  proposalResult: {
+    ...studyType(
+      t,
+      t.layout.groupedLists ? 13 : 12,
+      t.layout.groupedLists ? 18.85 : 18,
+    ),
+    marginTop: t.layout.groupedLists ? 10 : 8,
+    color: t.color.ink2,
+  },
+  message: { gap: 8 },
+  tools: { gap: 3 },
+  toolLine: {
+    flexDirection: 'row',
+    alignItems: t.layout.groupedLists ? 'center' : 'flex-start',
+    gap: 6,
+  },
+  toolDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginTop: 6,
+    backgroundColor: t.color.ink3,
+  },
+  toolText: {
+    ...studyType(
+      t,
+      t.layout.groupedLists ? 13 : 12,
+      t.layout.groupedLists ? 18.85 : 18,
+    ),
+    color: t.color.ink2,
+  },
+  stepHeader: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+    marginTop: t.layout.groupedLists ? 14 : 0,
+  },
+  stepNumber: {
+    ...studyType(t, 13, 18.85, '600'),
+    ...t.type.num,
+    color: t.color.accent,
+    flexShrink: 0,
+  },
+  stepTitle: {
+    ...studyType(
+      t,
+      t.layout.groupedLists ? 21 : 15,
+      t.layout.groupedLists ? 27.3 : 22.5,
+      t.layout.groupedLists ? '700' : '600',
+    ),
+    color: t.color.ink,
+    letterSpacing: t.layout.groupedLists ? -0.21 : 0,
+  },
+  stepPages: {
+    ...studyType(
+      t,
+      t.layout.groupedLists ? 13 : 12,
+      t.layout.groupedLists ? 18.85 : 18,
+    ),
+    color: t.color.ink2,
+    flexShrink: 0,
+  },
+  studyLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginBottom: t.layout.groupedLists ? 5 : 4,
+  },
+  studyLabelText: {
+    ...studyType(t, 12, t.layout.groupedLists ? 17.4 : 18, '600'),
+    color: t.color.ink2,
+    flexShrink: 1,
+  },
+  studyBody: {
+    ...studyType(
+      t,
+      t.layout.groupedLists ? 16 : 14,
+      t.layout.groupedLists ? 25.6 : 23.8,
+    ),
+    color: t.color.ink,
+  },
+  studyCard: {
+    paddingTop: t.layout.groupedLists ? 13 : 12,
+    paddingBottom: t.layout.groupedLists ? 14 : 12,
+    paddingHorizontal: t.layout.groupedLists ? 16 : 14,
+    borderRadius: t.layout.groupedLists ? 20 : 14,
+    borderWidth: t.layout.groupedLists ? 0 : 1,
+    borderColor: t.color.line,
+    backgroundColor: t.color.surface,
+  },
+  resumeLabel: {
+    ...studyType(
+      t,
+      12,
+      t.layout.groupedLists ? 17.4 : 18,
+      t.layout.groupedLists ? '600' : '400',
+    ),
+    color: t.layout.groupedLists ? t.color.accent : t.color.ink3,
+    flexShrink: 1,
+  },
+  resumeBody: {
+    ...studyType(
+      t,
+      t.layout.groupedLists ? 16 : 14,
+      t.layout.groupedLists ? 25.6 : 23.8,
+    ),
+    color: t.color.ink,
+    marginBottom: 6,
+  },
+  source: {
+    backgroundColor: t.layout.groupedLists ? t.color.surface : t.color.paper,
+    borderWidth: t.layout.groupedLists ? 0 : 1,
+    borderColor: t.color.line,
+    borderRadius: t.layout.groupedLists ? 20 : 12,
+    paddingTop: t.layout.groupedLists ? 13 : 10,
+    paddingBottom: t.layout.groupedLists ? 14 : 10,
+    paddingHorizontal: t.layout.groupedLists ? 16 : 12,
+  },
+  sourceText: {
+    ...studyType(
+      t,
+      t.layout.groupedLists ? 16 : 15,
+      t.layout.groupedLists ? 28 : 27,
+    ),
+    fontFamily: t.type.serifFamily,
+    color: t.color.paperInk,
+  },
+  aux: {
+    borderRadius: t.layout.groupedLists ? 20 : 12,
+    paddingTop: 12,
+    paddingBottom: t.layout.groupedLists ? 13 : 12,
+    paddingHorizontal: t.layout.groupedLists ? 16 : 14,
+  },
+  auxText: {
+    ...studyType(t, 16, t.layout.groupedLists ? 25.92 : 28.48),
+    color: t.color.ink,
+  },
+  auxRich: { gap: 8 },
   card: {
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: t.shape.lg,
-    borderWidth: 1,
+    paddingVertical: t.layout.groupedLists ? 13 : 12,
+    paddingHorizontal: t.layout.groupedLists ? 16 : 14,
+    borderRadius: t.layout.groupedLists ? 20 : 14,
+    borderWidth: t.layout.groupedLists ? 0 : 1,
     borderColor: t.color.line,
     backgroundColor: t.color.surface,
     gap: 8,
   },
   cardHeader: {
-    minHeight: 48,
+    minHeight: 18,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingTop: 4 },
+  actions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: t.layout.groupedLists ? 10 : 8,
+  },
   fold: {
     backgroundColor: t.color.surface,
-    borderRadius: t.shape.lg,
-    borderWidth: 1,
+    borderRadius: t.layout.groupedLists ? 20 : 12,
+    borderWidth: t.layout.groupedLists ? 0 : 1,
     borderColor: t.color.line,
     overflow: 'hidden',
   },
   foldHeader: {
-    minHeight: 52,
+    minHeight: t.layout.groupedLists ? 52 : 44,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 0,
+  },
+  foldCheck: {
+    width: t.layout.groupedLists ? 22 : 18,
+    height: t.layout.groupedLists ? 22 : 18,
+    borderRadius: t.layout.groupedLists ? 11 : 9,
+    backgroundColor: t.layout.groupedLists ? t.color.ok : undefined,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  foldTitle: {
+    ...studyType(
+      t,
+      t.layout.groupedLists ? 15 : 14,
+      t.layout.groupedLists ? 21.75 : 21,
+    ),
+    color: t.color.ink,
+  },
+  foldCount: {
+    ...studyType(
+      t,
+      t.layout.groupedLists ? 13 : 12,
+      t.layout.groupedLists ? 18.85 : 18,
+    ),
+    color: t.color.ink2,
+  },
+  foldText: {
+    ...studyType(t, 15, t.layout.groupedLists ? 24.75 : 26.7),
+    color: t.color.ink,
   },
   foldBody: {
-    padding: 14,
-    borderTopWidth: 1,
+    paddingTop: 12,
+    paddingHorizontal: t.layout.groupedLists ? 16 : 14,
+    paddingBottom: t.layout.groupedLists ? 16 : 14,
+    borderTopWidth: t.layout.groupedLists ? 0.5 : 1,
     borderTopColor: t.color.line,
     gap: 10,
   },
-  option: {
-    minHeight: 48,
-    borderWidth: 1,
-    borderRadius: t.shape.md,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+  history: { alignSelf: 'stretch' },
+  historyHeader: {
+    alignSelf: 'center',
+    maxWidth: '100%',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
+    paddingVertical: t.layout.groupedLists ? 6 : 4,
+    paddingHorizontal: t.layout.groupedLists ? 14 : 12,
+    borderRadius: t.layout.groupedLists ? 16 : 14,
+    backgroundColor: t.color.surface,
+    borderWidth: t.layout.groupedLists ? 0 : 1,
+    borderColor: t.color.line,
+  },
+  historyLabel: {
+    ...studyType(
+      t,
+      t.layout.groupedLists ? 13 : 12,
+      t.layout.groupedLists ? 18.85 : 18,
+    ),
+    color: t.color.ink2,
+    flexShrink: 1,
+  },
+  historyBody: { marginTop: 12, gap: 12 },
+  quizLabel: { color: t.color.accent },
+  quizQuestion: {
+    ...studyType(
+      t,
+      t.layout.groupedLists ? 16 : 15,
+      t.layout.groupedLists ? 24.8 : 24,
+      '600',
+    ),
+    color: t.color.ink,
+    marginBottom: 10,
+  },
+  option: {
+    borderWidth: t.layout.groupedLists ? 0 : 1,
+    borderRadius: t.layout.groupedLists ? 16 : 10,
+    paddingVertical: t.layout.groupedLists ? 11 : 9,
+    paddingHorizontal: t.layout.groupedLists ? 14 : 11,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: t.layout.groupedLists ? 7 : 6,
+  },
+  optionText: {
+    ...studyType(
+      t,
+      t.layout.groupedLists ? 15 : 14,
+      t.layout.groupedLists ? 21.75 : 21,
+    ),
+    color: t.color.ink,
+  },
+  optionBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: t.color.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  optionLetter: {
+    ...studyType(t, 13, 18.85, '600'),
+    ...t.type.num,
+    color: t.color.ink2,
+  },
+  typing: {
+    flexDirection: 'row',
+    gap: 5,
+    paddingVertical: 8,
+    paddingHorizontal: 2,
+  },
+  typingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: t.color.ink3,
   },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingVertical: 4,
+    alignSelf: t.layout.groupedLists ? 'center' : 'stretch',
+    maxWidth: '100%',
+    borderRadius: t.layout.groupedLists ? 12 : 0,
+    backgroundColor: t.layout.groupedLists ? t.color.surfaceFill : undefined,
+    paddingVertical: t.layout.groupedLists ? 3 : 0,
+    paddingHorizontal: t.layout.groupedLists ? 10 : 0,
+    marginVertical: t.layout.groupedLists ? 4 : 0,
+  },
+  dividerText: {
+    ...studyType(t, 12, t.layout.groupedLists ? 17.4 : 18),
+    color: t.layout.groupedLists ? t.color.ink2 : t.color.ink3,
+    textAlign: t.layout.groupedLists ? 'center' : 'left',
+    flexShrink: 1,
+  },
+  detourDividerLine: {
+    backgroundColor: t.scheme === 'light' ? '#E3D8F3' : t.color.detourBg,
   },
   line: { height: 1, flex: 1, backgroundColor: t.color.line },
   pageHighlight: {
@@ -1347,14 +1810,14 @@ const useStyles = makeStyles(t => ({
     padding: 4,
   },
   block: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: t.shape.xs,
-    minHeight: 48,
+    paddingVertical: t.layout.groupedLists ? 3 : 2,
+    paddingHorizontal: t.layout.groupedLists ? 10 : 4,
+    borderRadius: t.layout.groupedLists ? 12 : 3,
+    minHeight: 0,
   },
   pin: {
-    minHeight: 48,
-    paddingVertical: 8,
+    minHeight: 0,
+    paddingVertical: 7,
     paddingHorizontal: 12,
     borderRadius: t.shape.pill,
     backgroundColor: t.color.pinBg,

@@ -42,6 +42,13 @@ function render(resetScroll) {
   renderConsole();
 }
 function refresh() { render(false); }
+// 伴读 ⇄ 原文 切换：伴读页和原文页顶栏右侧共用；只在点它切过去的那一次播滑动动画
+let modeSlide = false;
+function modeSwitch(cur, toOther) {
+  const slide = modeSlide; modeSlide = false;
+  return '<div class="mode' + (slide ? ' slide' : '') + '" role="tablist"><span class="thumb on-' + cur + '"></span>' +
+    [['study', '伴读'], ['reader', '原文']].map(([k, l]) => '<button role="tab" aria-selected="' + (k === cur) + '" class="' + (k === cur ? 'on' : '') + '"' + (k === cur ? '' : ' onclick="' + on(() => { modeSlide = true; toOther(); }) + '"') + '>' + l + '</button>').join('') + '</div>';
+}
 
 // ---------- 浮层 ----------
 function closeOverlay() { $('#overlay').innerHTML = ''; const m = $('#app .selmenu'); if (m) m.remove(); }

@@ -21,11 +21,12 @@
 | 设计稿 | 是什么的"真相" |
 | --- | --- |
 | `docs/design/prototype.html`（源文件 `docs/design/prototype/`） | **默认皮肤「纸感」**的视觉、布局、页面清单、交互。所有页面都画全了。颜色、字号、圆角、间距直接取 `shell.html` 里的 CSS |
-| `docs/design/explore/apple.html`（CSS 在 `explore/src/apple.html` 的 `<style>` 里） | **第二皮肤「苹果风」**的视觉参考：材质、色值、圆角、字体、动效。只画了听讲和读书两页，其他页面按 [02-skins.md](02-skins.md) §2（什么必须一样）和 §7（逐页要点）推出来 |
-| `docs/design/explore/src/app.js` | 听讲 / 读书的**新交互**：路线图（步）、原文预览浮层、来源标记（补充推导 / AI 举例）、岔路折叠、问答便签、本节导读、从这里开始讲、读完这一节。原型 `prototype/` 里还没有这些，以 app.js 为准 |
+| `docs/design/prototype-apple.html`（源文件 `docs/design/prototype-apple/`） | **第二皮肤「苹果风」（glass）**的完整参考：所有页面都画全了（含「外观」页），浅色 + 深色。页面集合、导航、文案、操作区域和纸感原型一致，组件形态按 [02-skins.md](02-skins.md) §5、§7 做；听讲 / 读书已包含 app.js 的新交互。颜色、字号、圆角、间距、动效直接取 `base.css` / `pages.css` |
+| `docs/design/explore/apple.html`（CSS 在 `explore/src/apple.html` 的 `<style>` 里） | 苹果风最早的探索稿，只画了听讲和读书两页；glass Token 的出处（02 §4.3）。和 `prototype-apple.html` 冲突时以后者为准 |
+| `docs/design/explore/src/app.js` | 听讲 / 读书的**新交互**：路线图（步）、原文预览浮层、来源标记（补充推导 / AI 举例）、岔路折叠、问答便签、本节导读、从这里开始讲、读完这一节。纸感原型 `prototype/` 里还没有这些，以 app.js 为准（`prototype-apple/` 里已经有了） |
 | explore 下其他风格（google / meta / microsoft / windows11 / play） | V1 不做，只证明换肤架构要能容纳它们 |
 
-原型里的旧叫法按需求文档改掉：「伴读 / 原文」→「听讲 / 读书」，听讲进度单位「段」→「步」（长小节分「段」，每段再分 2–5「步」，见 [05 §5](05-engine-ai.md)）。
+用户于 2026-10-29 要求两套 UI 严格遵循各自原型：顶部模式保持原型的「伴读 / 原文」及左右顺序。引擎与开发文档仍用「听讲 / 读书」表示这两种模式；路线图进度用「步」（长小节分「段」，每段再分 2–5「步」，见 [05 §5](05-engine-ai.md)）。
 
 原型里的书名、目录来自真书，**页码、原文、讲解、闪卡都是示意内容**，只能当演示数据（Demo 模式，见 [07 T3](07-plan.md)），不能出现在正式数据里。
 

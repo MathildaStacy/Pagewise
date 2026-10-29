@@ -176,15 +176,27 @@ export const prefsSamples: Record<string, PrefsState> = {
 export const storageSamples: Record<string, StorageState> = {
   normal: {
     ...ready,
+    includeOriginals: false,
+    confirmClean: null,
+    confirmReparse: null,
+    confirmRestore: false,
     books: [
       {
         id: 'aima',
         title: '人工智能：现代方法（第4版）',
-        meta: '原文件 418.0 MB · 解析结果待文件服务统计',
+        meta: '原文件 418.0 MB · 解析结果 12.0 MB',
+        needsReparse: false,
       },
     ],
   },
-  empty: { ...ready, books: [] },
+  empty: {
+    ...ready,
+    includeOriginals: false,
+    confirmClean: null,
+    confirmReparse: null,
+    confirmRestore: false,
+    books: [],
+  },
 };
 export const aboutSamples: Record<string, AboutState> = {
   normal: { ...ready, demo: false, development: true, version: '0.0.1' },

@@ -4,6 +4,8 @@ const ts = require('typescript');
 
 // TODO(Q-9): 页面只读取 RN 展示 API，副作用入口留在平台/应用层。
 const presentationImports = [
+  'Animated',
+  'Easing',
   'View',
   'Text',
   'TextInput',

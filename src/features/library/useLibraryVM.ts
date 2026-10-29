@@ -16,7 +16,20 @@ import {
 } from '@app/usecases/library';
 import { useAppNav } from '@features/nav';
 import {
-  bookMeta,
+  confirmImportDraft,
+  describeImportParts,
+  importPriorityPages,
+  importCoverColor,
+  listImportDrafts,
+  pickImportDraft,
+  type ImportSelection,
+} from '@app/usecases/importBooks';
+import { getParseQueue } from '@app/usecases/parseQueue';
+import {
+  loadEpubImportError,
+  loadParseWarnings,
+} from '@app/usecases/importResults';
+import {
   markSnippet,
   pageRange,
   parsePart,
@@ -94,12 +107,32 @@ export function useShelfVM() {
       .catch(fail);
   };
   const pickRecent = (key: string) => {
+    if (c.mode !== 'demo') {
+      setState(s => ({ ...s, overlay: null }));
+      nav.open({ name: 'ImportSettings', draftId: key });
+      return;
+    }
     createDemoImportDraft(c, key)
       .then(draftId => {
         setState(s => ({ ...s, overlay: null }));
         nav.open({ name: 'ImportSettings', draftId });
       })
       .catch(fail);
+  };
+  const selected = (result: ImportSelection | null) => {
+    if (!result) return;
+    setState(s => ({
+      ...s,
+      overlay: null,
+      toast:
+        result.kind === 'duplicate'
+          ? result.restored
+            ? '原文件已补回，学习记录已保留'
+            : '这本书已经在书架上了'
+          : null,
+    }));
+    if (result.kind === 'duplicate') openBook(result.bookId);
+    else nav.open({ name: 'ImportSettings', draftId: result.draftId });
   };
   return {
     state,
@@ -110,7 +143,7 @@ export function useShelfVM() {
         if (state.continueCard)
           nav.open({ name: 'Study', bookId: state.continueCard.bookId });
       },
-      openImport: () =>
+      openImport: () => {
         setState(s => ({
           ...s,
           toast: null,
@@ -128,7 +161,20 @@ export function useShelfVM() {
             note: '支持 PDF 和 EPUB。也可以在其他 App 里把文件“分享到 Pagewise”。同一本书按文件内容识别，不会重复解析。',
             busy: false,
           },
-        })),
+        }));
+        if (c.mode !== 'demo')
+          listImportDrafts(c)
+            .then(recent =>
+              setState(s => ({
+                ...s,
+                overlay:
+                  s.overlay?.kind === 'import'
+                    ? { ...s.overlay, recent }
+                    : s.overlay,
+              })),
+            )
+            .catch(fail);
+      },
       openSearch: () =>
         setState(s => ({
           ...s,
@@ -153,11 +199,35 @@ export function useShelfVM() {
         })),
       closeOverlay: () => setState(s => ({ ...s, overlay: null, toast: null })),
       pickRecent,
-      pickOther: () =>
+      pickOther: () => {
+        if (c.mode === 'demo') {
+          setState(s => ({
+            ...s,
+            toast: '当前是演示书库，请切换到我的书库后导入文件',
+          }));
+          return;
+        }
+        if (state.overlay?.kind === 'import' && state.overlay.busy) return;
         setState(s => ({
           ...s,
-          toast: '系统文件选择将在导入功能中接入。可先使用演示书库体验。',
-        })),
+          overlay:
+            s.overlay?.kind === 'import'
+              ? { ...s.overlay, busy: true }
+              : s.overlay,
+        }));
+        pickImportDraft(c)
+          .then(selected)
+          .catch(fail)
+          .finally(() =>
+            setState(s => ({
+              ...s,
+              overlay:
+                s.overlay?.kind === 'import'
+                  ? { ...s.overlay, busy: false }
+                  : s.overlay,
+            })),
+          );
+      },
     },
   };
 }
@@ -209,7 +279,8 @@ export function useBookMapVM(bookId: string) {
     loadSection(c, bookId, id)
       .then(value => {
         if (!mounted.current) return;
-        const { section, parent, study, qa, stuck, blocks, plan } = value;
+        const { section, parent, study, qa, stuck, blocks, plan, userText } =
+          value;
         if (section.flag) {
           setLocal(s => ({
             ...s,
@@ -218,7 +289,10 @@ export function useBookMapVM(bookId: string) {
               kind: 'flag',
               id,
               title: `确认 ${section.no ?? section.id} 的标题`,
-              body: `${section.title}（${pageRange(section)}）需要核对。${
+              body: `${section.title}（${pageRange(
+                section,
+                record?.book,
+              )}）需要核对。${
                 section.flag === 'merged'
                   ? '识别结果已将相邻标题合并。可以保持合并；如正文存在第二个标题，也可以拆成两个小节。'
                   : '确认后会保留为手动修正的小节，重新解析时不会覆盖。'
@@ -239,7 +313,7 @@ export function useBookMapVM(bookId: string) {
             title: sectionName(section),
             subtitle: parent ? sectionName(parent) : '',
             facts: [
-              { k: '页码', v: pageRange(section) },
+              { k: '页码', v: pageRange(section, record?.book) },
               {
                 k: '状态',
                 v:
@@ -255,7 +329,7 @@ export function useBookMapVM(bookId: string) {
                       }`
                     : '未学',
               },
-              { k: '问答', v: `${qa.length} 条` },
+              ...(qa.length ? [{ k: '问答', v: `${qa.length} 条` }] : []),
             ],
             summary: section.summary ?? undefined,
             stuck: stuck.map(item => item.text),
@@ -263,7 +337,9 @@ export function useBookMapVM(bookId: string) {
               ...(blocks.length
                 ? [{ key: 'read' as const, label: '看原文' }]
                 : []),
-              { key: 'notes', label: '看笔记' },
+              ...(qa.length || section.summary || userText?.user_text
+                ? [{ key: 'notes' as const, label: '看笔记' }]
+                : []),
               {
                 key: 'start',
                 label: current
@@ -415,19 +491,26 @@ export function useBookMapVM(bookId: string) {
                       busy: false,
                       results: hits.map(hit => ({
                         ref: hit.ref,
-                        title:
-                          record?.sections.find(
+                        title: (() => {
+                          const foundSection = record?.sections.find(
                             section => section.id === hit.section_id,
-                          )?.title ?? '正文',
+                          );
+                          return foundSection
+                            ? sectionName(foundSection)
+                            : '正文';
+                        })(),
                         snippet: markSnippet(hit.snippet, query),
                         page:
                           hit.page === null
                             ? hit.loc ?? '章节位置'
-                            : `p.${hit.page - (record?.book.page_offset ?? 0)}`,
+                            : pageRange(
+                                { page_from: hit.page, page_to: hit.page },
+                                record?.book,
+                              ),
                       })),
                       empty:
                         query.trim() && !hits.length
-                          ? '没有找到，试试更短的词'
+                          ? `没有找到「${query.trim()}」`
                           : undefined,
                     }
                   : s.overlay,
@@ -460,23 +543,49 @@ export function useParseProgressVM(bookId: string) {
     demo: c.mode === 'demo',
   });
   const refresh = useCallback(() => {
-    loadParseProgress(c, bookId)
-      .then(({ book, parts }) =>
+    Promise.all([
+      loadParseProgress(c, bookId),
+      loadParseWarnings(c, bookId),
+      loadEpubImportError(c, bookId),
+    ])
+      .then(([{ book, parts }, warnings, epubError]) =>
         setState(s => ({
           ...s,
           loading: false,
-          error: null,
+          error:
+            book.format === 'epub' && book.status === 'failed'
+              ? epubError ?? 'EPUB 没能完成解析，请检查文件后重试'
+              : null,
           title: book.title,
-          meta: bookMeta(book),
+          meta:
+            book.format === 'pdf'
+              ? [
+                  book.pages ? `${book.pages} 页` : null,
+                  'MinerU',
+                  book.parse_model,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')
+              : 'EPUB · 本机解析',
           cover: { title: book.title, color: book.cover_color },
-          parts: parts.map(parsePart),
-          ready: book.ready_to_page > 0 || book.status === 'ready',
+          parts: parts.map(part => ({
+            ...parsePart(part),
+            warning: warnings[String(part.part_no)],
+          })),
+          ready:
+            parts.some(p => p.stage === 'done') ||
+            book.ready_to_page > 0 ||
+            book.status === 'ready',
           footer:
             book.status === 'ready'
-              ? '全书已解析完成，地图已就绪'
+              ? book.format === 'pdf' && book.has_outline
+                ? '全书已解析完成，书的地图已和书签核对。'
+                : '全书已解析完成，书的地图已就绪。'
+              : book.format === 'epub'
+              ? '正在本机解析 EPUB，完成后即可学习。'
               : book.ready_to_page
               ? `p.1–${book.ready_to_page} 已就绪，这部分的章节现在就能学。`
-              : '每片完成后，那部分的章节就能开始学。',
+              : '解析在后台进行，可以离开这个页面。每片完成后，那部分的章节就能开始学。',
         })),
       )
       .catch(error =>
@@ -492,15 +601,25 @@ export function useParseProgressVM(bookId: string) {
     intents: {
       back: nav.back,
       refresh,
-      retryPart: (_number: number) =>
-        setState(s => ({
-          ...s,
-          toast:
-            c.mode === 'demo'
-              ? '这是演示进度。真实解析队列将在导入功能中接入。'
-              : '解析队列将在导入功能中接入。',
-        })),
+      retryPart: (number: number, ocr = false) => {
+        if (c.mode === 'demo') {
+          setState(s => ({
+            ...s,
+            toast: '这是演示进度，不会上传文件或消耗额度',
+          }));
+          return;
+        }
+        getParseQueue(c)
+          .retry(bookId, number, { ocr })
+          .then(refresh)
+          .catch(error => setState(s => ({ ...s, toast: message(error) })));
+      },
       goUpdateToken: () => nav.open({ name: 'MeMineru' }),
+      retryBook: () =>
+        getParseQueue(c)
+          .retry(bookId, 0)
+          .then(refresh)
+          .catch(error => setState(s => ({ ...s, toast: message(error) }))),
       openMap: () => nav.open({ name: 'BookMap', bookId }),
     },
   };
@@ -509,6 +628,8 @@ export function useImportSettingsVM(draftId: string) {
   const c = useContainer();
   const nav = useAppNav();
   const [existing, setExisting] = useState<string | null>(null);
+  const draftMeta = useRef({ pages: 0, size: 0 });
+  const submitting = useRef(false);
   const [state, setState] = useState<ImportSettingsState>({
     loading: true,
     error: null,
@@ -534,6 +655,7 @@ export function useImportSettingsVM(draftId: string) {
       .then(({ info, mineru }) => {
         if (!active) return;
         const pages = Number(info.pages) || 0;
+        draftMeta.current = { pages, size: Number(info.size_bytes ?? 0) };
         const format = info.format === 'epub' ? 'EPUB' : 'PDF';
         setExisting(
           typeof info.existingBookId === 'string' ? info.existingBookId : null,
@@ -543,6 +665,11 @@ export function useImportSettingsVM(draftId: string) {
           loading: false,
           title: String(info.title ?? '导入的书'),
           subtitle: String(info.author ?? ''),
+          fileName: typeof info.name === 'string' ? info.name : undefined,
+          cover: {
+            title: String(info.title ?? '导入的书'),
+            color: importCoverColor(String(info.title ?? '导入的书')),
+          },
           format,
           facts: [
             {
@@ -555,21 +682,28 @@ export function useImportSettingsVM(draftId: string) {
                 1,
               )} MB`,
             },
-            {
-              label: '文字层',
-              value: info.has_text_layer ? '有' : '没有 · 扫描版',
-            },
-            {
-              label: '书签目录',
-              value: info.has_outline ? '有 · 用来核对地图' : '没有',
-            },
+            ...(format === 'PDF'
+              ? [
+                  {
+                    label: '文字层',
+                    value: info.has_text_layer ? '有' : '没有 · 扫描版',
+                  },
+                  {
+                    label: '书签目录',
+                    value: info.has_outline ? '有 · 用来核对地图' : '没有',
+                  },
+                ]
+              : [
+                  {
+                    label: '目录',
+                    value: info.has_outline ? '有' : '解析后确定',
+                  },
+                  { label: '解析位置', value: '本机' },
+                ]),
           ],
           ocr: !info.has_text_layer,
           parts: pages
-            ? Array.from(
-                { length: Math.ceil(pages / 200) },
-                (_, i) => `p.${i * 200 + 1}–${Math.min((i + 1) * 200, pages)}`,
-              ).join('、')
+            ? describeImportParts(pages, Number(info.size_bytes), 1)
             : 'EPUB 在本机解析',
           quota: `${
             mineru.usedToday?.date === c.clock.today()
@@ -579,7 +713,13 @@ export function useImportSettingsVM(draftId: string) {
             (mineru.usedToday?.date === c.clock.today()
               ? mineru.usedToday.pages
               : 0) + pages
-          } / 1000`,
+          } / ${importPriorityPages}`,
+          overQuota:
+            (mineru.usedToday?.date === c.clock.today()
+              ? mineru.usedToday.pages
+              : 0) +
+              pages >
+            importPriorityPages,
           confirmUpload: mineru.confirmUpload ?? true,
           canStart: true,
         }));
@@ -593,15 +733,27 @@ export function useImportSettingsVM(draftId: string) {
     };
   }, [c, draftId]);
   const confirm = () => {
+    if (submitting.current || !state.canStart) return;
     setState(s => ({ ...s, overlay: false }));
     if (existing) {
       setState(s => ({ ...s, toast: '这本书已经在书架上了' }));
       nav.replace({ name: 'BookMap', bookId: existing });
-    } else
-      setState(s => ({
-        ...s,
-        toast: '文件上传与解析队列将在导入功能中接入。',
-      }));
+    } else {
+      submitting.current = true;
+      setState(s => ({ ...s, canStart: false, error: null }));
+      confirmImportDraft(c, draftId, {
+        model: state.model,
+        ocr: state.ocr,
+        priorityFrom: Number(state.priorityFrom),
+      })
+        .then(bookId => nav.replace({ name: 'ParseProgress', bookId }))
+        .catch(error =>
+          setState(s => ({ ...s, error: message(error), canStart: true })),
+        )
+        .finally(() => {
+          submitting.current = false;
+        });
+    }
   };
   return {
     state,
@@ -620,13 +772,29 @@ export function useImportSettingsVM(draftId: string) {
       },
       setOcr: (ocr: boolean) => setState(s => ({ ...s, ocr })),
       setPriorityFrom: (priorityFrom: string) =>
-        setState(s => ({ ...s, priorityFrom })),
+        setState(s => {
+          const { pages, size } = draftMeta.current,
+            value = Number(priorityFrom);
+          return {
+            ...s,
+            priorityFrom,
+            parts:
+              Number.isInteger(value) && value >= 1 && value <= pages
+                ? describeImportParts(pages, size, value)
+                : s.parts,
+          };
+        }),
       start: () => {
         if (
           !/^\d+$/.test(state.priorityFrom) ||
-          Number(state.priorityFrom) < 1
+          Number(state.priorityFrom) < 1 ||
+          (state.format === 'PDF' &&
+            Number(state.priorityFrom) > draftMeta.current.pages)
         ) {
-          setState(s => ({ ...s, error: '开始页码需要是大于 0 的整数' }));
+          setState(s => ({
+            ...s,
+            error: `开始页码需要是大于 0 且不超过 ${draftMeta.current.pages} 的整数`,
+          }));
           return;
         }
         if (state.format === 'PDF' && state.confirmUpload)

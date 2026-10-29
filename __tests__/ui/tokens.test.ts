@@ -131,7 +131,7 @@ describe('design token completeness', () => {
   it('keeps specified body scales, shapes, and motion timings', () => {
     expect(paperTokens.light.type.aiBody).toMatchObject({
       fontSize: 16,
-      lineHeight: 28,
+      lineHeight: 28.48,
     });
     expect(paperTokens.light.type.bookBody).toMatchObject({
       fontSize: 16.5,

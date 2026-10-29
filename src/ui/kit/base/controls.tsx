@@ -1,7 +1,7 @@
 import {
   Pressable,
   ScrollView,
-  Switch as NativeSwitch,
+  StyleSheet,
   Text,
   TextInput,
   View,
@@ -12,7 +12,7 @@ import { useTokens } from '../context';
 import { Icon } from '../Icon';
 import { makeStyles } from '../makeStyles';
 import * as Kit from '../proxy';
-import { Children } from 'react';
+import { Children, cloneElement, isValidElement, useState } from 'react';
 
 function tonePair(t: ReturnType<typeof useTokens>, tone: Tone = 'neutral') {
   const c = t.color;
@@ -54,7 +54,14 @@ function textTone(
 }
 
 export function Screen({ scroll, edges, children, style }: KitProps['Screen']) {
-  const s = useStyles();
+  const s = useStyles(),
+    t = useTokens();
+  const [scrollY, setScrollY] = useState(0);
+  const parts = Children.toArray(children);
+  const first = parts[0];
+  const hasHeader =
+    isValidElement<KitProps['AppBar']>(first) && first.type === Kit.AppBar;
+  const header = hasHeader ? cloneElement(first, { scrollY }) : null;
   return (
     <SafeAreaView
       edges={edges}
@@ -63,12 +70,20 @@ export function Screen({ scroll, edges, children, style }: KitProps['Screen']) {
       accessibilityLabel="页面"
       accessibilityState={{}}
     >
+      {scroll && hasHeader ? header : null}
       {scroll ? (
         <ScrollView
-          contentContainerStyle={s.scrollContent}
+          onScroll={event => setScrollY(event.nativeEvent.contentOffset.y)}
+          scrollEventThrottle={16}
+          contentContainerStyle={[
+            s.scrollContent,
+            hasHeader && first.props.variant === 'root' && t.layout.groupedLists
+              ? s.floatingTabSpace
+              : undefined,
+          ]}
           keyboardShouldPersistTaps="handled"
         >
-          {children}
+          {hasHeader ? parts.slice(1) : children}
         </ScrollView>
       ) : (
         children
@@ -105,9 +120,10 @@ export function AppBar({
           ) : null}
         </View>
       ) : null}
-      <View style={[s.grow, variant === 'push' && s.center]}>
+      <View style={[s.grow, variant === 'push' ? s.center : s.rootTitle]}>
         <Text
           accessibilityRole="header"
+          numberOfLines={1}
           style={[variant === 'root' ? t.type.largeTitle : t.type.title, s.ink]}
         >
           {title}
@@ -142,7 +158,7 @@ export function TabBar({ items, active, onSelect }: KitProps['TabBar']) {
             <Icon
               name={item.icon}
               size={22}
-              color={active === item.key ? t.color.accentInk : t.color.ink2}
+              color={active === item.key ? t.color.accent : t.color.ink3}
             />
             {item.badge != null ? (
               <Text style={s.badge}>{item.badge}</Text>
@@ -151,7 +167,11 @@ export function TabBar({ items, active, onSelect }: KitProps['TabBar']) {
           <Text
             style={[
               s.micro,
-              { color: active === item.key ? t.color.accentInk : t.color.ink2 },
+              StyleSheet.create({
+                root: {
+                  color: active === item.key ? t.color.accent : t.color.ink3,
+                },
+              }).root,
             ]}
           >
             {item.label}
@@ -182,6 +202,7 @@ export function Segmented({
           accessibilityRole="radio"
           accessibilityLabel={option.label}
           accessibilityState={{ checked: value === option.key }}
+          hitSlop={7}
           onPress={() => onChange(option.key)}
           style={({ pressed }) => [
             s.segment,
@@ -208,10 +229,11 @@ export function ModeSwitch({ value, onChange }: KitProps['ModeSwitch']) {
       accessibilityLabel="学习方式"
       accessibilityState={{}}
     >
+      <View style={s.modeTrack} />
       {(
         [
-          { key: 'read', label: '读书' },
-          { key: 'listen', label: '听讲' },
+          { key: 'listen', label: '伴读' },
+          { key: 'read', label: '原文' },
         ] as const
       ).map(item => (
         <Pressable
@@ -219,24 +241,30 @@ export function ModeSwitch({ value, onChange }: KitProps['ModeSwitch']) {
           accessibilityRole="radio"
           accessibilityLabel={item.label}
           accessibilityState={{ checked: value === item.key }}
+          hitSlop={9}
           onPress={() => onChange(item.key)}
-          style={({ pressed }) => [
-            s.modeItem,
-            value === item.key && { backgroundColor: t.color.accent },
-            pressed && { opacity: 0.75 },
-          ]}
+          style={({ pressed }) => [s.modeItem, pressed && { opacity: 0.75 }]}
         >
-          <Text
+          <View
             style={[
-              s.label,
-              {
-                color:
-                  value === item.key ? t.color.onAccent : t.color.accentInk,
-              },
+              s.modeVisual,
+              value === item.key && { backgroundColor: t.color.accent },
             ]}
           >
-            {item.label}
-          </Text>
+            <Text
+              style={[
+                s.label,
+                StyleSheet.create({
+                  root: {
+                    color:
+                      value === item.key ? t.color.onAccent : t.color.accentInk,
+                  },
+                }).root,
+              ]}
+            >
+              {item.label}
+            </Text>
+          </View>
         </Pressable>
       ))}
     </View>
@@ -249,21 +277,44 @@ export function Switch({
   accessibilityLabel,
   disabled,
 }: KitProps['Switch']) {
-  const s = useStyles();
   const t = useTokens();
   return (
-    <View style={s.switchTarget}>
-      <NativeSwitch
-        value={value}
-        onValueChange={onChange}
-        disabled={disabled}
-        accessibilityRole="switch"
-        accessibilityLabel={accessibilityLabel}
-        accessibilityState={{ checked: value, disabled: !!disabled }}
-        trackColor={{ false: t.color.line, true: t.color.accent }}
-        thumbColor={t.color.surface}
+    <Pressable
+      accessibilityRole="switch"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ checked: value, disabled: !!disabled }}
+      disabled={disabled}
+      onPress={() => onChange(!value)}
+      hitSlop={12}
+      style={
+        StyleSheet.create({
+          root: {
+            width: 42,
+            height: 24,
+            borderRadius: 12,
+            backgroundColor: value ? t.color.accent : t.color.switchOff,
+            opacity: disabled ? 0.45 : 1,
+          },
+        }).root
+      }
+    >
+      <View
+        style={
+          StyleSheet.create({
+            root: {
+              position: 'absolute',
+              left: value ? 20 : 2,
+              top: 2,
+              width: 20,
+              height: 20,
+              borderRadius: 10,
+              backgroundColor: t.color.continueInk,
+              boxShadow: '0 1px 2px rgba(0,0,0,.2)',
+            },
+          }).root
+        }
       />
-    </View>
+    </Pressable>
   );
 }
 
@@ -308,6 +359,7 @@ export function Button({
       }
       accessibilityState={{ disabled: !!disabled }}
       disabled={disabled}
+      hitSlop={size === 'sm' ? 9 : 3}
       onPress={onPress}
       style={({ pressed }) => [
         s.button,
@@ -328,7 +380,21 @@ export function Button({
       typeof children !== 'number' ? (
         children
       ) : (
-        <Text style={[s.label, { color: fg }]}>{label ?? children}</Text>
+        <Text
+          style={[
+            s.label,
+            StyleSheet.create({
+              label: {
+                fontSize:
+                  size === 'sm' ? t.type.label.fontSize : t.type.body.fontSize,
+                fontWeight: '500',
+                color: fg,
+              },
+            }).label,
+          ]}
+        >
+          {label ?? children}
+        </Text>
       )}
     </Pressable>
   );
@@ -349,6 +415,7 @@ export function IconButton({
       accessibilityLabel={label}
       accessibilityState={{ disabled: !!disabled }}
       disabled={disabled}
+      hitSlop={4}
       onPress={onPress}
       style={({ pressed }) => [
         s.iconButton,
@@ -356,7 +423,11 @@ export function IconButton({
         disabled && { opacity: 0.45 },
       ]}
     >
-      <Icon name={icon} size={22} color={t.color.ink2} />
+      <Icon
+        name={icon}
+        size={t.layout.groupedLists ? 24 : 22}
+        color={t.layout.groupedLists ? t.color.accent : t.color.ink2}
+      />
       {badge != null ? <Text style={s.badge}>{badge}</Text> : null}
     </Pressable>
   );
@@ -364,25 +435,65 @@ export function IconButton({
 
 export function QuickActions({ items, onPress }: KitProps['QuickActions']) {
   const s = useStyles();
+  const t = useTokens();
   return (
     <ScrollView
       horizontal
+      style={s.quickViewport}
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={s.quick}
       accessibilityRole="toolbar"
       accessibilityLabel="快捷动作"
       accessibilityState={{}}
     >
-      {items.map(item => (
-        <Kit.Button
-          key={item.key}
-          variant={item.kind ?? 'ghost'}
-          size="sm"
-          label={item.label}
-          icon={item.icon}
-          onPress={() => onPress(item.key)}
-        />
-      ))}
+      {items.map(item => {
+        const solid = item.kind === 'primary' || item.kind === 'detour';
+        const color = solid ? t.color.onAccent : t.color.ink2;
+        const background =
+          item.kind === 'primary'
+            ? t.color.accent
+            : item.kind === 'detour'
+            ? t.color.detour
+            : t.color.surface;
+        return (
+          <Pressable
+            key={item.key}
+            accessibilityRole="button"
+            accessibilityLabel={item.label}
+            accessibilityState={{ disabled: false }}
+            onPress={() => onPress(item.key)}
+            style={s.quickTarget}
+          >
+            {({ pressed }) => (
+              <View
+                style={[
+                  s.quickChip,
+                  StyleSheet.create({
+                    root: {
+                      backgroundColor: background,
+                      borderColor: solid ? background : t.color.line,
+                    },
+                  }).root,
+                  pressed && s.quickPressed,
+                ]}
+              >
+                {item.icon ? (
+                  <Icon name={item.icon} color={color} size={16} />
+                ) : null}
+                <Text
+                  style={[
+                    s.quickLabel,
+                    StyleSheet.create({ root: { color } }).root,
+                    solid && s.quickStrong,
+                  ]}
+                >
+                  {item.label}
+                </Text>
+              </View>
+            )}
+          </Pressable>
+        );
+      })}
     </ScrollView>
   );
 }
@@ -439,13 +550,34 @@ export function Composer({
             onPress={onStop}
           />
         ) : (
-          <Kit.Button
-            variant="primary"
-            icon="send"
-            label="发送"
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="发送"
+            accessibilityState={{ disabled: !!sendDisabled }}
             disabled={sendDisabled}
             onPress={onSend}
-          />
+            style={s.sendTarget}
+          >
+            {({ pressed }) => (
+              <View
+                style={[
+                  s.sendCircle,
+                  StyleSheet.create({
+                    root: {
+                      backgroundColor: sendDisabled
+                        ? t.color.ink3
+                        : t.color.accent,
+                    },
+                  }).root,
+                  pressed && s.quickPressed,
+                ]}
+              >
+                <View style={s.sendArrow}>
+                  <Icon name="arrowDown" size={20} color={t.color.onAccent} />
+                </View>
+              </View>
+            )}
+          </Pressable>
         )}
       </View>
     </View>
@@ -470,64 +602,60 @@ export function StepProgress({
     >
       <View style={s.inline}>
         <Pressable
+          hitSlop={10}
           onPress={onPressBar}
           accessibilityRole="button"
           accessibilityLabel={`${label}，查看路线图`}
           accessibilityState={{}}
           style={s.progressLabel}
         >
-          <Text style={s.caption}>{label}</Text>
-        </Pressable>
-        <View style={s.grow} />
-        {right}
-      </View>
-      <View style={s.inline}>
-        {steps.map((step, index) => (
-          <Pressable
-            key={`${index}-${step.title}`}
-            onPress={() => onPressStep(index)}
-            accessibilityRole="button"
-            accessibilityLabel={`${index + 1}. ${step.title}，${
-              {
-                done: '已讲',
-                current: '当前',
-                skipped: '已跳过',
-                todo: '未讲',
-              }[step.state]
-            }`}
-            accessibilityState={{ selected: step.state === 'current' }}
-            style={s.stepTarget}
+          <Text
+            style={[
+              s.caption,
+              StyleSheet.create({ root: { color: t.color.ink3 } }).root,
+            ]}
           >
-            <View
-              style={[
-                s.stepMark,
+            {label}
+          </Text>
+        </Pressable>
+        <View style={s.progressSteps}>
+          {steps.map((step, index) => (
+            <Pressable
+              key={`${index}-${step.title}`}
+              hitSlop={{ top: 15, bottom: 15, left: 0, right: 0 }}
+              onPress={() => onPressStep(index)}
+              accessibilityRole="button"
+              accessibilityLabel={`${index + 1}. ${step.title}，${
                 {
-                  backgroundColor:
-                    step.state === 'done'
-                      ? t.color.stepDone
-                      : step.state === 'current'
-                      ? t.color.stepCur
-                      : t.color.stepTodo,
-                },
-                step.state === 'skipped' && s.skippedMark,
-              ]}
-            />
-            {step.state === 'done' ? (
-              <Icon name="check" size={14} color={t.color.accent} />
-            ) : step.state === 'skipped' ? (
-              <Icon name="skip" size={14} color={t.color.ink3} />
-            ) : (
-              <Text
+                  done: '已讲',
+                  current: '当前',
+                  skipped: '已跳过',
+                  todo: '未讲',
+                }[step.state]
+              }`}
+              accessibilityState={{ selected: step.state === 'current' }}
+              style={s.stepTarget}
+            >
+              <View
                 style={[
-                  s.micro,
-                  step.state === 'current' && { color: t.color.accent },
+                  s.stepMark,
+                  StyleSheet.create({
+                    root: {
+                      backgroundColor:
+                        step.state === 'done'
+                          ? t.color.stepDone
+                          : step.state === 'current'
+                          ? t.color.stepCur
+                          : t.color.stepTodo,
+                    },
+                  }).root,
+                  step.state === 'skipped' && s.skippedMark,
                 ]}
-              >
-                {index + 1}
-              </Text>
-            )}
-          </Pressable>
-        ))}
+              />
+            </Pressable>
+          ))}
+        </View>
+        {right}
       </View>
     </View>
   );
@@ -548,7 +676,15 @@ export function DetourBanner({
       accessibilityState={{}}
     >
       <Icon name="branch" color={t.color.detour} />
-      <Text style={[s.label, s.grow, { color: t.color.detour }]}>{title}</Text>
+      <Text
+        style={[
+          s.label,
+          s.grow,
+          StyleSheet.create({ root: { color: t.color.detour } }).root,
+        ]}
+      >
+        {title}
+      </Text>
       <Kit.Button
         variant="detour"
         size="sm"
@@ -604,7 +740,9 @@ export function Row({
         <Text
           style={[
             s.body,
-            { color: tone ? textTone(t, tone, fg) : t.color.ink },
+            StyleSheet.create({
+              root: { color: tone ? textTone(t, tone, fg) : t.color.ink },
+            }).root,
           ]}
         >
           {title}
@@ -675,7 +813,10 @@ export function Field({
       {error ? (
         <Text
           accessibilityRole="alert"
-          style={[s.caption, { color: t.color.badInk }]}
+          style={[
+            s.caption,
+            StyleSheet.create({ root: { color: t.color.badInk } }).root,
+          ]}
         >
           {error}
         </Text>
@@ -695,13 +836,21 @@ export function Note({ tone, children }: KitProps['Note']) {
   const text = plain ? parts.join('') : null;
   return (
     <View
-      style={[s.note, { backgroundColor: bg }]}
+      style={[
+        s.note,
+        StyleSheet.create({ root: { backgroundColor: bg } }).root,
+      ]}
       accessibilityRole={tone === 'bad' ? 'alert' : 'text'}
       accessibilityLabel={text ?? '提示'}
       accessibilityState={{}}
     >
       {plain ? (
-        <Text style={[s.caption, { color: textTone(t, tone, fg) }]}>
+        <Text
+          style={[
+            s.caption,
+            StyleSheet.create({ root: { color: textTone(t, tone, fg) } }).root,
+          ]}
+        >
           {text}
         </Text>
       ) : (
@@ -709,7 +858,11 @@ export function Note({ tone, children }: KitProps['Note']) {
           typeof child === 'string' || typeof child === 'number' ? (
             <Text
               key={index}
-              style={[s.caption, { color: textTone(t, tone, fg) }]}
+              style={[
+                s.caption,
+                StyleSheet.create({ root: { color: textTone(t, tone, fg) } })
+                  .root,
+              ]}
             >
               {child}
             </Text>
@@ -728,12 +881,23 @@ export function Tag({ tone, label }: KitProps['Tag']) {
   const [fg, bg] = tonePair(t, tone);
   return (
     <View
-      style={[s.tag, { backgroundColor: bg, borderColor: fg }]}
+      style={[
+        s.tag,
+        StyleSheet.create({ root: { backgroundColor: bg, borderColor: fg } })
+          .root,
+      ]}
       accessibilityRole="text"
       accessibilityLabel={label}
       accessibilityState={{}}
     >
-      <Text style={[s.micro, { color: textTone(t, tone, fg) }]}>{label}</Text>
+      <Text
+        style={[
+          s.micro,
+          StyleSheet.create({ root: { color: textTone(t, tone, fg) } }).root,
+        ]}
+      >
+        {label}
+      </Text>
     </View>
   );
 }
@@ -752,7 +916,12 @@ export function ProgressBar({ value, tone }: KitProps['ProgressBar']) {
       style={s.track}
     >
       <View
-        style={[s.fill, { width: `${progress * 100}%`, backgroundColor: fg }]}
+        style={[
+          s.fill,
+          StyleSheet.create({
+            root: { width: `${progress * 100}%`, backgroundColor: fg },
+          }).root,
+        ]}
       />
     </View>
   );
@@ -788,9 +957,18 @@ export function StageStrip({ stages }: KitProps['StageStrip']) {
               ]
             }`}
             accessibilityState={{ busy: stage.state === 'current' }}
-            style={[s.stage, { backgroundColor: bg }]}
+            style={[
+              s.stage,
+              StyleSheet.create({ root: { backgroundColor: bg } }).root,
+            ]}
           >
-            <Text style={[s.micro, { color: textTone(t, tone, fg) }]}>
+            <Text
+              style={[
+                s.micro,
+                StyleSheet.create({ root: { color: textTone(t, tone, fg) } })
+                  .root,
+              ]}
+            >
               {stage.label}
             </Text>
           </View>
@@ -811,10 +989,24 @@ export function Cover({ title, color, size = 'md' }: KitProps['Cover']) {
       accessibilityState={{}}
       style={[
         s.cover,
-        { width, minHeight: width * 1.37, backgroundColor: color },
+        StyleSheet.create({
+          root: {
+            width,
+            height: width * (t.layout.groupedLists ? 76 / 54 : 74 / 54),
+            backgroundColor: color,
+          },
+        }).root,
       ]}
     >
-      <Text style={[s.micro, { color: t.color.onAccent }]}>{title}</Text>
+      <Text
+        style={[
+          s.micro,
+          StyleSheet.create({ root: { color: t.color.onAccent } }).root,
+        ]}
+        numberOfLines={3}
+      >
+        {Array.from(title).slice(0, 12).join('')}
+      </Text>
     </View>
   );
 }
@@ -828,7 +1020,7 @@ export function StatusDot({ tone }: KitProps['StatusDot']) {
       accessibilityRole="image"
       accessibilityLabel={`${tone}状态`}
       accessibilityState={{}}
-      style={[s.dot, { backgroundColor: fg }]}
+      style={[s.dot, StyleSheet.create({ root: { backgroundColor: fg } }).root]}
     />
   );
 }
@@ -851,16 +1043,23 @@ export function SectionStatusIcon({ status }: KitProps['SectionStatusIcon']) {
       accessibilityState={{}}
       style={[
         s.sectionStatus,
-        {
-          borderColor: fg,
-          backgroundColor: status === 'done' ? fg : t.color.surface,
-        },
+        StyleSheet.create({
+          root: {
+            borderColor: fg,
+            backgroundColor: status === 'done' ? fg : t.color.surface,
+          },
+        }).root,
       ]}
     >
       {status === 'done' ? (
         <Icon name="check" size={12} color={t.color.onAccent} />
       ) : status === 'learning' ? (
-        <View style={[s.dot, { backgroundColor: fg }]} />
+        <View
+          style={[
+            s.dot,
+            StyleSheet.create({ root: { backgroundColor: fg } }).root,
+          ]}
+        />
       ) : null}
     </View>
   );
@@ -872,6 +1071,7 @@ export function CheckRow({
   subtitle,
   tag,
   onToggle,
+  tone,
 }: KitProps['CheckRow']) {
   const s = useStyles();
   const t = useTokens();
@@ -881,15 +1081,25 @@ export function CheckRow({
       accessibilityRole="checkbox"
       accessibilityLabel={title}
       accessibilityState={{ checked }}
-      style={({ pressed }) => [s.row, pressed && s.pressed]}
+      style={({ pressed }) => [s.checkRow, pressed && s.pressed]}
     >
       <View
         style={[
           s.check,
-          {
-            backgroundColor: checked ? t.color.accent : t.color.surface,
-            borderColor: checked ? t.color.accent : t.color.line,
-          },
+          StyleSheet.create({
+            root: {
+              backgroundColor: checked
+                ? tone === 'stuck' && t.layout.groupedLists
+                  ? t.color.stuck
+                  : t.color.accent
+                : t.color.surface,
+              borderColor: checked
+                ? tone === 'stuck' && t.layout.groupedLists
+                  ? t.color.stuck
+                  : t.color.accent
+                : t.color.ink3,
+            },
+          }).root,
         ]}
       >
         {checked ? (
@@ -897,10 +1107,12 @@ export function CheckRow({
         ) : null}
       </View>
       <View style={s.grow}>
-        <Text style={s.body}>{title}</Text>
-        {subtitle ? <Text style={s.caption}>{subtitle}</Text> : null}
+        <View style={s.checkTitleLine}>
+          <Text style={s.checkText}>{title}</Text>
+          {tag ? <Kit.Tag label={tag} tone="detour" /> : null}
+        </View>
+        {subtitle ? <Text style={s.checkSubtitle}>{subtitle}</Text> : null}
       </View>
-      {tag ? <Kit.Tag label={tag} /> : null}
     </Pressable>
   );
 }
@@ -917,7 +1129,14 @@ export function Fab({ label, icon, onPress }: KitProps['Fab']) {
       style={({ pressed }) => [s.fab, pressed && { opacity: 0.8 }]}
     >
       <Icon name={icon} color={t.color.onAccent} />
-      <Text style={[s.label, { color: t.color.onAccent }]}>{label}</Text>
+      <Text
+        style={[
+          s.label,
+          StyleSheet.create({ root: { color: t.color.onAccent } }).root,
+        ]}
+      >
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -941,14 +1160,16 @@ export function Empty({ title, body, action }: KitProps['Empty']) {
 const useStyles = makeStyles(t => ({
   screen: { flex: 1, backgroundColor: t.color.bg },
   scrollContent: { flexGrow: 1 },
+  floatingTabSpace: { paddingBottom: 110 },
   grow: { flex: 1, minWidth: 0 },
+  rootTitle: { paddingLeft: 10 },
   center: { alignItems: 'center' },
   right: { alignItems: 'flex-end' },
   inline: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   ink: { color: t.color.ink },
   body: { ...t.type.body, color: t.color.ink },
   label: { ...t.type.label, color: t.color.ink2, textAlign: 'center' },
-  caption: { ...t.type.caption, color: t.color.ink2 },
+  caption: { ...t.type.caption, color: t.color.ink3 },
   micro: { ...t.type.micro, color: t.color.ink2 },
   strong: { fontWeight: '600', color: t.color.ink },
   appBar: {
@@ -960,7 +1181,7 @@ const useStyles = makeStyles(t => ({
     borderBottomWidth: 1,
     borderBottomColor: t.color.line,
   },
-  barSide: { minWidth: 48, justifyContent: 'center' },
+  barSide: { minWidth: 40, justifyContent: 'center' },
   tabBar: {
     flexDirection: 'row',
     borderTopWidth: 1,
@@ -999,25 +1220,43 @@ const useStyles = makeStyles(t => ({
   },
   segment: {
     flex: 1,
-    minHeight: 48,
-    paddingVertical: 8,
+    minHeight: 30,
+    paddingVertical: 0,
     paddingHorizontal: 8,
     justifyContent: 'center',
-    borderRadius: t.shape.xs,
+    borderRadius: 6,
   },
-  segmentOn: { backgroundColor: t.color.surface, ...t.elevation.card },
+  segmentOn: {
+    backgroundColor: t.color.surface,
+    boxShadow: '0 1px 2px rgba(0,0,0,.08)',
+  },
   mode: {
-    flexDirection: 'row',
-    backgroundColor: t.color.accentBg,
+    height: 30,
     padding: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: t.shape.pill,
+  },
+  modeTrack: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: t.color.accentBg,
     borderRadius: t.shape.pill,
   },
   modeItem: {
-    minHeight: 48,
-    minWidth: 48,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    minHeight: 26,
+    width: 48,
     justifyContent: 'center',
+    borderRadius: 13,
+  },
+  modeVisual: {
+    paddingHorizontal: 0,
+    minHeight: 26,
+    justifyContent: 'center',
+    alignItems: 'center',
     borderRadius: t.shape.pill,
   },
   switchTarget: {
@@ -1027,8 +1266,8 @@ const useStyles = makeStyles(t => ({
     alignItems: 'center',
   },
   button: {
-    minHeight: 48,
-    paddingVertical: 10,
+    minHeight: 42,
+    paddingVertical: 0,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1036,12 +1275,12 @@ const useStyles = makeStyles(t => ({
     gap: 6,
     borderRadius: t.shape.pill,
   },
-  smallButton: { paddingHorizontal: 12, paddingVertical: 8 },
+  smallButton: { minHeight: 30, paddingHorizontal: 12, paddingVertical: 0 },
   blockButton: { alignSelf: 'stretch' },
   iconButton: {
-    minHeight: 48,
-    minWidth: 48,
-    padding: 10,
+    minHeight: t.layout.groupedLists ? 44 : 40,
+    minWidth: t.layout.groupedLists ? 44 : 40,
+    padding: 8,
     borderRadius: t.shape.pill,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1054,7 +1293,25 @@ const useStyles = makeStyles(t => ({
     paddingTop: 8,
     paddingBottom: 2,
     backgroundColor: t.color.surface,
+    borderTopWidth: 1,
+    borderTopColor: t.color.line,
   },
+  quickViewport: { flexGrow: 0, flexShrink: 0 },
+  quickTarget: { minHeight: 32, minWidth: 48, justifyContent: 'center' },
+  quickChip: {
+    minHeight: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderRadius: 16,
+  },
+  quickLabel: { ...t.type.label, fontWeight: '400' },
+  quickStrong: { fontWeight: '600' },
+  quickPressed: { opacity: 0.7 },
   composerRoot: { backgroundColor: t.color.surface },
   composer: {
     flexDirection: 'row',
@@ -1066,17 +1323,33 @@ const useStyles = makeStyles(t => ({
   },
   input: {
     ...t.type.body,
+    fontSize: 15,
+    lineHeight: 22.5,
     color: t.color.ink,
     flex: 1,
-    minHeight: 48,
-    maxHeight: 180,
-    paddingVertical: 10,
+    minHeight: 40,
+    maxHeight: 110,
+    paddingVertical: 9,
     paddingHorizontal: 14,
     borderRadius: t.shape.pill,
     borderWidth: 1,
     borderColor: t.color.line,
     backgroundColor: t.color.surface,
   },
+  sendTarget: {
+    minWidth: 40,
+    minHeight: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sendCircle: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 20,
+  },
+  sendArrow: { transform: [{ rotate: '180deg' }] },
   quote: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1088,19 +1361,19 @@ const useStyles = makeStyles(t => ({
   },
   progressRoot: {
     paddingHorizontal: 12,
-    paddingTop: 4,
-    paddingBottom: 6,
+    paddingTop: 6,
+    paddingBottom: 8,
     backgroundColor: t.color.surface,
     borderBottomWidth: 1,
     borderBottomColor: t.color.line,
   },
-  progressLabel: { minHeight: 48, justifyContent: 'center' },
+  progressLabel: { minHeight: 19, justifyContent: 'center' },
+  progressSteps: { flex: 1, flexDirection: 'row', gap: 3 },
   stepTarget: {
-    minHeight: 48,
+    minHeight: 19,
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
   },
   skippedMark: {
     borderStyle: 'dashed',
@@ -1157,16 +1430,20 @@ const useStyles = makeStyles(t => ({
   fieldInput: {
     ...t.type.body,
     color: t.color.ink,
-    minHeight: 48,
-    borderWidth: 1,
-    borderColor: t.color.line,
-    borderRadius: t.shape.sm,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
+    minHeight: t.layout.groupedLists ? 25 : 39,
+    borderWidth: t.layout.groupedLists ? 0 : 1,
+    borderColor: t.color.fieldBorder,
+    borderRadius: t.layout.groupedLists ? 0 : 8,
+    paddingVertical: t.layout.groupedLists ? 0 : 8,
+    paddingHorizontal: t.layout.groupedLists ? 0 : 10,
     backgroundColor: t.color.surface,
   },
   multiline: { minHeight: 110, textAlignVertical: 'top' },
-  note: { borderRadius: t.shape.sm, paddingVertical: 8, paddingHorizontal: 10 },
+  note: {
+    borderRadius: t.layout.groupedLists ? 14 : 8,
+    paddingVertical: t.layout.groupedLists ? 10 : 8,
+    paddingHorizontal: t.layout.groupedLists ? 14 : 10,
+  },
   tag: {
     borderWidth: 1,
     borderRadius: t.shape.xs,
@@ -1181,47 +1458,81 @@ const useStyles = makeStyles(t => ({
     backgroundColor: t.color.surfaceAlt,
   },
   fill: { height: '100%', borderRadius: t.shape.xs },
-  stageStrip: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  stageStrip: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    marginTop: t.layout.groupedLists ? 10 : 8,
+  },
   stage: {
     flexGrow: 1,
-    paddingVertical: 4,
+    paddingVertical: t.layout.groupedLists ? 3.3 : 3,
     paddingHorizontal: 6,
-    borderRadius: t.shape.xs,
+    borderRadius: t.layout.groupedLists ? 12 : 4,
     alignItems: 'center',
   },
   cover: {
-    borderRadius: t.shape.xs,
+    borderRadius: t.layout.groupedLists ? 7 : 4,
     padding: 5,
     justifyContent: 'flex-end',
     ...t.elevation.card,
   },
   dot: { width: 8, height: 8, borderRadius: t.shape.pill },
   sectionStatus: {
-    width: 18,
-    height: 18,
+    width: t.layout.groupedLists ? 20 : 16,
+    height: t.layout.groupedLists ? 20 : 16,
     borderRadius: t.shape.pill,
-    borderWidth: 1.5,
+    borderWidth: t.layout.groupedLists ? 1.6 : 1.5,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  checkTitleLine: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 4,
+  },
+  checkText: {
+    fontSize: t.layout.groupedLists ? 15 : 14,
+    lineHeight: t.layout.groupedLists ? 21.75 : 21.7,
+    color: t.color.ink,
+  },
+  checkSubtitle: {
+    fontSize: 13,
+    lineHeight: 18.85,
+    color: t.color.ink2,
+    marginTop: 2,
+  },
+  checkRow: {
+    flexDirection: 'row',
+    alignItems: t.layout.groupedLists ? 'center' : 'flex-start',
+    gap: t.layout.groupedLists ? 12 : 10,
+    paddingVertical: t.layout.groupedLists ? 12 : 11,
+    paddingHorizontal: 14,
+    borderBottomWidth: t.layout.groupedLists ? 0 : 1,
+    borderColor: t.color.line,
+    backgroundColor: t.color.surface,
+    borderRadius: t.layout.groupedLists ? 18 : 0,
+    marginBottom: t.layout.groupedLists ? 8 : 0,
+  },
   check: {
-    width: 20,
-    height: 20,
+    width: t.layout.groupedLists ? 24 : 19,
+    height: t.layout.groupedLists ? 24 : 19,
     borderWidth: 1.5,
-    borderRadius: t.shape.xs,
+    borderRadius: t.layout.groupedLists ? 12 : 5,
     alignItems: 'center',
     justifyContent: 'center',
   },
   fab: {
     alignSelf: 'flex-end',
-    minHeight: 48,
-    paddingHorizontal: 16,
+    minHeight: t.layout.groupedLists ? 50 : 48,
+    paddingHorizontal: t.layout.groupedLists ? 20 : 16,
     paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     borderRadius: t.shape.pill,
-    backgroundColor: t.color.ink,
+    backgroundColor: t.layout.groupedLists ? t.color.accent : t.color.ink,
     ...t.elevation.fab,
   },
   empty: {

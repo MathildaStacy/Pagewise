@@ -1,7 +1,15 @@
 import { View } from 'react-native';
-import { ListSection, Row, Button, Note, Empty, useTokens } from '@ui/kit';
+import { Sheet, Dialog, usePresentation } from '@ui/kit';
 import type { StorageState, StorageIntents } from '@features/settings/types';
-import { SettingsFrame } from './MeView';
+import {
+  SettingsFrame,
+  SettingsGroup,
+  SettingsRow,
+  SettingsButton,
+  SettingsSwitch,
+  SettingsNote,
+  useSettingsStyles,
+} from './MeView';
 export function MeStorageView({
   state,
   intents,
@@ -9,41 +17,115 @@ export function MeStorageView({
   state: StorageState;
   intents: StorageIntents;
 }) {
-  const t = useTokens();
+  const { groupedLists } = usePresentation(),
+    s = useSettingsStyles();
   return (
     <SettingsFrame title="存储与备份" state={state} back={intents.back}>
-      <ListSection title="每本书">
-        {state.books.map(b => (
-          <Row
-            key={b.id}
-            title={b.title}
-            subtitle={b.meta}
-            right={
-              <Button
-                size="sm"
-                variant="ghost"
-                label="清理"
-                onPress={() => intents.clean(b.id)}
-              />
-            }
-          />
-        ))}
-        {!state.books.length ? (
-          <Empty body="书架为空，导入后可在这里管理存储。" />
-        ) : null}
-      </ListSection>
-      <ListSection>
-        <Row
+      <SettingsGroup title="每本书">
+        {state.books.length ? (
+          state.books.map(b => (
+            <SettingsRow
+              key={b.id}
+              title={b.title}
+              subtitle={b.meta}
+              right={
+                <SettingsButton
+                  small
+                  variant={groupedLists ? 'danger' : 'ghost'}
+                  label={b.needsReparse ? '重新解析' : '清理'}
+                  onPress={() =>
+                    b.needsReparse ? intents.reparse(b.id) : intents.clean(b.id)
+                  }
+                />
+              }
+            />
+          ))
+        ) : (
+          <SettingsRow title="书架为空，导入后可在这里管理存储。" />
+        )}
+      </SettingsGroup>
+      <SettingsGroup title={groupedLists ? '备份' : undefined}>
+        <SettingsRow
           title="导出备份"
-          subtitle="书的地图、学习记录、笔记、闪卡、设置；不含 Key 和 Token"
+          subtitle="整库：书的地图、学习记录、笔记、闪卡、设置；不含 API Key 和 Token"
           chevron
           onPress={intents.exportBackup}
         />
-        <Row title="从备份恢复" chevron onPress={intents.restoreBackup} />
-      </ListSection>
-      <View style={{ padding: t.space.pageX }}>
-        <Note tone="neutral">存储清理和备份将在完整文件管理接入后启用。</Note>
-      </View>
+        <SettingsRow
+          title="从备份恢复"
+          chevron
+          onPress={intents.restoreBackup}
+        />
+      </SettingsGroup>
+      <SettingsGroup>
+        <SettingsRow
+          title="备份包含原文件"
+          subtitle="默认只备份学习数据"
+          right={
+            <SettingsSwitch
+              label="备份包含原文件"
+              value={state.includeOriginals}
+              onChange={intents.setIncludeOriginals}
+            />
+          }
+        />
+      </SettingsGroup>
+      <Dialog
+        danger={groupedLists}
+        visible={!!state.confirmClean}
+        title="清理解析缓存？"
+        body="会删除这本书的解析结果（Markdown、内容块、图片），保留学习记录、笔记和闪卡。以后再打开需要重新解析。"
+        confirm="清理"
+        cancel="取消"
+        onConfirm={intents.confirmClean}
+        onCancel={intents.closeOverlay}
+      />
+      <Sheet
+        visible={!!state.confirmReparse}
+        title="重新解析原文件？"
+        onClose={intents.closeOverlay}
+      >
+        <SettingsNote>
+          PDF 将重新上传到 MinerU，可能消耗解析额度；EPUB
+          在本机解析。原有学习记录和手动目录会保留。
+        </SettingsNote>
+        <View style={s.overlayActions}>
+          <SettingsButton
+            block
+            label="开始重新解析"
+            onPress={intents.confirmReparse}
+          />
+          <SettingsButton
+            block
+            variant="ghost"
+            label="取消"
+            onPress={intents.closeOverlay}
+          />
+        </View>
+      </Sheet>
+      <Sheet
+        visible={state.confirmRestore}
+        title="从备份恢复？"
+        onClose={intents.closeOverlay}
+      >
+        <SettingsNote>
+          恢复将替换本机学习数据，完成后重新打开应用。备份不含 Key 和
+          Token，新设备上需要重新填写。请先导出当前数据。
+        </SettingsNote>
+        <View style={s.overlayActions}>
+          <SettingsButton
+            block
+            label="选择备份并恢复"
+            onPress={intents.confirmRestore}
+          />
+          <SettingsButton
+            block
+            variant="ghost"
+            label="取消"
+            onPress={intents.closeOverlay}
+          />
+        </View>
+      </Sheet>
     </SettingsFrame>
   );
 }

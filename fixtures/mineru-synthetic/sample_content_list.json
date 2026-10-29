@@ -1,0 +1,113 @@
+[
+  {
+    "type": "text",
+    "text": "1.1 第二页",
+    "text_level": 2,
+    "page_idx": 1,
+    "bbox": [100, 100, 900, 140]
+  },
+  {
+    "type": "header",
+    "text": "合成教材页眉",
+    "page_idx": 0,
+    "bbox": [100, 0, 900, 40]
+  },
+  {
+    "type": "text",
+    "text": "第 1 章 搜索玩具世界",
+    "text_level": 1,
+    "page_idx": 0,
+    "bbox": [100, 50, 900, 100]
+  },
+  {
+    "type": "text",
+    "text": "这段由项目作者编写，机器人从起点走到终点。",
+    "page_idx": 0,
+    "bbox": [100, 110, 900, 170]
+  },
+  {
+    "type": "text",
+    "text": "点坐标段落",
+    "page_idx": 0,
+    "bbox": [61.2, 158.4, 306, 198]
+  },
+  {
+    "type": "list_item",
+    "text": "起点是 A。",
+    "page_idx": 0,
+    "bbox": [100, 260, 500, 290]
+  },
+  {
+    "type": "list_item",
+    "text": "终点是 B。",
+    "page_idx": 0,
+    "bbox": [100, 300, 500, 330]
+  },
+  {
+    "type": "image",
+    "img_path": "images/route.svg",
+    "image_caption": ["图 1：机器人走向目标。"],
+    "image_footnote": ["示意图为本项目自绘。"],
+    "page_idx": 0,
+    "bbox": [200, 350, 800, 550]
+  },
+  {
+    "type": "caption",
+    "text": "箭头表示可走的方向。",
+    "page_idx": 0,
+    "bbox": [200, 560, 800, 590]
+  },
+  {
+    "type": "table",
+    "table_body": "<table><tr><th>节点</th><th>代价</th></tr><tr><td>A</td><td>2 &amp; 3</td></tr></table>",
+    "table_caption": ["表 1：自编代价。"],
+    "page_idx": 0,
+    "bbox": [100, 620, 900, 780]
+  },
+  {
+    "type": "code",
+    "code_body": "cost = left + right",
+    "page_idx": 0,
+    "bbox": [100, 800, 900, 850]
+  },
+  {
+    "type": "page_number",
+    "text": "1",
+    "page_idx": 0,
+    "bbox": [450, 950, 550, 980]
+  },
+  {
+    "type": "text",
+    "text": "f(n)=g(n)+h(n)",
+    "text_format": "latex",
+    "page_idx": 1,
+    "bbox": [0.1, 0.2, 0.9, 0.3]
+  },
+  {
+    "type": "text",
+    "text": "像素坐标段落。",
+    "coordinate_system": "pixels",
+    "page_idx": 1,
+    "bbox": [122.4, 633.6, 1101.6, 792]
+  },
+  {
+    "type": "footer",
+    "text": "合成页脚",
+    "page_idx": 1,
+    "bbox": [100, 940, 900, 980]
+  },
+  {
+    "type": "text",
+    "text": "   ",
+    "page_idx": 1,
+    "bbox": [100, 400, 900, 430]
+  },
+  { "type": "page_number", "text": "2", "page_idx": 1 },
+  { "type": "footer", "text": "空白页", "page_idx": 2 },
+  {
+    "type": "text",
+    "text": "最后一页使用相对坐标。",
+    "page_idx": 3,
+    "bbox": [0.1, 0.15, 0.9, 0.25]
+  }
+]

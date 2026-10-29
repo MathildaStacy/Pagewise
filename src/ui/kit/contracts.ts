@@ -39,6 +39,13 @@ export const iconNames = [
   'help',
   'arrowDown',
   'external',
+  'settingsDoc',
+  'cpu',
+  'sliders',
+  'appearance',
+  'drive',
+  'logo',
+  'updown',
 ] as const;
 export type IconName = (typeof iconNames)[number];
 export type Tone =
@@ -159,6 +166,7 @@ export interface DetourBannerProps {
   backLabel: string;
 }
 export interface ListSectionProps {
+  plain?: boolean;
   title?: string;
   subtitle?: string;
   note?: string;
@@ -209,6 +217,7 @@ export interface SectionStatusIconProps {
   status: 'new' | 'learning' | 'done';
 }
 export interface CheckRowProps {
+  tone?: 'accent' | 'stuck';
   checked: boolean;
   title: string;
   subtitle?: string;
@@ -230,6 +239,7 @@ export interface DialogProps {
   body: string;
   confirm: string;
   cancel?: string;
+  danger?: boolean;
   onConfirm(): void;
   onCancel(): void;
 }
@@ -398,9 +408,17 @@ export interface PageOrigProps {
     x1: number;
     y1: number;
     state?: 'current' | 'done' | 'highlight' | 'selected' | 'flash';
+    marks?: ('heard' | 'now' | 'highlight' | 'selected' | 'flash')[];
     pin?: boolean;
+    pinLabel?: string;
+    label?: string;
+    selectable?: boolean;
   }[];
-  onBlock?(ref: number): void;
+  onBlock?(
+    ref: number,
+    rect?: { x: number; y: number; w: number; h: number },
+  ): void;
+  onPin?(ref: number): void;
 }
 export interface BlockViewProps {
   doc?: RichDoc;

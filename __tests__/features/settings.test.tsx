@@ -1,4 +1,4 @@
-import { Share } from 'react-native';
+import { Share, TextInput } from 'react-native';
 import Renderer, { act } from 'react-test-renderer';
 import { createTestContainer, createTestDemoContainer } from '@app/testing';
 import type { Container } from '@app/container';
@@ -25,7 +25,7 @@ import {
   deleteService,
   assignModel,
 } from '@app/usecases/settings';
-import { SkinProvider, Field, CheckRow, Button } from '@ui/kit';
+import { SkinProvider, CheckRow } from '@ui/kit';
 import { MeView } from '@ui/screens/MeView';
 import { MeMineruView } from '@ui/screens/MeMineruView';
 import { MeAIView } from '@ui/screens/MeAIView';
@@ -42,9 +42,15 @@ import {
   storageSamples,
   aboutSamples,
 } from '@features/settings/samples';
+import * as storageUsecases from '@app/usecases/storage';
+import { ImportInputError, reparseBook } from '@app/usecases/importBooks';
 
 jest.mock('@app/ContainerProvider', () => ({ useContainer: jest.fn() }));
 jest.mock('@features/nav', () => ({ useAppNav: jest.fn() }));
+jest.mock('@app/usecases/importBooks', () => ({
+  ...jest.requireActual('@app/usecases/importBooks'),
+  reparseBook: jest.fn(),
+}));
 let c: Container;
 let renderers: Renderer.ReactTestRenderer[] = [];
 const nav = {
@@ -233,6 +239,48 @@ it('AI editor validates, saves and returns to the AI list; list routes and chang
   expect(list().state.tidy).toBe(list().state.options[0].key);
 });
 
+it('starts a cleared book reparse only after its explicit confirmation', async () => {
+  jest.spyOn(storageUsecases, 'loadStorage').mockResolvedValue([
+    {
+      id: 'aima',
+      title: 'AIMA',
+      sizeBytes: 100,
+      parsedBytes: 0,
+      available: true,
+      needsReparse: true,
+    },
+  ]);
+  const clear = jest
+    .spyOn(storageUsecases, 'clearParseCache')
+    .mockResolvedValue();
+  const vm = await mountVM(useStorageVM);
+  await act(async () => vm().intents.clean('aima'));
+  await act(async () => vm().intents.confirmClean());
+  expect(clear).toHaveBeenCalledWith(c, 'aima');
+  expect(reparseBook).not.toHaveBeenCalled();
+  expect(vm().state.books[0].needsReparse).toBe(true);
+  await act(async () => vm().intents.reparse('aima'));
+  expect(vm().state.confirmReparse).toBe('aima');
+  expect(reparseBook).not.toHaveBeenCalled();
+  await act(async () => vm().intents.confirmReparse());
+  expect(reparseBook).toHaveBeenCalledWith(c, 'aima');
+  expect(nav.open).toHaveBeenCalledWith({
+    name: 'ParseProgress',
+    bookId: 'aima',
+  });
+});
+it('shows the original-file recovery instruction when a reparse has no source', async () => {
+  jest
+    .mocked(reparseBook)
+    .mockRejectedValueOnce(
+      new ImportInputError('原文件不在本机，请先重新选择同一本 PDF 或 EPUB'),
+    );
+  const vm = await mountVM(useStorageVM);
+  await act(async () => vm().intents.reparse('aima'));
+  await act(async () => vm().intents.confirmReparse());
+  expect(vm().state.error).toContain('原文件不在本机');
+  expect(nav.open).not.toHaveBeenCalled();
+});
 it('storage reads real book sizes and About switches demo mode and exports redacted logs', async () => {
   await c.close();
   c = await createTestDemoContainer();
@@ -241,7 +289,11 @@ it('storage reads real book sizes and About switches demo mode and exports redac
   expect(vm().state.books).toHaveLength(3);
   expect(vm().state.books[0].meta).toContain('原文件');
   await act(async () => vm().intents.clean('aima'));
-  expect(vm().state.notice).toContain('接入后启用');
+  expect(vm().state.confirmClean).toBe('aima');
+  await act(async () => vm().intents.closeOverlay());
+  expect(vm().state.confirmClean).toBeNull();
+  await act(async () => vm().intents.setIncludeOriginals(true));
+  expect(vm().state.includeOriginals).toBe(true);
   const about = await mountVM(useAboutVM);
   about().intents.demo();
   expect(nav.exitDemo).toHaveBeenCalled();
@@ -480,9 +532,9 @@ it('connects the prototype select fields and side-by-side actions to real editor
     );
     renderers.push(editor);
   });
-  const editorFields = () => editor.root.findAllByType(Field);
+  const editorFields = () => editor.root.findAllByType(TextInput);
   const field = (label: string) =>
-    editorFields().find(n => n.props.label === label)!;
+    editorFields().find(n => n.props.accessibilityLabel === label)!;
   const press = (r: Renderer.ReactTestRenderer, prefix: string) =>
     r.root
       .findAll(
@@ -501,24 +553,14 @@ it('connects the prototype select fields and side-by-side actions to real editor
       .props.onToggle(),
   );
   await act(async () => {
-    field('名称').props.onChange('UI 测试服务');
-    field('Base URL').props.onChange('https://ui.example.test');
-    field('API Key').props.onChange('fixture-ui-key-1357');
-    field('模型（逗号分隔）').props.onChange('first-model, second-model');
+    field('名称').props.onChangeText('UI 测试服务');
+    field('Base URL').props.onChangeText('https://ui.example.test');
+    field('API Key').props.onChangeText('fixture-ui-key-1357');
+    field('模型（逗号分隔）').props.onChangeText('first-model, second-model');
   });
-  await act(async () =>
-    editor.root
-      .findAllByType(Button)
-      .find(n => n.props.label === '测试连接')!
-      .props.onPress(),
-  );
+  await act(async () => press(editor, '测试连接'));
   expect(JSON.stringify(editor.toJSON())).toContain('连接正常');
-  await act(async () =>
-    editor.root
-      .findAllByType(Button)
-      .find(n => n.props.label === '保存')!
-      .props.onPress(),
-  );
+  await act(async () => press(editor, '保存'));
   expect(nav.back).toHaveBeenCalled();
   function AIList() {
     const vm = useAIVM();

@@ -108,6 +108,7 @@ android {
 }
 
 dependencies {
+    implementation("com.tom-roush:pdfbox-android:2.0.27.0")
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
 

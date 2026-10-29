@@ -1,5 +1,24 @@
 import type { Container } from '../container';
 import { createRepos } from '@data/repos';
+import { getReaderRuntime } from '../readerRuntime';
+import { resolveStudyBlockImage } from '../bookImages';
+
+export async function loadOriginalReaderWindow(
+  c: Container,
+  bookId: string,
+  page: number,
+  widthPx: number,
+) {
+  const book = await c.repos.books.get(bookId);
+  if (!book || book.format !== 'pdf') throw new Error('EPUB 只有重排模式');
+  if (c.mode === 'demo')
+    throw new Error('Demo 只有示意原文，真实 PDF 导入后可用原版阅读');
+  return getReaderRuntime(c).window(bookId, page, widthPx);
+}
+export async function loadOriginalReaderInfo(c: Container, bookId: string) {
+  if (c.mode === 'demo') return null;
+  return getReaderRuntime(c).info(bookId);
+}
 
 export async function loadStudyReader(
   c: Container,
@@ -22,10 +41,24 @@ export async function loadStudyReader(
     c.repos.notes.userText.get(bookId, id),
   ]);
   if (!section) throw new Error('这个小节不存在');
+  const originalBlocks =
+    section.page_from !== null && section.page_to !== null
+      ? (
+          await Promise.all(
+            Array.from(
+              { length: section.page_to - section.page_from + 1 },
+              (_, i) => c.repos.blocks.byPage(bookId, section.page_from! + i),
+            ),
+          )
+        ).flat()
+      : blocks;
   return {
     book,
     section,
-    blocks,
+    blocks: blocks.map(b => resolveStudyBlockImage(c, bookId, b)),
+    originalBlocks: originalBlocks.map(b =>
+      resolveStudyBlockImage(c, bookId, b),
+    ),
     highlights,
     pins,
     userText: note?.user_text ?? '',
@@ -38,7 +71,7 @@ export async function loadStudyBlock(
 ) {
   const block = await c.repos.blocks.get(bookId, seq);
   if (!block) throw new Error('找不到引用的原文');
-  return block;
+  return resolveStudyBlockImage(c, bookId, block);
 }
 export async function toggleStudyHighlight(
   c: Container,

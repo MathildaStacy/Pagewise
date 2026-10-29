@@ -1,7 +1,12 @@
 import { AiError, type AiErrorCode } from '@services/ai/http';
+import { MineruError, type MineruFailureKind } from '@services/mineru/types';
 import { redact } from './log';
 
-export type ErrorCode = `ai.${AiErrorCode}` | 'A0211' | 'unknown';
+export type ErrorCode =
+  | `ai.${AiErrorCode}`
+  | `mineru.${MineruFailureKind}`
+  | 'A0211'
+  | 'unknown';
 export interface AppError {
   code: ErrorCode;
   message: string;
@@ -34,6 +39,19 @@ const aiMessages: Record<AiErrorCode, { message: string; retry: boolean }> = {
 };
 
 export function toAppError(error: unknown): AppError {
+  if (error instanceof MineruError && error.code !== 'A0211') {
+    return {
+      code: `mineru.${error.kind}`,
+      message: error.message,
+      retry: [
+        'service',
+        'network',
+        'timeout',
+        'protocol',
+        'queue_full',
+      ].includes(error.kind),
+    };
+  }
   if (error instanceof AiError) {
     return {
       code: `ai.${error.code}`,

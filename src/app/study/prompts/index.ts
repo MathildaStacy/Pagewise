@@ -1,4 +1,5 @@
 import type { TeachPrefs } from '../../usecases/settings';
+import { lessonPlanCuts, type LessonBlock } from '@core/lesson';
 
 export function buildTeachPrompt(prefs: TeachPrefs): string {
   const order = prefs.intuitionFirst
@@ -33,43 +34,43 @@ ${
 
 const tasks = {
   plan: [
-    '把教材原文按实际块顺序切成 2–5 个讲解步骤，覆盖全部块且首尾相接；一个不可拆分块组可为一步。公式、图、表、算法与相邻说明不可拆开。标题≤24字，kind为intuition|definition|derivation|example|check。from/to取真实块seq，不能凭空补序号。',
+    '把教材原文按实际块顺序切成讲解步骤，覆盖全部块且首尾相接。只能合并下方给出的相邻不可拆分组，不能拆开组；公式、图、表、算法与相邻说明必须留在同一步。steps 是对象数组，每项必须有非空字符串title（≤24字）、字符串kind（仅intuition|definition|derivation|example|check）、整数from和to。from/to是实际块seq，不是页码、组号或数组下标。',
     '{"steps":[{"title":"…","kind":"intuition","from":数字,"to":数字}]}',
   ],
   recap: [
-    '生成续学回顾，最多3句：讲到哪里、未解决卡点、是否先复习。使用输入的离开天数和真实进度，不编造学习记录。',
+    '生成续学回顾：讲到哪里、未解决卡点、是否先复习。使用输入的离开天数和真实进度，不编造学习记录。lines 必须为1–3个非空字符串组成的数组，每项一句话；不要输出字符串或对象代替数组。',
     '{"lines":["…","…","…"]}',
   ],
   sectionDraft: [
-    '根据原文、问答、岔路、测验和卡点候选生成约100字小结、尚未解决卡点和3–5张闪卡。岔路卡标记from_detour。不要把所有问题都当卡点。',
+    '根据原文、问答、岔路、测验和卡点候选生成约100字小结、尚未解决卡点和3–5张闪卡。summary 必须是非空字符串；stuck 必须是字符串数组，可为空，不要把所有问题都当卡点。cards 必须包含3至5个完整对象，每项必须有非空字符串front、非空字符串back、布尔值from_detour（true或false，不能是字符串）。即使问答较少也从本节原文提炼概念和辨析题；仅岔路内容的卡标记true。',
     '{"summary":"…","stuck":["…"],"cards":[{"front":"…","back":"…","from_detour":false}]}',
   ],
   detourTitle: [
-    '用≤16字标题和≤80字结论概括已结束的岔路；不要添加讨论以外的结论。',
+    '概括输入messages中已结束的岔路，不要添加讨论以外的结论。title 必须是≤16字的非空字符串，summary 必须是≤80字的非空字符串。',
     '{"title":"…","summary":"…"}',
   ],
   pinTitle: [
-    '将本次问答压缩为便签的问题和答案。保留准确的原文引用，问题≤30字，答案≤120字。',
+    '将本次问答压缩为便签的问题和答案。question 必须是≤30字的非空字符串，answer 必须是≤120字的非空字符串。保留输入answer中准确的[[b:数字]]引用，不要发明引用。',
     '{"question":"…","answer":"…"}',
   ],
   explain: [
-    '解释指定原文块，≤200字，必须用[[b:seq]]引用该块。只引用输入里的块。补充推导用[[derive]]包围。',
+    '解释 input.block 指定的唯一原文块。answer 必须是≤200字的非空字符串，且至少包含一次对该块的精确引用：把 block.seq 的整数填进 [[b:数字]]，不要写字面量seq、块前缀或页码。只能引用 block.seq，map 只提供术语背景，不是可引用的原文。补充推导用[[derive]]…[[/derive]]包围，主体解释仍须引用该块。',
     '{"answer":"…"}',
   ],
   translate: [
-    '中英互译指定原文，术语与书的地图保持一致，保留公式，不增添解释。',
+    '中英互译 input.block.text 指定的原文，术语与map中的书的地图保持一致，保留公式，不增添解释。answer 必须是非空字符串，仅包含译文。',
     '{"answer":"…"}',
   ],
   guide: [
-    '生成本节导读，一句话≤30字，展开3–4句，前置只列地图中存在的小节ID。',
+    '生成本节导读。one_line 必须是≤30字的一句话非空字符串；full 必须是3–4句展开导读的非空字符串；prereq 必须是字符串数组，值只能为输入map中存在的小节id，无前置时输出[]，不要输出标题、编号说明或虚构ID。',
     '{"one_line":"…","full":"…","prereq":["小节ID"]}',
   ],
   partSummary: [
-    '压缩本段讲解，保留核心概念、结论、未解决问题与真实引用，供下一段衔接。',
+    '压缩输入messages中的本段讲解，保留核心概念、结论、未解决问题与真实引用，供下一段衔接。summary 必须是非空字符串；不添加输入以外的引用。',
     '{"summary":"…"}',
   ],
   compact: [
-    '压缩给定对话，保留用户目标、已讲概念、已确认结论、未解决卡点和引用；不要重复整段教材或把工具提议当已执行。',
+    '压缩输入messages中的对话，保留用户目标、已讲概念、已确认结论、未解决卡点和引用；不要重复整段教材或把工具提议当已执行。summary 必须是非空字符串，不添加输入以外的引用。',
     '{"summary":"…"}',
   ],
 } as const;
@@ -89,7 +90,51 @@ export function buildTaskPrompt(task: StudyTask, input: unknown): string {
       ? 'pinTitle'
       : task;
   const [instruction, schema] = tasks[canonical];
-  return `<task name="${task}">\n${instruction}\n只输出一个合法JSON对象，不加代码围栏。schema：${schema}\n</task>\n<input>\n${JSON.stringify(
+  const blocks =
+    input &&
+    typeof input === 'object' &&
+    'blocks' in input &&
+    Array.isArray(input.blocks)
+      ? (input.blocks as LessonBlock[])
+      : [];
+  let constraints = '';
+  if (canonical === 'plan' && blocks.length) {
+    const ordered = [...blocks].sort((a, b) => a.seq - b.seq);
+    const cuts = lessonPlanCuts(ordered);
+    const starts = [
+      0,
+      ...cuts.map(seq => ordered.findIndex(b => b.seq === seq)),
+    ];
+    const groups = starts.map((start, index) => {
+      const group = ordered.slice(start, starts[index + 1] ?? ordered.length);
+      return { group: index + 1, from: group[0].seq, to: group.at(-1)!.seq };
+    });
+    constraints = `\n不可拆分组（按顺序完整覆盖；组内所有块必须同一步）：${JSON.stringify(
+      groups,
+    )}。
+steps数量必须为${Math.min(2, groups.length)}–${Math.min(
+      5,
+      groups.length,
+    )}，最多${Math.min(5, groups.length)}步；只有一个组时必须只输出一步。
+每一步使用一个完整组或若干连续完整组合并：from取首组from，to取末组to。全部组必须按顺序恰好用一次，不能遗漏、重复、交错或拆分。不能为了凑2–5步而切开组。
+合法分割点（下一步的from）仅限：${JSON.stringify(cuts)}。第一步from=${
+      ordered[0].seq
+    }，最后一步to=${
+      ordered.at(-1)!.seq
+    }。每个分割点前一个真实块为上一步to；不要在其他位置切开。`;
+  }
+  if (
+    canonical === 'explain' &&
+    input &&
+    typeof input === 'object' &&
+    'block' in input &&
+    input.block &&
+    typeof input.block === 'object' &&
+    'seq' in input.block &&
+    Number.isSafeInteger(input.block.seq)
+  )
+    constraints = `\n本次answer必须包含这个精确字符串：[[b:${input.block.seq}]]；没有其他允许的引用ID。`;
+  return `<task name="${task}">\n${instruction}${constraints}\n只输出一个合法JSON对象，必须包含schema列出的全部字段，字段类型严格匹配，不加代码围栏、前言、结语或额外字段。schema：${schema}\n</task>\n<input>\n${JSON.stringify(
     input,
   )}\n</input>`;
 }

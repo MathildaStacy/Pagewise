@@ -312,7 +312,8 @@ export class StudySession implements StudySessionApi {
           item => item.id === options.stuckId,
         );
         if (stuck) {
-          await this.enterDetour(stuck.section_id, stuck.id);
+          if (!(await this.enterDetour(stuck.section_id, stuck.id))) return;
+          await this.loadSectionSource(stuck.section_id);
           await this.request(
             'review',
             `请重新讲解这个卡点：${stuck.text}`,
@@ -335,6 +336,13 @@ export class StudySession implements StudySessionApi {
         }
       }
       if (options.question) {
+        if (
+          options.sectionId &&
+          options.sectionId !== this.state.main.sectionId
+        ) {
+          if (!(await this.enterDetour(options.sectionId))) return;
+          await this.loadSectionSource(options.sectionId);
+        }
         await this.ensurePlan();
         await this.request('ask', options.question, true);
         return;
@@ -575,41 +583,8 @@ export class StudySession implements StudySessionApi {
       const block = await this.c.repos.blocks.get(this.bookId, quote);
       if (block?.section_id) {
         if (!(await this.enterDetour(block.section_id))) return;
-        if (!this.state.partBlocks.some(item => item.seq === quote)) {
-          const ranges = await this.c.repos.sections.parts(
-            this.bookId,
-            block.section_id,
-          );
-          const part = ranges.find(
-            range => quote >= range.block_from && quote <= range.block_to,
-          );
-          const source = await executeReadTool(
-            this.c,
-            this.bookId,
-            'load_section',
-            { id: block.section_id, ...(part ? { part: part.part_no } : {}) },
-          );
-          const callId = `quote-${++this.sequence}`;
-          await this.append('assistant', '', {
-            parts: asJson([
-              {
-                t: 'call',
-                id: callId,
-                name: 'load_section',
-                args: JSON.stringify({
-                  id: block.section_id,
-                  ...(part ? { part: part.part_no } : {}),
-                }),
-              },
-            ]) as JsonValue[],
-          });
-          await this.toolResult(
-            callId,
-            'load_section',
-            source.output,
-            source.allowedRefs,
-          );
-        }
+        if (!this.state.partBlocks.some(item => item.seq === quote))
+          await this.loadSectionSource(block.section_id, quote);
       }
     }
     const savedTurn = existingUser
@@ -1465,6 +1440,39 @@ export class StudySession implements StudySessionApi {
     await this.checkpoint();
     return true;
   }
+  private async loadSectionSource(sectionId: string, quote?: number) {
+    const ranges = await this.c.repos.sections.parts(this.bookId, sectionId);
+    const part =
+      quote === undefined
+        ? undefined
+        : ranges.find(
+            range => quote >= range.block_from && quote <= range.block_to,
+          );
+    const args = { id: sectionId, ...(part ? { part: part.part_no } : {}) };
+    const source = await executeReadTool(
+      this.c,
+      this.bookId,
+      'load_section',
+      args,
+    );
+    const callId = `source-${++this.sequence}`;
+    await this.append('assistant', '', {
+      parts: asJson([
+        {
+          t: 'call',
+          id: callId,
+          name: 'load_section',
+          args: JSON.stringify(args),
+        },
+      ]) as JsonValue[],
+    });
+    await this.toolResult(
+      callId,
+      'load_section',
+      source.output,
+      source.allowedRefs,
+    );
+  }
   backMain(rebase = false): Promise<void> {
     return this.run(() => this.backMainInternal(rebase));
   }
@@ -1755,7 +1763,8 @@ export class StudySession implements StudySessionApi {
           })
         )[0];
         if (stuck) {
-          await this.enterDetour(stuck.section_id, stuck.id);
+          if (!(await this.enterDetour(stuck.section_id, stuck.id))) return;
+          await this.loadSectionSource(stuck.section_id);
           await this.request(
             'review',
             `请重新讲解这个卡点：${stuck.text}`,

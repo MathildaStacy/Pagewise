@@ -5,7 +5,7 @@
 | 编号 | 问题 | 默认做法 | 状态 |
 | --- | --- | --- | --- |
 | Q-1 | MinerU 官方文档（2026-10-29 核对）的限制是单文件 ≤ 200 页、每天 1000 页高优先级；PRODUCT_DESIGN 写的是 600 页 / 2000 页 | 按官方现行值，做成常量 | 待负责人确认后改 PRODUCT_DESIGN |
-| Q-2 | 模式开关的顺序：原型是「伴读 \| 原文」（AI 在左），PRODUCT_DESIGN 和 explore 是「读书 \| 听讲」 | 按 PRODUCT_DESIGN：「读书 \| 听讲」，位置在顶栏右侧（原型位置） | 待确认 |
+| Q-2 | 模式开关的顺序：原型是「伴读 \| 原文」（AI 在左），PRODUCT_DESIGN 和 explore 是「读书 \| 听讲」 | 用户 2026-10-29 指定 UI 几乎完整遵循原型，采用「伴读 \| 原文」及原型顺序 | 已按用户最新要求采用 |
 | Q-3 | paper 皮肤的深色、补充推导 / AI 举例 / 便签的颜色原型里没有 | 02 §4.2 的初稿值，过对比度测试 | T2 后负责人看 SkinGallery 定 |
 | Q-4 | STUDY_ENGINE 说分片合并后块要按页码重新编号；边解析边学时重编号会让引用指错 | 块号稳定：`seq = PDF 页序号 × 1000 + 页内序号`，不重编号 | 已采用，待确认后改 STUDY_ENGINE |
 | Q-5 | 「划词」：RN 里做块内任意文字范围选择成本高 | V1 以整块为单位（点段落），范围选择放 M5 | 待确认 |
@@ -19,3 +19,6 @@
 | Q-13 | Glass 低端/省电自动降级不能只依赖手工 blurEnabled prop | T2 增加轻量 Android UiEnvironment TurboModule，读取 low-RAM / Power Save 并监听省电切换，应用层将结果传入 SkinProvider | T2 已实现并完成原生构建；降级分支有测试 |
 | Q-14 | 3.5.2 的原型正文与较新的 explore 正文块数不同，路线图以 explore 为准 | Demo 中 3.5.2 使用 explore 的 12 块和 4 步；其他已给正文保留 prototype，所有块标记示意内容；未给正文的目录叶仅生成演示占位，不进入正式库 | T3 已采用 |
 | Q-15 | 路线图 `to+1=from` 与跨页稳定块号有冲突；单块或不可拆公式组无法有 2 步 | 按实际块列表邻接验证连续覆盖；不可拆单组保留一步，空正文不生成引用；同步 05 §5.2 | T5 已采用 |
+| Q-16 | T8/T10 原生文件选择、PDF 元数据和 EPUB 解析需要具体依赖 | 固定 `@react-native-documents/picker@12.0.3`、`react-native-zip-archive@9.5.3`、`htmlparser2@10.0.0`；Android PDFBox `2.0.27.0` 用于书签、标签、文字层和分片，页面仍由系统 PdfRenderer 渲染。Metro 显式选择 htmlparser2 的 CommonJS 入口 | T8/T10 已采用；Android 构建与本地测试通过 |
+| Q-17 | 本机测试中继非流式返回只有 keepalive，流式正常 | 仅在非流式响应为空且只有 SSE heartbeat 时重试一次流式；正常非流式及其他错误保持原行为，二次截断失败会明确报告 | T7 已实现并加回归测试 |
+| Q-18 | 最终验收指定 AIMA / DDIA，用户提供的本机文件为 Machine Learning for Trading PDF | 按用户最新答复，真实书籍验收使用所提供的 827 页 PDF，公版 Alice EPUB 验证 EPUB 链路；不推断该书拥有 AIMA 的章节点数量 | 已按用户指定材料采用 |

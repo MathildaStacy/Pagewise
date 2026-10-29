@@ -1,4 +1,5 @@
 import type { Book, BookPart, Section } from '@core/types';
+import { pageLabel, type PageLabelBook } from '@core/ids';
 import type { MapRecord, ShelfRecord } from '@app/usecases/library';
 import type {
   BookMapState,
@@ -8,12 +9,15 @@ import type {
   ShelfState,
 } from './types';
 
-export const pageRange = (section: Pick<Section, 'page_from' | 'page_to'>) =>
+export const pageRange = (
+  section: Pick<Section, 'page_from' | 'page_to'>,
+  book: PageLabelBook = { page_offset: 0 },
+) =>
   section.page_from === null
     ? 'EPUB · 章节位置'
-    : `p.${section.page_from}${
+    : `${pageLabel(book, section.page_from)}${
         section.page_to !== null && section.page_to !== section.page_from
-          ? `–${section.page_to}`
+          ? `–${pageLabel(book, section.page_to).replace(/^p\./, '')}`
           : ''
       }`;
 export const sectionName = (s: Pick<Section, 'no' | 'title'>) =>
@@ -45,10 +49,14 @@ export function parsePart(part: BookPart): ParseProgressState['parts'][number] {
       : index === 5
       ? '完成'
       : `${stageLabels[index]} ${Math.round(
-          (index === 2 ? percent : 0) * 100,
+          (index === 2 || part.stage === 'uploading' ? percent : 0) * 100,
         )}%`,
     tone: failed ? 'bad' : index === 5 ? 'ok' : 'muted',
-    progress: index === 5 ? 1 : (index + (index === 2 ? percent : 0)) / 5,
+    progress:
+      index === 5
+        ? 1
+        : (index + (index === 2 || part.stage === 'uploading' ? percent : 0)) /
+          5,
     stages: stageLabels.map((label, i) => ({
       label,
       state:
@@ -108,9 +116,13 @@ export function shelfStatus(record: ShelfRecord): ShelfBook['status'] {
     const leaves = sections.filter(s => s.is_leaf);
     return {
       tone: 'accent',
-      text: `在学 ${study.main_section} · 已学 ${
-        leaves.filter(s => s.status === 'done').length
-      }/${leaves.length} 个小节`,
+      text: `在学 ${
+        sections.find(s => s.id === study.main_section)?.no ??
+        sections.find(s => s.id === study.main_section)?.title ??
+        study.main_section
+      } · 已学 ${leaves.filter(s => s.status === 'done').length}/${
+        leaves.length
+      } 个小节`,
     };
   }
   return {
@@ -120,11 +132,15 @@ export function shelfStatus(record: ShelfRecord): ShelfBook['status'] {
     }已就绪 · 未开始`,
   };
 }
-export const bookMeta = (book: Book) =>
+export const bookMeta = (book: Book, chapters?: number) =>
   [
     book.author,
     book.format.toUpperCase(),
-    book.pages ? `${book.pages} 页` : null,
+    book.pages
+      ? `${book.pages} 页`
+      : chapters !== undefined
+      ? `${chapters} 章`
+      : null,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -136,7 +152,11 @@ export function presentShelf(
   const books = records.map(record => ({
     id: record.book.id,
     title: record.book.title,
-    meta: bookMeta(record.book),
+    author: record.book.author,
+    meta: bookMeta(
+      record.book,
+      record.sections.filter(section => !section.parent_id).length,
+    ),
     cover: {
       title: record.book.title.replace(/[（(].*$/u, ''),
       color: record.book.cover_color,
@@ -153,12 +173,21 @@ export function presentShelf(
   const section = current.sections.find(
     s => s.id === current.study!.main_section,
   );
-  const chapter = current.sections.find(
-    s =>
-      s.level === 1 &&
-      s.ord <= (section?.ord ?? 0) &&
-      (!s.block_to || !section?.block_to || s.block_to >= section.block_to),
-  );
+  const byId = new Map(current.sections.map(value => [value.id, value]));
+  let chapter = section;
+  for (
+    let depth = 0;
+    chapter && chapter.level !== 1 && depth < byId.size;
+    depth++
+  )
+    chapter = chapter.parent_id ? byId.get(chapter.parent_id) : undefined;
+  if (chapter?.level !== 1) chapter = undefined;
+  const chapterNo = chapter?.no?.trim();
+  const chapterLabel = chapter
+    ? chapterNo
+      ? `第 ${chapterNo} 章 ${chapter.title}`
+      : chapter.title
+    : '';
   const days = current.study?.last_active_at
     ? Math.floor(
         (now.getTime() - Date.parse(current.study.last_active_at)) / 86400000,
@@ -173,10 +202,7 @@ export function presentShelf(
       bookId: current.book.id,
       kicker: `继续学习 · ${current.book.title}`,
       title: section ? sectionName(section) : current.study!.main_section!,
-      meta: [
-        chapter ? `第 ${chapter.no} 章 ${chapter.title}` : '',
-        section ? pageRange(section) : '',
-      ]
+      meta: [chapterLabel, section ? pageRange(section, current.book) : '']
         .filter(Boolean)
         .join(' · '),
       ...(days >= 1 && current.stuck.length
@@ -206,6 +232,9 @@ export function presentMap(
   const { book, sections, study, stuck } = record;
   const current = sections.find(s => s.id === study?.main_section);
   const flagged = sections.filter(s => s.flag);
+  const roots = sections.filter(s => !s.parent_id);
+  const chapterCount =
+    roots.filter(s => /^\d+$/.test(s.no ?? '')).length || roots.length;
   const children = (id: string) => sections.filter(s => s.parent_id === id);
   const descendant = (s: Section) =>
     Boolean(
@@ -227,7 +256,7 @@ export function presentMap(
       pageLabel: kids.length
         ? `${kids.filter(k => k.status === 'done').length}/${kids.length}`
         : s.page_from !== null
-        ? `p.${s.page_from}`
+        ? pageLabel(book, s.page_from)
         : '章节',
       tags: [
         ...(s.flag ? [{ tone: 'stuck' as const, label: '需确认' }] : []),
@@ -242,22 +271,24 @@ export function presentMap(
     };
   };
   return {
-    title: book.title,
+    title: book.title.replace(/[（(].*$/u, ''),
     scrollToSectionId: study?.main_section ?? undefined,
     check: {
-      ok: flagged.length === 0,
+      ok: sections.length > 0,
       tone: flagged.length ? 'stuck' : 'muted',
-      text: flagged.length
-        ? `${flagged.length} 处需要你确认 · ${flagged
-            .map(s => s.no ?? s.id)
-            .join('、')}`
-        : book.format === 'epub'
-        ? `从 EPUB 目录建立：${sections.filter(s => !s.parent_id).length} 章`
-        : `已建立书的地图 · ${sections.filter(s => !s.parent_id).length} 章`,
-      sub:
-        book.status === 'ready'
-          ? '已就绪的章节可以开始学'
-          : '解析中，已就绪的章节可以先学',
+      text:
+        book.format === 'epub'
+          ? `从 EPUB 目录建立：${chapterCount} 章`
+          : book.has_outline
+          ? `已和 PDF 书签核对：${chapterCount} 章${
+              flagged.length ? '' : '一致'
+            }`
+          : `已建立书的地图 · ${chapterCount} 章`,
+      sub: flagged.length
+        ? `${flagged.length} 处需要你确认 · 点开黄色标记逐项核对`
+        : book.status === 'ready'
+        ? '没有需要确认的地方'
+        : '解析中，已就绪的章节可以先学',
     },
     chapters: sections
       .filter(s => !s.parent_id)
@@ -266,14 +297,16 @@ export function presentMap(
         no: s.no ?? '',
         title: s.title,
         meta: [
-          pageRange(s),
-          `${children(s.id).length} 节`,
+          pageRange(s, book),
+          children(s.id).length ? `${children(s.id).length} 节` : '',
           s.status === 'done'
             ? '已学完'
             : descendant(s)
-            ? `在学 ${study?.main_section}`
-            : '未开始',
-        ].join(' · '),
+            ? `在学 ${current?.no ?? current?.title ?? study?.main_section}`
+            : '',
+        ]
+          .filter(Boolean)
+          .join(' · '),
         status: s.status,
         current: descendant(s),
         expanded: expanded[s.id] ?? descendant(s),
