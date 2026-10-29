@@ -2,6 +2,7 @@
 import { openMemoryDb } from '@data/drivers/nodeSqlite';
 import { createRecordedFetch } from '@services/ai/fake';
 import { createTestClock } from './clock';
+import { seedDemo } from './demo/seed';
 import {
   createContainer,
   type Container,
@@ -16,8 +17,27 @@ export function createTestContainer(
     over.db ?? openMemoryDb(),
     {
       clock: createTestClock(),
+      mode: 'test',
       ...over,
     },
     { fetchImpl: createRecordedFetch([]), ...options },
   );
+}
+
+/** Node test entry remains separate from device code so Metro never loads node:sqlite. */
+export async function createTestDemoContainer(
+  over: Partial<Container> = {},
+  options: ContainerOptions = {},
+): Promise<Container> {
+  const container = await createTestContainer(
+    { ...over, mode: 'demo' },
+    options,
+  );
+  try {
+    await seedDemo(container.db, container.clock);
+    return container;
+  } catch (error) {
+    await container.close();
+    throw error;
+  }
 }

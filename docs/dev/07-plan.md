@@ -39,7 +39,7 @@
 验收：
 - [x] `npm run check` 通过；`npm run android` 能在模拟器上跑出空白 App。
 - [x] 故意在 `src/ui/screens` 写一个 `import '@data/db'` 和一个 `color: '#fff'`，lint 和边界测试都报错（验证后删掉）。
-- [ ] CI 在 PR 上跑通，产出 debug APK。
+- [x] CI 在 PR 上跑通，产出 debug APK。
 
 本地验收（2026-10-29）：
 
@@ -47,7 +47,7 @@
 - 临时 `src/ui/screens/T0BoundaryProbe.tsx` 注入跨层 import、颜色、字号、圆角；ESLint 拒绝，架构 Jest 实际扫描失败；探针已删除，恢复后检查通过。
 - `./gradlew :app:assembleDebug --no-daemon -PreactNativeArchitectures=arm64-v8a` 构建成功；APK 在 `android/app/build/outputs/apk/debug/app-debug.apk`。
 - `npm run android -- --no-packager --active-arch-only` 在 Pixel_10_Pro（Android 17 / arm64）安装启动；Metro 日志确认 `Running "Pagewise"`、`fabric: true`，已核对空白页面。
-- TypeScript / Babel / Jest 七个路径别名一致，CI YAML 解析通过。GitHub CI 尚未远端运行，上面的 PR 验收项保持未勾选。
+- TypeScript / Babel / Jest 七个路径别名一致，CI YAML 解析通过。远端验收补充：PR #1 的 CI run 40745561296，Quality 与 Android build 均通过，已上传 android-debug-apk。
 - 当前规格位于 `docs/dev/`，没有正式 `spec/_settings.md`，Full Spec 的 code drift gate 不适用；本次按 01 §2–§4 核对 T0 目录、依赖和边界。
 
 ### T1 移植基础件
@@ -93,9 +93,11 @@
 - `createDemoContainer()`。
 
 验收：
-- [ ] 每个仓库方法有测试（node:sqlite 内存库）；04 §6 的完整性规则各有测试。
-- [ ] FTS：≥ 3 字走 FTS、≤ 2 字走 LIKE，两条路径都有测试（FTS 不可用时跳过并打印原因）。
-- [ ] Demo 种子跑完后：AIMA 有地图（第 3 章 6 节 26 小节）、3.5.2 有 4 步路线图、闪卡和卡点数量与原型一致。
+- [x] 每个仓库方法有测试（node:sqlite 内存库）；04 §6 的完整性规则各有测试。
+- [x] FTS：≥ 3 字走 FTS、≤ 2 字走 LIKE，两条路径都有测试（FTS 不可用时跳过并打印原因）。
+- [x] Demo 种子跑完后：AIMA 有地图（第 3 章 6 节 26 小节）、3.5.2 有 4 步路线图、闪卡和卡点数量与原型一致。
+
+本地验收（2026-10-29）：`npm run check` 35 suites / 655 tests 通过。迁移 SQL 与 04 原文逐条对照；仓库覆盖 FTS/LIKE、事务回滚、手动目录保留和清缓存保留学习记录。Demo 独立内存库有 3 本书、3.5.2 的 12 个示意块和 4 步路线图，闪卡/卡点/高亮/问答数量与原型一致；引用指向存在的稳定块号。重复播种无重复，整批失败回滚，正式书库拒绝混入 Demo。外观、AI 分配及用量已接 SQLite，密钥仍在 KeyStore。
 
 ### T4 导航与外围页面
 
@@ -103,6 +105,17 @@
 
 - RootStack + Tabs；容器 / VM / View 三件套：Shelf（含导入浮层的界面，选择文件先接假实现）、BookMap（含小节浮层、搜索浮层、flag 对话框）、Review、ReviewSession、Notes、NotesBook（导出浮层先只显示）、NoteDetail、Me 及全部子页（MeAI 表单接 T1 的解析和 Keychain；测试连接接 T7）。
 - 每个 VM 的 `samples.ts`，并接进 SkinGallery 的「页面」列表。
+
+实施文件分工（沿用本节范围；不生成正式 spec）：
+
+| 子任务 | 主目标 | 辅助文件范围 |
+| --- | --- | --- |
+| T4a 书架与地图 | `src/features/library/useLibraryVM.ts` | `src/features/library/{types,presenters,samples}.ts`、`src/features/library/LibraryScreens.tsx`、`src/ui/screens/{Shelf,BookMap,ParseProgress,ImportSettings}View.tsx`、`src/app/usecases/library.ts`、`__tests__/features/library.test.tsx` |
+| T4b 复习与笔记 | `src/features/review/useReviewVM.ts` | `src/features/review/{types,presenters,samples}.ts`、`src/features/review/ReviewScreens.tsx`、`src/features/notes/{types,presenters,samples,useNotesVM}.ts`、`src/features/notes/NotesScreens.tsx`、`src/ui/screens/{Review,ReviewSession,Notes,NotesBook,NoteDetail}View.tsx`、`src/app/usecases/{review,notes}.ts`、`__tests__/features/{review,notes}.test.tsx`、`src/core/review/index.ts` |
+| T4c 我的与设置 | `src/features/settings/useSettingsVM.ts` | `src/features/settings/{types,presenters,samples}.ts`、`src/features/settings/SettingsScreens.tsx`、`src/ui/screens/{Me,MeMineru,MeAI,MeAIEdit,MePrefs,MeStorage,About}View.tsx`、`src/app/usecases/settings.ts`、`__tests__/features/settings.test.tsx` |
+| T4d 导航与集成 | `src/ui/navigation/RootNavigator.tsx` | `src/features/nav.tsx`、`src/App.tsx`、`src/features/gallery/*`、`src/ui/screens/SkinGalleryView.tsx`、导航/应用测试、导航依赖与配置 |
+
+T4a–c 在 T3 通过后同批实现，T4d 负责集成。VM 通过 `app/usecases` 访问容器，页面只用 kit 与 VM 类型；复用已有 tokens。验证运行 `npm run check`、Android 构建和模拟器走查。T8 的文件选择和 T11 的导出/备份保持本节所述界面范围。
 
 验收：
 - [ ] Demo 模式下，原型控制台里的这些场景都能在 App 里走通：书架 → 地图 → 小节浮层；复习闪卡（翻面、三种评分、做完页）；卡点「已掌握」；笔记按节 → 详情 → 写自己的笔记（重进还在）；我的各子页开关和分段能改并持久化。

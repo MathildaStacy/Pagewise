@@ -1,4 +1,5 @@
 export interface AppearanceState {
+  error: string | null;
   skin: 'paper' | 'glass';
   scheme: 'system' | 'light' | 'dark';
   readingSize: 's' | 'm' | 'l';

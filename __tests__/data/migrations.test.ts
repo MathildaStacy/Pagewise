@@ -9,15 +9,17 @@ describe('SQLite schema migration', () => {
   });
   afterEach(async () => db.close());
 
-  it('keeps T1 schema empty, foreign keys enabled, and migration idempotent', async () => {
-    expect(migrations).toEqual([]);
-    expect(SCHEMA_VERSION).toBe(0);
-    expect(await migrate(db)).toEqual({ from: 0, to: 0 });
-    expect(await migrate(db)).toEqual({ from: 0, to: 0 });
+  it('installs T3 schema, keeps foreign keys enabled, and migration idempotent', async () => {
+    expect(migrations).toHaveLength(1);
+    expect(SCHEMA_VERSION).toBe(1);
+    expect(await migrate(db)).toEqual({ from: 0, to: 1 });
+    expect(await migrate(db)).toEqual({ from: 1, to: 1 });
     expect(await db.get('PRAGMA foreign_keys')).toEqual({ foreign_keys: 1 });
     expect(
-      await db.all("SELECT name FROM sqlite_master WHERE type = 'table'"),
-    ).toEqual([]);
+      await db.get(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='book'",
+      ),
+    ).toEqual({ name: 'book' });
   });
 
   it('runs migration steps in order and commits their version atomically', async () => {
@@ -65,16 +67,16 @@ describe('SQLite schema migration', () => {
   });
 
   it('rejects a newer database without downgrading it', async () => {
-    await db.run('PRAGMA user_version = 1');
+    await db.run('PRAGMA user_version = 2');
     await expect(migrate(db)).rejects.toThrow(
-      '数据库版本 1 比这个 App 支持的版本（0）新',
+      '数据库版本 2 比这个 App 支持的版本（1）新',
     );
-    expect(await db.get('PRAGMA user_version')).toEqual({ user_version: 1 });
+    expect(await db.get('PRAGMA user_version')).toEqual({ user_version: 2 });
   });
 
   it('treats an absent user_version result as zero', async () => {
     const spy = jest.spyOn(db, 'get').mockResolvedValueOnce(undefined);
-    expect(await migrate(db)).toEqual({ from: 0, to: 0 });
+    expect(await migrate(db)).toEqual({ from: 0, to: 1 });
     spy.mockRestore();
   });
 });

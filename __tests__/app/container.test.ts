@@ -28,7 +28,7 @@ test('test factory migrates a real isolated SQLite database and closes once', as
   const a = await createTestContainer();
   const b = await createTestContainer();
   try {
-    expect(await a.db.get('PRAGMA user_version')).toEqual({ user_version: 0 });
+    expect(await a.db.get('PRAGMA user_version')).toEqual({ user_version: 1 });
     expect(await a.db.get('PRAGMA foreign_keys')).toEqual({ foreign_keys: 1 });
     await a.db.run('CREATE TABLE fixture (value TEXT)');
     await a.db.run('INSERT INTO fixture VALUES (?)', ['示意内容']);

@@ -1,12 +1,13 @@
 import { useStore } from 'zustand';
-import { appearanceStore, setAppearance } from '@app/appearance';
+import { useContainer } from '@app/ContainerProvider';
 import type { AppearanceState, AppearanceIntents } from './types';
 
 export function useAppearanceVM(back: () => void): {
   state: AppearanceState;
   intents: AppearanceIntents;
 } {
-  const appearance = useStore(appearanceStore);
+  const settings = useContainer().appearance;
+  const appearance = useStore(settings.store);
   return {
     state: {
       ...appearance,
@@ -28,15 +29,15 @@ export function useAppearanceVM(back: () => void): {
     intents: {
       setSkin: value => {
         if (value === 'paper' || value === 'glass')
-          setAppearance({ skin: value });
+          settings.update({ skin: value });
       },
       setScheme: value => {
         if (value === 'system' || value === 'light' || value === 'dark')
-          setAppearance({ scheme: value });
+          settings.update({ scheme: value });
       },
       setSize: value => {
         if (value === 's' || value === 'm' || value === 'l')
-          setAppearance({ readingSize: value });
+          settings.update({ readingSize: value });
       },
       back,
     },

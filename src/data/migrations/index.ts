@@ -1,13 +1,14 @@
 /** Adapted from AShareSim/src/data/migrations/index.ts (GPL-3.0-only). */
 import type { Db } from '../db';
+import { m0001 } from './0001_init';
 /** 按顺序排列；下标 + 1 就是存在 PRAGMA user_version 里的版本号。 */
-export const migrations: string[][] = [];
+export const migrations: string[][] = [m0001];
 
 export const SCHEMA_VERSION = migrations.length;
 
 /**
  * 把数据库升级到迁移列表的最新版本。每个迁移和版本号在同一个事务里，失败时停在上一个版本。
- * 默认使用正式 migrations（T1 为空）；steps 允许测试或自定义迁移使用独立列表。
+ * 默认使用正式 migrations（T3 首个版本）；steps 允许测试或自定义迁移使用独立列表。
  */
 export async function migrate(
   db: Db,

@@ -18,4 +18,4 @@
 
 [glass 分组 Row](glass-dark-rows.png) · [SelectionMenu](glass-dark-selection.png) · [系统2倍 glass按钮](glass-dark-system-font2.png) · [系统2倍 glass行](glass-dark-system-font2-rows.png) · [系统2倍 paper行](paper-dark-system-font2-rows.png)
 
-后续 PR 使用这里的图片；负责人对整套页面的视觉确认与 TalkBack 留在 T12。
+[草稿 PR #1](https://github.com/MathildaStacy/Pagewise/pull/1) 已附这些图片，[CI run 40745561296](https://github.com/MathildaStacy/Pagewise/actions/runs/40745561296) 的 Quality 与 Android build 全绿并保存 APK；负责人对整套页面的视觉确认与 TalkBack 留在 T12。

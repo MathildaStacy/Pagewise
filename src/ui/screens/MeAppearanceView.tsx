@@ -29,6 +29,11 @@ export function MeAppearanceView({
         onBack={intents.back}
         backLabel="组件对照"
       />
+      {state.error ? (
+        <View style={{ padding: t.space.pageX }}>
+          <Note tone="bad">{state.error}</Note>
+        </View>
+      ) : null}
       <ListSection title="皮肤" note="切换即时生效，学习位置保持不变">
         <Row title="界面风格" subtitle="纸感 · 温暖克制 / 苹果风 · 通透轻盈" />
         <View style={{ padding: t.space.pageX }}>

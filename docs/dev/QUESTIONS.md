@@ -13,7 +13,8 @@
 | Q-7 | MinerU Token 有效期 API 拿不到 | 更新 Token 时可选填有效期；收到 A0211 时标记过期 | 已采用 |
 | Q-8 | T0 的路径别名和分层 lint 需要额外构建依赖，01 §2 未逐项列出 | 增加开发依赖 `babel-plugin-module-resolver@5.0.2`、`eslint-plugin-import@2.32.0`、`eslint-import-resolver-typescript@3.10.1`，不增加运行时能力；沿用 RN 模板的 Babel/Metro/ESLint/Jest/类型工具链 | T0 已采用 |
 | Q-9 | 01 §3 写页面只能 import kit 和 VM 类型，但 TSX 需要 React / React Native 展示 API | 允许 React / RN 纯展示 API、同目录展示组件；禁止 RN 的存储、网络、原生模块等副作用入口，业务仍通过 VM；页面不得 import 皮肤 | T0 已采用，待确认 |
-| Q-10 | T1 要求 AI 网关记录用量，但 setting / ai_usage 在 T3 才建表 | T1 网关通过注入的 AiConfiguration 读配置/记用量，设备默认使用未配置的内存适配器；T3 接入 SQLite 仓库后持久化，T1 不提前建表 | T1 采用，T3 替换 |
+| Q-10 | T1 要求 AI 网关记录用量，但 setting / ai_usage 在 T3 才建表 | T1 网关通过注入的 AiConfiguration 读配置/记用量，设备默认使用未配置的内存适配器；T3 接入 SQLite 仓库后持久化，T1 不提前建表 | T3 已替换为 SQLite 配置与用量仓库 |
 | Q-11 | 把 createTestContainer 和 Node SQLite 驱动静态导出在设备组合根会让 Metro 尝试打包 node:sqlite | 测试工厂单独从 app/testing.ts 导入；app/container.ts 仅包含设备与共用组装逻辑 | T1 已采用 |
 | Q-12 | glass 原稿若干语义色与辅助文字未达到 WCAG AA；paper 原色必须与原型一致 | paper 四套原始颜色保持；glass 亮色 ink2/accent/stuck/ok/bad/derive/example 与深色 detour/bad 按 02 记录微调；ok/stuck 保留给图标，小字用 ink/stuckInk，引用小字用 accentInk | T2 自动门禁通过 |
 | Q-13 | Glass 低端/省电自动降级不能只依赖手工 blurEnabled prop | T2 增加轻量 Android UiEnvironment TurboModule，读取 low-RAM / Power Save 并监听省电切换，应用层将结果传入 SkinProvider | T2 已实现并完成原生构建；降级分支有测试 |
+| Q-14 | 3.5.2 的原型正文与较新的 explore 正文块数不同，路线图以 explore 为准 | Demo 中 3.5.2 使用 explore 的 12 块和 4 步；其他已给正文保留 prototype，所有块标记示意内容；未给正文的目录叶仅生成演示占位，不进入正式库 | T3 已采用 |

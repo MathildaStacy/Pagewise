@@ -1,5 +1,6 @@
 import type { Db } from '@data/db';
 import { migrate } from '@data/migrations';
+import { createRepos, type Repos } from '@data/repos';
 import {
   createAiGateway,
   type AiGateway,
@@ -9,17 +10,24 @@ import { AiError, type FetchLike } from '@services/ai/http';
 import { normaliseConfig, resolvedService } from '@services/ai/models';
 import { createMemoryKeyStore, type KeyStore } from '@services/secrets';
 import {
-  createMemoryAiConfiguration,
+  createSqliteAiConfiguration,
   type AiConfiguration,
   type ModelAssignment,
 } from './aiConfiguration';
 import { systemClock, type Clock } from './clock';
+import {
+  createAppearanceSettings,
+  type AppearanceSettings,
+} from './appearance';
 import { createEventBus, type EventBus } from './events';
 import { createLogger, type Logger } from './log';
 
-/** T1 基础服务；仓库和其它平台能力按 T3/T6/T8/T10 加入。 */
+/** 所有 IO 和应用设置通过容器注入，Demo 与正式书库使用独立数据库。 */
 export interface Container {
   db: Db;
+  repos: Repos;
+  appearance: AppearanceSettings;
+  mode: 'device' | 'test' | 'demo';
   secrets: KeyStore;
   ai: AiGateway;
   clock: Clock;
@@ -43,8 +51,25 @@ export async function createContainer(
   const log = over.log ?? createLogger({ clock });
   const secrets =
     over.secrets ?? createMemoryKeyStore({ onSecret: log.registerSecret });
+  try {
+    await migrate(db);
+  } catch (error) {
+    log.error('数据库初始化失败');
+    await db.close();
+    throw error;
+  }
+  const repos = over.repos ?? createRepos(db, () => clock.now().toISOString());
+  let appearance: AppearanceSettings;
+  try {
+    appearance =
+      over.appearance ?? (await createAppearanceSettings(repos.settings, db));
+  } catch (error) {
+    log.error('读取外观设置失败');
+    await db.close();
+    throw error;
+  }
   const configuration =
-    options.aiConfiguration ?? createMemoryAiConfiguration();
+    options.aiConfiguration ?? createSqliteAiConfiguration(repos);
   async function resolve(assignment: ModelAssignment | undefined) {
     if (!assignment) {
       throw new AiError(
@@ -78,17 +103,13 @@ export async function createContainer(
       fetchImpl: options.fetchImpl,
       now: () => clock.now(),
     });
-  try {
-    await migrate(db);
-  } catch (error) {
-    log.error('数据库初始化失败');
-    await db.close();
-    throw error;
-  }
   log.info('基础服务已就绪');
   let closing: Promise<void> | undefined;
   return {
     db,
+    repos,
+    appearance,
+    mode: over.mode ?? 'device',
     clock,
     log,
     secrets,
@@ -98,6 +119,7 @@ export async function createContainer(
       over.close ??
       (() => {
         closing ??= (async () => {
+          await appearance.flush();
           await log.flush();
           await db.close();
         })();

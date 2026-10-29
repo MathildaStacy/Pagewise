@@ -3,8 +3,8 @@ import { open } from '@op-engineering/op-sqlite';
 import { createDb, type Db, type Row, type SqlValue } from '../db';
 
 /** 打开手机上的 App 数据库。 */
-export function openDeviceDb(name = 'pagewise.db'): Db {
-  const conn = open({ name });
+export function openDeviceDb(name = 'pagewise.db', location?: string): Db {
+  const conn = open({ name, ...(location ? { location } : {}) });
   try {
     conn.executeSync('PRAGMA foreign_keys = ON');
     conn.executeSync('PRAGMA journal_mode = WAL');
