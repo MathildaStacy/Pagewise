@@ -1,0 +1,170 @@
+/* Pagewise 书页排版风原型 · 控件与浮层：Note、Tag、开关、复选框、输入框、进度条、空状态、Sheet、Dialog、Toast、段落菜单、原型控制台 */
+
+/* Note：左边一条 2px 色线 + 浅底，像书里的「注」 */
+.note{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.6;padding:10px 12px 10px 14px;border-radius:0 var(--r-sm) var(--r-sm) 0;background:var(--surface-alt);color:var(--ink2);box-shadow:inset 2px 0 0 var(--ink3)}
+.note>svg.i{width:16px;height:16px;margin-top:2px;flex:none}
+.note b{color:var(--ink);font-weight:600}
+.note.acc{background:var(--accent-bg);color:var(--ink);box-shadow:inset 2px 0 0 var(--accent)}
+.note.acc>svg.i{color:var(--accent)}
+.note.ai{background:var(--ai-soft);color:var(--ink2);box-shadow:inset 2px 0 0 var(--ai)}
+.note.ai>svg.i{color:var(--ai)}
+.note.warn{background:var(--stuck-bg);color:var(--ink);box-shadow:inset 2px 0 0 var(--stuck)}
+.note.warn>svg.i{color:var(--stuck)}
+.note.bad{background:var(--bad-bg);color:var(--ink);box-shadow:inset 2px 0 0 var(--bad)}
+.note.bad>svg.i{color:var(--bad)}
+.note.ok{background:var(--ok-bg);color:var(--ink);box-shadow:inset 2px 0 0 var(--ok)}
+.note.ok>svg.i{color:var(--ok)}
+
+/* Tag：细线框的小字标签，不填色 */
+.tag{display:inline-flex;align-items:center;gap:3px;height:19px;padding:0 6px;border-radius:var(--r-xs);font-size:11px;font-weight:500;letter-spacing:.04em;color:var(--ink2);box-shadow:inset 0 0 0 1px var(--rule2);vertical-align:1px;white-space:nowrap}
+.tag.acc{color:var(--accent-ink);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 45%,transparent)}
+.tag.ok{color:var(--ok-ink);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ok) 45%,transparent)}
+.tag.stuck{color:var(--stuck-ink);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--stuck) 45%,transparent)}
+.tag.dt{color:var(--detour-ink);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--detour) 45%,transparent)}
+.tag.bad{color:var(--bad-ink);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--bad) 45%,transparent)}
+.tag.ai{display:inline-flex;flex-direction:row;gap:3px;color:var(--ai-ink);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ai) 45%,transparent)}  /* .ai 也是 AI 回答的 class，这里要覆盖它的纵向布局 */
+.tag svg.i{width:12px;height:12px}
+.grp-h .tag{font:500 11px var(--font);letter-spacing:.04em}
+
+/* ToggleSwitch：36×18 的细线轨道；开 = 墨蓝实底 + 纸色方点。比圆形开关更「印刷」，但面积和手感不变 */
+.sw{width:38px;height:20px;border-radius:10px;position:relative;flex:none;cursor:pointer;box-shadow:inset 0 0 0 1px var(--ink3);transition:background .2s,box-shadow .2s}
+.sw::after{content:"";position:absolute;left:4px;top:4px;width:12px;height:12px;border-radius:50%;background:var(--ink3);transition:left .2s var(--ease),background .2s}
+.sw.on{background:var(--accent);box-shadow:none}
+.sw.on::after{left:22px;background:var(--on-accent)}
+/* CheckBox：18px 方形，选中墨色实底 */
+.cb{width:18px;height:18px;border-radius:var(--r-xs);box-shadow:inset 0 0 0 1.25px var(--ink2);display:grid;place-items:center;color:transparent;flex:none;transition:background .15s}
+.cb svg.i{width:13px;height:13px;stroke-width:2.2}
+.on>.cb,.cb.on{background:var(--btn);box-shadow:none;color:var(--on-btn)}
+
+/* TextBox：只有一条下划线（像在纸上填空），聚焦时变成 1.5px 墨蓝 */
+.fld{display:block;padding:12px 0 14px;position:relative}
+.fld label{display:block;font-size:11px;letter-spacing:.12em;color:var(--ink2);margin-bottom:4px}
+.inp,.fld input,.fld select,.fld textarea{display:block;width:100%;min-height:36px;font-size:15px;padding:6px 0;background:none;box-shadow:inset 0 -1px 0 var(--rule2);transition:box-shadow .15s}
+.inp:focus,.fld input:focus,.fld textarea:focus,.fld select:focus{box-shadow:inset 0 -1.5px 0 var(--accent)}
+.fld input[readonly],.fld input[disabled]{color:var(--ink2);box-shadow:inset 0 -1px 0 var(--line)}
+.fld select{-webkit-appearance:none;appearance:none;cursor:pointer;background-image:linear-gradient(45deg,transparent 50%,var(--ink2) 50%),linear-gradient(135deg,var(--ink2) 50%,transparent 50%);background-position:calc(100% - 10px) 16px,calc(100% - 5px) 16px;background-size:5px 5px;background-repeat:no-repeat}
+.fld textarea{min-height:88px;resize:vertical;line-height:1.6;padding:8px 10px;box-shadow:inset 0 0 0 1px var(--rule2);border-radius:var(--r-sm)}
+.fld textarea:focus{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.fld .err{font-size:12px;color:var(--bad-ink);margin-top:5px}
+.fld.bad input{box-shadow:inset 0 -1.5px 0 var(--bad)}
+::placeholder{color:var(--ink3)}
+.box{height:32px;border-radius:var(--r-sm);box-shadow:inset 0 0 0 1px var(--rule2);padding:0 10px;font-size:14px;text-align:center}
+.box:focus{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.edt{display:block;width:100%;border-radius:var(--r-sm);background:var(--paper);padding:12px 14px;font:15px/1.75 var(--font);min-height:120px;resize:vertical;box-shadow:inset 0 0 0 1px var(--rule2)}
+.edt:focus{box-shadow:inset 0 0 0 1.5px var(--accent)}
+
+/* ProgressBar：2px 细线；AI 在做的事（解析中）用朱色 */
+.bar{height:2px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);transition:width .4s var(--ease)}
+.bar.ai i{background:var(--ai)}
+.bar.ok i{background:var(--ok)}
+.bar.bad i{background:var(--bad)}
+.bar.ind i{width:40%!important;animation:ind 1.4s var(--ease-std) infinite}
+@keyframes ind{from{transform:translateX(-100%)}to{transform:translateX(260%)}}
+/* 分段进度（本节的步）：已讲墨蓝、当前朱色、跳过虚线、未讲发丝线 */
+.segs{display:flex;gap:3px}
+.segs i{flex:1;height:3px;background:var(--line)}
+.segs i.d{background:var(--accent)}
+.segs i.n{background:var(--ai)}
+.segs i.k{background:repeating-linear-gradient(90deg,var(--ink3) 0 3px,transparent 3px 6px)}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex:none;display:inline-block}
+.empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:40px 28px;color:var(--ink2);font-size:13.5px;line-height:1.65}
+.empty b{font:500 19px var(--display);color:var(--ink);margin-top:8px}
+.empty .btn{margin-top:14px}
+.skel{border-radius:var(--r-xs);background:linear-gradient(90deg,var(--line) 25%,var(--surface-alt) 50%,var(--line) 75%);background-size:300% 100%;animation:skel 1.6s infinite}
+@keyframes skel{from{background-position:100% 0}to{background-position:-50% 0}}
+.pad{padding:0 20px}
+.enter{animation:up .35s var(--ease) both}
+@keyframes up{from{opacity:0;transform:translateY(6px)}}
+@keyframes pop{from{opacity:0;transform:scale(.94)}}
+
+/* ---------- 浮层 ---------- */
+#overlay{position:absolute;inset:0;z-index:20;pointer-events:none}
+#overlay:empty{display:none}
+#overlay.show{pointer-events:auto}
+.scrim{position:absolute;inset:0;background:var(--scrim);opacity:0;transition:opacity .25s}
+#overlay.show .scrim{opacity:1}
+/* Sheet：贴底的纸面板，顶部 12 圆角；标题 20 号衬线左对齐，下面一条发丝线；底部按钮区横排（三个以上竖排） */
+.sheet{position:absolute;left:0;right:0;bottom:0;max-height:86%;display:flex;flex-direction:column;border-radius:var(--r-sheet) var(--r-sheet) 0 0;overflow:hidden;background:var(--bg);box-shadow:var(--sh-float);
+  transform:translateY(calc(100% + 16px));transition:transform .4s var(--ease);touch-action:none}
+#overlay.show .sheet{transform:none}
+.sheet.drag{transition:none}
+.grab{width:32px;height:3px;border-radius:2px;background:var(--ink3);opacity:.5;margin:8px auto 0;flex:none;cursor:grab}
+.sheet .sh{display:flex;align-items:flex-start;gap:8px;padding:10px 12px 12px 22px;flex:none;box-shadow:inset 0 -1px 0 var(--rule);margin-bottom:12px}
+.sheet .sh .t{flex:1;min-width:0;padding-top:4px}
+.sheet .sh b{display:block;font:500 20px/1.3 var(--display)}
+.sheet .sh small{display:block;font-size:12px;color:var(--ink2);margin-top:3px}
+.sheet .sh .x{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:var(--ink2);flex:none}
+.sheet .sh .x:hover{background:var(--surface-alt)}
+.sheet .sh .x svg.i{width:18px;height:18px}
+.sb{overflow-y:auto;padding:0 20px 14px;min-height:0;touch-action:pan-y;scrollbar-width:none}
+.sb::-webkit-scrollbar{display:none}
+.sf{display:flex;gap:8px;padding:12px 20px 30px;flex:none;box-shadow:inset 0 1px 0 var(--rule)}
+.sf .btn{flex:1;min-width:0}
+.sf.v{flex-direction:column}
+.sp{font-size:15px;line-height:1.7;margin:0 0 12px}
+/* 引用的原文：书页底色 + 宋体 + 左边墨蓝细线 */
+.sp.quote{font:15px/1.85 var(--serif);color:var(--paper-ink);background:var(--paper);padding:10px 14px;box-shadow:inset 2px 0 0 var(--accent)}
+.sub{font-size:11px;letter-spacing:.14em;color:var(--ink2);font-weight:500;margin:4px 0 8px}
+/* Dialog：居中的纸片，标题衬线；按钮区上方一条发丝线，两个等宽按钮（主按钮在左） */
+.dlgw{position:absolute;inset:0;display:grid;place-items:center;padding:0 22px}
+.dlg{width:100%;max-width:346px;border-radius:var(--r-lg);overflow:hidden;background:var(--bg);box-shadow:var(--sh-float);transform:translateY(8px);opacity:0;transition:transform .25s var(--ease),opacity .18s}
+#overlay.show .dlg{transform:none;opacity:1}
+.dlg .dh{padding:24px 24px 6px;font:500 20px/1.35 var(--display)}
+.dlg .db{padding:4px 24px 20px;font-size:14px;line-height:1.65;color:var(--ink2)}
+.dlg .db b{color:var(--ink);font-weight:600}
+.dlg .db .edt{margin-top:10px;min-height:96px;color:var(--ink)}
+.dlg .db .sp.quote{font-size:13.5px;margin:4px 0 0}
+.dlg .df{display:flex;gap:8px;padding:14px 24px 20px;box-shadow:inset 0 1px 0 var(--rule)}
+.dlg .df.v{flex-direction:column-reverse}
+.dlg .df .btn{flex:1}
+/* Toast：墨色小纸条（深色时反过来是米色），一行字，左边一个小图标；在 Tab 栏 / 输入区上方 */
+#toast{position:absolute;left:20px;right:20px;bottom:100px;z-index:30;transform:translateY(10px);opacity:0;pointer-events:none;padding:11px 14px;border-radius:var(--r-sm);font-size:13.5px;line-height:1.45;
+  background:var(--btn);color:var(--on-btn);box-shadow:0 8px 24px rgba(40,30,15,.22);transition:opacity .2s,transform .35s var(--ease);display:flex;align-items:center;gap:10px}
+#toast.show{opacity:1;transform:none}
+#toast .ap{display:grid;place-items:center;flex:none;opacity:.8}
+#toast .ap svg.i{width:17px;height:17px}
+#toast.ok .ap{color:#B9D3A5}
+#toast.dt .ap{color:#D4C0E0}
+#toast.bad .ap{color:#F0B2A4}
+:root[data-theme=dark] #toast.ok .ap{color:var(--ok-ink)}
+:root[data-theme=dark] #toast.ok .ap,:root[data-theme=dark] #toast.dt .ap,:root[data-theme=dark] #toast.bad .ap{filter:brightness(.55)}
+#toast .tx{flex:1;min-width:0}
+#toast .tx b{display:none}
+/* 段落菜单：浮起来的纸条，图标 + 文字；「解释」用朱色（是 AI 动作） */
+.emenu{position:absolute;z-index:15;display:flex;gap:0;max-width:calc(100% - 16px);overflow-x:auto;scrollbar-width:none;border-radius:var(--r-md);padding:3px;background:var(--card-hi);box-shadow:var(--sh-float);animation:pop .18s var(--ease)}
+.emenu::-webkit-scrollbar{display:none}
+.emenu button{flex:none;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:52px;height:50px;justify-content:center;padding:0 8px;border-radius:var(--r-sm);font-size:11.5px;white-space:nowrap}
+.emenu button+button{box-shadow:-1px 0 0 var(--line)}
+.emenu button svg.i{width:18px;height:18px}
+.emenu button:hover{background:var(--surface-alt)}
+.emenu button.ai{color:var(--ai-ink)}
+
+/* ---------- 原型控制台：一页版权页（colophon）样式的说明，放在书桌上 ---------- */
+.console{width:340px;flex:none;background:var(--paper);box-shadow:0 1px 0 var(--rule),0 18px 40px rgba(40,30,15,.12);position:sticky;top:40px;max-height:calc(100vh - 80px);display:flex;flex-direction:column}
+.console .tb{display:flex;align-items:baseline;justify-content:space-between;padding:20px 24px 10px;margin:0 24px 0;padding-left:0;padding-right:0;box-shadow:inset 0 -1.5px 0 var(--ink);font-size:11px;letter-spacing:.16em;color:var(--ink2);flex:none}
+.console .tb b{font:500 13px var(--display);letter-spacing:.02em;color:var(--ink)}
+.console .bd{padding:14px 24px 24px;overflow-y:auto;scrollbar-width:thin}
+.console h1{font:500 24px/1.25 var(--display);margin:6px 0 8px}
+.console .lead{font:14px/1.7 var(--serif);color:var(--ink2)}
+.console h2{font:500 11px var(--font);letter-spacing:.16em;color:var(--ink2);margin:22px 0 8px;padding-bottom:6px;box-shadow:inset 0 -1px 0 var(--rule)}
+.console p{font-size:12.5px;line-height:1.65;color:var(--ink2);margin:4px 0}
+.console a{color:var(--accent-ink);text-underline-offset:3px}
+.console .tg{display:flex;gap:6px;margin-top:14px}
+.console .tg button,.console .pgs button{height:28px;padding:0 10px;border-radius:var(--r-sm);font-size:12.5px;box-shadow:inset 0 0 0 1px var(--rule2)}
+.console .tg button:hover,.console .pgs button:hover{background:var(--surface-alt)}
+.console .tg button.on,.console .pgs button.on{background:var(--btn);color:var(--on-btn);box-shadow:none}
+.console .pgs{display:flex;flex-wrap:wrap;gap:5px}
+.console .pgs .gl{width:100%;font-size:11px;letter-spacing:.1em;color:var(--ink3);margin:8px 0 1px}
+.console .jump{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+.console .jump button{text-align:left;padding:7px 0;box-shadow:inset 0 -1px 0 var(--line);font-size:13px;font-weight:500;line-height:1.35}
+.console .jump button:hover{color:var(--accent-ink)}
+.console .jump button small{display:block;font-weight:400;color:var(--ink2);font-size:11px;margin-top:1px}
+.console .flags{display:flex;flex-direction:column}
+.console .flags label{display:flex;align-items:center;gap:10px;padding:7px 0;font-size:12.5px;cursor:pointer;box-shadow:inset 0 -1px 0 var(--line)}
+.console .flags label small{display:block;color:var(--ink2);font-size:11px}
+.console .flags label .grow{flex:1}
+.console .rst{margin-top:18px;width:100%;height:34px;border-radius:var(--r-sm);box-shadow:inset 0 0 0 1px var(--rule2);font-size:13px;font-weight:500;color:var(--bad-ink)}
+@media (max-width:860px){.console{position:static;max-height:none}}
+@media (max-width:430px){.stage{padding:0}.phone{width:100vw;height:100vh;border-radius:0;box-shadow:none}.console{width:100%}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}

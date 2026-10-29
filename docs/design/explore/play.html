@@ -1,0 +1,815 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pagewise · 新谷歌风探索</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@8..144,400..700&family=Roboto+Flex:opsz,wght@8..144,400..700&display=swap" rel="stylesheet">
+<style>
+/* 新谷歌风 · 照 Google Play 现在的样子：白底、Google 蓝、下划线标签页、圆角方图标列表、评分小标签、底部胶囊导航
+ * 语义色：主线 = 蓝，岔路 = 绿，高亮 = 黄，卡点 = 红 */
+:root{
+  --primary:#0B57D0;--on-primary:#fff;--pc:#D3E3FD;--on-pc:#041E49;
+  --sc:#C2E7FF;--on-sc:#001D35;
+  --green:#146C2E;--gc:#C4EED0;--on-gc:#072711;
+  --red:#B3261E;--rc:#F9DEDC;--on-rc:#410E0B;
+  --amber-c:#FFE7A3;--on-amber-c:#3D2E00;--hl:rgba(253,214,99,.45);
+  --surface:#FFFFFF;--s-low:#F8FAFD;--s:#F0F4F9;--s-high:#E9EEF6;--s-highest:#DDE3EA;
+  --on-s:#1F1F1F;--on-sv:#444746;--outline:#747775;--ov:#C4C7C5;
+  --inv-s:#303030;--inv-on:#F2F2F2;--scrim:rgba(0,0,0,.32);
+  --font:"Google Sans Flex","Google Sans","Google Sans Text","Roboto Flex",Roboto,"PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --serif:"Noto Serif SC","Songti SC","STSong",serif;
+  --std:cubic-bezier(.2,0,0,1);--dec:cubic-bezier(.05,.7,.1,1);
+  color-scheme:light;
+}
+[data-theme=dark]{
+  --primary:#A8C7FA;--on-primary:#062E6F;--pc:#0842A0;--on-pc:#D3E3FD;
+  --sc:#004A77;--on-sc:#C2E7FF;
+  --green:#6DD58C;--gc:#0F5223;--on-gc:#C4EED0;
+  --red:#F2B8B5;--rc:#8C1D18;--on-rc:#F9DEDC;
+  --amber-c:#4D3B00;--on-amber-c:#FFE7A3;--hl:rgba(253,214,99,.2);
+  --surface:#131314;--s-low:#1B1B1C;--s:#1E1F20;--s-high:#282A2C;--s-highest:#333537;
+  --on-s:#E3E3E3;--on-sv:#C4C7C5;--outline:#8E918F;--ov:#444746;
+  --inv-s:#E3E3E3;--inv-on:#303030;--scrim:rgba(0,0,0,.5);
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:var(--font);background:#E9EEF6;color:var(--on-s);-webkit-font-smoothing:antialiased;transition:background .3s}
+[data-theme=dark] body{background:#070708}
+button,input{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+input{cursor:text;outline:0}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+svg.i{width:24px;height:24px;flex:none;fill:currentColor}
+
+.stage{min-height:100%;display:flex;gap:40px;justify-content:center;align-items:center;padding:28px 16px}
+.phone{width:390px;height:844px;flex:none;position:relative;overflow:hidden;border-radius:44px;background:var(--surface);display:flex;flex-direction:column;
+  box-shadow:0 0 0 10px #1F1F1F,0 0 0 11px #444746,0 30px 80px rgba(0,0,0,.28);transition:background .3s}
+.sbar{height:40px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:4px 24px 0 28px;font-size:14px;font-weight:500;position:relative;z-index:11}
+.sbar .cam{position:absolute;left:50%;top:12px;width:14px;height:14px;border-radius:50%;background:#000;transform:translateX(-50%)}
+.sbar .r{display:flex;gap:6px;align-items:center}
+.sbar .r svg{width:16px;height:16px;fill:currentColor}
+
+/* ---------- 学习页 ---------- */
+#appbar{height:64px;flex:none;display:flex;align-items:center;gap:4px;padding:0 4px}
+#appbar .ib{width:48px;height:48px;border-radius:24px;display:grid;place-items:center;color:var(--on-s);transition:background .2s}
+#appbar .ib:hover{background:var(--s)}
+#appbar .ib:active{background:var(--s-high)}
+.ttl{flex:1;min-width:0;line-height:1.25;padding-left:4px}
+.ttl b{display:block;font-size:20px;font-weight:400}
+.ttl small{font-size:13px;color:var(--on-sv)}
+
+/* 读书 / 听讲：Play 顶部的下划线标签页，指示条在两个等宽标签之间滑动 */
+#modebar{flex:none;border-bottom:1px solid var(--ov)}
+.seg{position:relative;display:flex;padding-left:8px}
+.seg button{width:84px;height:48px;font-size:16px;font-weight:500;color:var(--on-sv);transition:color .2s}
+.seg button.on{color:var(--primary)}
+.seg .thumb{position:absolute;bottom:0;left:32px;width:36px;height:3px;border-radius:3px 3px 0 0;background:var(--primary);transition:left .3s var(--std)}
+.seg .thumb.listen{left:116px}
+
+#top{flex:none}
+.rail{display:flex;gap:8px;overflow-x:auto;padding:12px 16px 10px;scrollbar-width:none}
+.rail::-webkit-scrollbar{display:none}
+.step{flex:none;display:flex;align-items:center;gap:8px;height:32px;padding:0 12px 0 8px;border-radius:8px;box-shadow:inset 0 0 0 1px var(--ov);font-size:14px;font-weight:500;color:var(--on-sv);transition:background .2s}
+.step .ic{width:18px;height:18px;border-radius:9px;display:grid;place-items:center;font-size:12px;font-weight:500}
+.step .ic svg.i{width:18px;height:18px}
+.step.done{box-shadow:none;background:var(--s)}
+.step.done .ic{color:var(--primary)}
+.step.now{box-shadow:none;background:var(--sc);color:var(--on-sc)}
+.step.now .ic{background:var(--primary);color:var(--on-primary)}
+.step.skipped .t{text-decoration:line-through}
+.pbar{position:relative;height:4px;margin:0 20px 10px 16px;border-radius:2px;background:var(--pc);display:flex}
+.pbar i{display:block;border-radius:2px;background:var(--primary);box-shadow:4px 0 0 var(--surface);transition:width .6s var(--std)}
+.pbar::after{content:"";position:absolute;right:0;top:0;width:4px;height:4px;border-radius:2px;background:var(--primary)}
+.banner{display:flex;align-items:center;gap:12px;margin:12px 16px;padding:8px 8px 8px 16px;border-radius:16px;background:var(--gc);color:var(--on-gc)}
+.banner .grow{flex:1;font-size:16px;line-height:1.3}
+.banner small{display:block;font-size:12px;font-weight:700}
+.banner button{height:40px;padding:0 16px;border-radius:20px;background:var(--green);color:var(--surface);font-size:14px;font-weight:500}
+
+#view{flex:1;overflow-y:auto;overflow-x:hidden;min-height:0;scrollbar-width:none}
+#view::-webkit-scrollbar{display:none}
+[data-mode=listen] #view{padding-bottom:150px}
+.thread{padding:8px 20px 24px;display:flex;flex-direction:column;gap:16px}
+.enter{animation:rise .4s var(--dec) both}
+@keyframes rise{from{opacity:0;transform:translateY(12px)}}
+.sys{align-self:center;font-size:12px;color:var(--on-sv);background:var(--s);border-radius:8px;padding:4px 10px}
+/* 步骤标题照 Play 的分区标题：「赞助商广告 · 为您推荐」 */
+.head{display:flex;align-items:baseline;flex-wrap:wrap;gap:0 6px;margin-top:20px;scroll-margin-top:8px}
+.head .sn{font-size:14px;font-weight:700}
+.head .sn::after{content:" ·"}
+.head b{font-size:22px;font-weight:400;line-height:1.3}
+.head .pg{margin-left:auto;font-size:13px;color:var(--on-sv)}
+.ai{font-size:16px;line-height:1.72}
+.ai b{font-weight:600}
+.math{font-family:"Times New Roman",serif;font-style:italic;font-size:1.06em;white-space:nowrap}
+.user{align-self:flex-end;max-width:80%;background:var(--s-high);padding:10px 16px;border-radius:20px 20px 4px 20px;font-size:15px;line-height:1.5}
+.tool{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--on-sv)}
+.tool svg.i{width:18px;height:18px}
+.src{display:block;width:100%;text-align:left;background:var(--s);border-radius:24px;padding:14px 18px 16px;transition:background .2s}
+.src:active{background:var(--s-high)}
+.lbl{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--on-sv);margin-bottom:6px}
+.lbl svg.i{width:16px;height:16px;color:var(--primary)}
+.src .q{display:block;font:16px/1.78 var(--serif)}
+.aux{border-radius:20px;padding:14px 18px;font-size:15px;line-height:1.68}
+.derive{box-shadow:inset 0 0 0 1px var(--ov)}
+.ex{background:color-mix(in srgb,var(--pc) 55%,var(--surface));color:var(--on-pc)}
+.ex .lbl{color:var(--on-pc)}
+.ex .lbl svg.i{color:inherit}
+.check{border-radius:20px;padding:14px 18px;font-size:15px;line-height:1.65;box-shadow:inset 0 0 0 1px var(--ov)}
+.check .lbl{color:var(--primary)}
+.resume{border-radius:20px;padding:14px 18px;font-size:15px;line-height:1.65;background:var(--sc);color:var(--on-sc)}
+.resume .lbl,.resume .lbl svg.i{color:var(--on-sc)}
+/* 引用照 Play 的评分小标签 */
+.cite{display:inline-flex;align-items:center;height:22px;padding:0 7px;margin:0 2px;border-radius:6px;background:var(--s-high);color:var(--primary);font-size:13px;font-weight:500;vertical-align:1px;transition:background .2s}
+.cite:active{background:var(--pc)}
+.cite.dt{background:var(--gc);color:var(--green)}
+/* 折叠的岔路照 Play 的列表行：圆角方图标 + 标题 + 灰色元信息 */
+.fold-h{display:grid;grid-template-columns:56px 1fr 24px;grid-template-rows:auto auto;column-gap:16px;width:100%;padding:4px 0;text-align:left}
+.fold-h>svg.i:first-child{grid-row:1/3;width:56px;height:56px;padding:16px;border-radius:14px;background:var(--gc);color:var(--on-gc)}
+.fold-h .grow{grid-column:2;align-self:end;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fold-h .n{grid-column:2;grid-row:2;align-self:start;font-size:14px;color:var(--on-sv);margin-top:2px}
+.fold-h .n::before{content:"岔路 • 3.4.2 • "}
+.fold-h>svg.i:last-child{grid-column:3;grid-row:1/3;align-self:center;color:var(--on-sv);transition:transform .3s var(--std)}
+.fold.open .fold-h>svg.i:last-child{transform:rotate(90deg)}
+.fold-b{display:flex;flex-direction:column;gap:12px;margin-top:10px;padding:16px;border-radius:20px;background:var(--s-low);box-shadow:inset 0 0 0 1px var(--ov)}
+.fold-b .user,.detour-run .user{background:var(--gc);color:var(--on-gc)}
+.detour-run{display:flex;flex-direction:column;gap:14px;background:color-mix(in srgb,var(--gc) 40%,var(--surface));border-radius:24px;padding:16px;margin:0 -6px}
+.donecard{background:var(--gc);color:var(--on-gc);border-radius:24px;padding:16px 18px;font-size:15px;line-height:1.6}
+.donecard .lbl,.donecard .lbl svg.i{color:var(--on-gc)}
+.typing{display:flex;gap:6px;padding:8px 2px}
+.typing i{width:8px;height:8px;border-radius:4px;background:#4285F4;animation:bounce 1s var(--std) infinite}
+.typing i:nth-child(2){background:#EA4335;animation-delay:.15s}.typing i:nth-child(3){background:#FBBC04;animation-delay:.3s}
+@keyframes bounce{0%,70%,100%{transform:translateY(0)}35%{transform:translateY(-6px)}}
+
+#dock{position:absolute;left:0;right:0;bottom:0;padding:24px 0 26px;z-index:5;background:linear-gradient(to bottom,transparent,var(--surface) 30%)}
+[data-mode=read] #dock{display:none}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:0 16px 12px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;height:36px;padding:0 14px;border-radius:8px;font-size:14px;font-weight:500;display:flex;align-items:center;gap:6px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--ov);color:var(--on-sv);transition:background .2s}
+.chip:active{background:var(--s-high)}
+.chip.pri{background:var(--primary);color:var(--on-primary);box-shadow:none;border-radius:18px;padding:0 18px 0 12px}
+.chip svg.i{width:18px;height:18px}
+.composer{display:flex;align-items:center;gap:2px;margin:0 16px;height:56px;border-radius:28px;padding:0 6px 0 22px;background:var(--s-high)}
+.composer input{flex:1;min-width:0;font-size:16px}
+.composer input::placeholder{color:var(--on-sv)}
+.mic{width:44px;height:44px;border-radius:22px;display:grid;place-items:center;color:var(--on-sv)}
+.send{width:44px;height:44px;border-radius:22px;background:var(--primary);color:var(--on-primary);display:grid;place-items:center}
+.send svg.i{width:20px;height:20px}
+
+/* ---------- 读书 ---------- */
+.guide{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;width:calc(100% - 32px);margin:12px 16px 0;text-align:left;background:var(--s);border-radius:16px;padding:12px 12px 12px 16px}
+.guide .lbl{margin:0;color:var(--on-s)}
+.guide .gt{flex:1;min-width:0;font-size:14px;color:var(--on-sv)}
+.guide .gt.one{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.guide.open .gt{flex-basis:100%;order:3;font-size:15px;line-height:1.65;margin-top:2px;color:var(--on-s)}
+.guide>svg.i:last-child{color:var(--on-sv);transform:rotate(90deg);transition:transform .3s var(--std)}
+.guide.open>svg.i:last-child{transform:rotate(-90deg)}
+.page{padding:20px 24px 8px;font:17px/1.86 var(--serif)}
+.blk{position:relative;margin:0 -10px 8px;padding:3px 10px;border-radius:8px;cursor:pointer;transition:background .2s}
+.blk::before{content:"";position:absolute;left:-6px;top:8px;bottom:8px;width:3px;border-radius:2px;background:transparent}
+.blk.heard::before{background:var(--pc)}
+.blk.now::before{background:var(--primary)}
+.blk.hl{background:var(--hl)}
+.blk.sel{background:var(--s-high)}
+.blk.flash{animation:flash 2s var(--std)}
+@keyframes flash{0%,30%{background:var(--pc)}}
+.b-h{font:400 24px/1.35 var(--font);margin-bottom:12px}
+.b-eq{text-align:center;font-size:19px}
+.cap{font:13px/1.6 var(--font);color:var(--on-sv);margin-top:4px}
+.figsvg{display:block;width:100%;height:auto;font:11px var(--font)}
+.figsvg .e path{stroke:var(--outline);stroke-width:1.5;fill:none}
+.figsvg .e .dash{stroke-dasharray:4 3}.figsvg .e .on{stroke:var(--primary);stroke-width:3}
+.figsvg .n circle{fill:var(--s);stroke:var(--outline);stroke-width:1.2}
+.figsvg .n .on{fill:var(--pc);stroke:var(--primary)}.figsvg .n .goal{fill:var(--gc);stroke:var(--green);stroke-width:2}
+.figsvg text{fill:var(--on-s);text-anchor:middle}.figsvg .l text{font-weight:700;font-size:13px}
+.figsvg .w text,.figsvg .s text{fill:var(--on-sv);font-size:10.5px}
+.pin{display:flex;align-items:center;gap:8px;margin:-2px 0 12px;padding:6px 12px 6px 8px;border-radius:8px;background:var(--amber-c);color:var(--on-amber-c);font:500 13px var(--font);text-align:left}
+.pin svg.i{width:18px;height:18px}
+.pno{text-align:center;font:12px var(--font);color:var(--on-sv);margin:4px 0 14px}
+.readend{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 16px 56px}
+.readend small{font-size:12px;color:var(--on-sv)}
+
+/* ---------- 按钮、底部面板、提示条 ---------- */
+.btn{height:48px;padding:0 24px;border-radius:24px;box-shadow:inset 0 0 0 1px var(--outline);color:var(--primary);font-size:15px;font-weight:500;transition:background .2s}
+.btn:active{background:var(--s-high)}
+.btn.pri{background:var(--primary);color:var(--on-primary);box-shadow:none}
+#overlay{position:absolute;inset:0;z-index:20;pointer-events:none}
+#overlay:empty{display:none}
+#overlay.show{pointer-events:auto}
+.scrim{position:absolute;inset:0;background:var(--scrim);opacity:0;transition:opacity .3s}
+#overlay.show .scrim{opacity:1}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-height:80%;display:flex;flex-direction:column;border-radius:28px 28px 0 0;background:var(--s-low);transform:translateY(105%);transition:transform .4s var(--std)}
+#overlay.show .sheet{transform:none}
+.grab{width:32px;height:4px;border-radius:2px;background:var(--on-sv);opacity:.4;margin:16px auto 8px;flex:none}
+.sh{padding:8px 24px 12px;flex:none}
+.sh b{font-size:22px;font-weight:400}
+.sh small{display:block;font-size:14px;color:var(--on-sv);margin-top:2px}
+.sb{overflow-y:auto;padding:4px 20px;min-height:0}
+.sp{font-size:16px;line-height:1.65;margin:4px 4px 10px}
+.sp.quote{font-family:var(--serif)}
+.sp.stuck{display:flex;gap:10px;align-items:flex-start;color:var(--red);font-size:15px}
+.sub{font-size:14px;font-weight:700;margin:14px 4px 8px}
+.sf{display:flex;flex-direction:column;gap:8px;padding:16px 20px 34px;flex:none}
+.peek{background:var(--surface);border-radius:20px;box-shadow:inset 0 0 0 1px var(--ov);padding:18px 18px 8px;font:15px/1.8 var(--serif);max-height:330px;overflow-y:auto}
+.pblk{padding:2px 8px;margin:0 -8px 6px;border-radius:8px}
+.pblk.tgt{background:var(--hl);box-shadow:inset 3px 0 0 var(--primary)}
+.pblk.b-eq{text-align:center}
+.ck{display:flex;align-items:center;gap:16px;width:100%;text-align:left;background:var(--surface);border-radius:16px;padding:12px 16px;margin-bottom:8px}
+.ck .bx{width:18px;height:18px;border-radius:2px;box-shadow:inset 0 0 0 2px var(--on-sv);display:grid;place-items:center;color:transparent;flex:none;transition:background .2s}
+.ck .bx svg.i{width:16px;height:16px}
+.ck.on .bx{background:var(--primary);box-shadow:none;color:var(--on-primary)}
+.ck .grow{flex:1;min-width:0;font-size:16px;line-height:1.4}
+.ck small{display:block;color:var(--on-sv);font-size:14px;margin-top:2px}
+#toast{position:absolute;left:16px;right:16px;bottom:150px;z-index:30;opacity:0;transform:translateY(12px);pointer-events:none;padding:14px 16px;border-radius:4px;font-size:14px;background:var(--inv-s);color:var(--inv-on);box-shadow:0 3px 8px rgba(0,0,0,.2);transition:all .3s var(--std)}
+[data-mode=read] #toast{bottom:40px}
+#toast.show{opacity:1;transform:none}
+.homebar{position:absolute;left:50%;bottom:8px;width:108px;height:4px;border-radius:2px;background:var(--on-s);transform:translateX(-50%);z-index:40;opacity:.6}
+
+/* 书架和学习页之间：横向共享轴切换 */
+.phone[data-screen=study]>#appbar,.phone[data-screen=study]>#modebar,.phone[data-screen=study]>#top,.phone[data-screen=study]>#view,.phone[data-screen=study]>#dock{animation:inR .35s var(--dec)}
+@keyframes inR{from{opacity:0;transform:translateX(32px)}}
+
+/* 新谷歌风 · 书架首页：Play 首页的结构，放 Pagewise 的内容 */
+#home{position:absolute;top:40px;left:0;right:0;bottom:0;z-index:10;display:flex;flex-direction:column;background:var(--surface);transition:transform .3s var(--std),opacity .2s,visibility 0s}
+.phone[data-screen=study] #home{transform:translateX(-32px);opacity:0;visibility:hidden;pointer-events:none;transition:transform .3s var(--std),opacity .2s,visibility 0s .3s}
+.h-top{height:64px;flex:none;display:flex;align-items:center;gap:4px;padding:0 12px 0 20px}
+.logo{display:flex;align-items:center;gap:10px;flex:1;font-size:22px;color:var(--on-sv)}
+.logo svg{width:30px;height:30px}
+.h-top .ib{position:relative;width:48px;height:48px;border-radius:24px;display:grid;place-items:center;color:var(--on-sv)}
+.h-top .ib:active{background:var(--s-high)}
+.h-top .dot{position:absolute;top:8px;right:8px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--red);color:var(--surface);font-size:11px;font-weight:500;line-height:16px;box-shadow:0 0 0 2px var(--surface)}
+.avatar{width:40px;height:40px;margin-left:4px;border-radius:20px;background:#E8710A;color:#fff;display:grid;place-items:center}
+.avatar svg.i{width:26px;height:26px}
+.h-tabs{position:relative;flex:none;display:flex;padding:0 8px;border-bottom:1px solid var(--ov)}
+.h-tabs button{height:48px;padding:0 16px;font-size:16px;font-weight:500;color:var(--on-sv);transition:color .2s}
+.h-tabs button.on{color:var(--primary)}
+.h-tabs .ind{position:absolute;bottom:0;left:0;width:0;height:3px;border-radius:3px 3px 0 0;background:var(--primary);transition:left .3s var(--std),width .3s var(--std)}
+.h-body{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;padding-bottom:20px}
+.h-body::-webkit-scrollbar{display:none}
+.h-body>*{animation:rise .35s var(--dec) both}
+
+.hero{margin:16px 16px 0;border-radius:28px;background:var(--s);overflow:hidden}
+.art{position:relative;display:block;width:100%;height:208px;border-radius:28px;overflow:hidden;text-align:left;color:#fff;background:#13205A}
+.art svg{position:absolute;inset:0;width:100%;height:100%}
+.art .eb{position:absolute;left:16px;top:14px;height:26px;padding:0 10px;border-radius:8px;background:rgba(255,255,255,.18);font-size:13px;font-weight:500;display:flex;align-items:center;gap:4px;backdrop-filter:blur(6px)}
+.art .eb svg.i{position:static;width:16px;height:16px}
+.art .cap2{position:absolute;left:0;right:0;bottom:0;padding:40px 20px 16px;font-size:18px;font-weight:500;line-height:1.35;background:linear-gradient(transparent,rgba(5,10,40,.7))}
+.hero .row{display:flex;align-items:center;gap:16px;padding:16px}
+.cover{flex:none;width:64px;height:64px;border-radius:15px;display:grid;place-items:center;color:#fff;font-size:15px;font-weight:700;line-height:1.15;text-align:center;white-space:pre-line;box-shadow:0 1px 3px rgba(0,0,0,.18),0 4px 8px rgba(0,0,0,.08);letter-spacing:.04em}
+.grow{flex:1;min-width:0}
+.tt{font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meta{font-size:14px;color:var(--on-sv);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rate{display:inline-flex;align-items:center;gap:4px;height:26px;padding:0 8px;margin-top:6px;border-radius:8px;background:var(--s);font-size:14px;color:var(--on-s)}
+.hero .rate{background:var(--s-high);color:var(--on-sv)}
+.rate svg.i{width:16px;height:16px;color:var(--primary)}
+.rate.ok svg.i{color:var(--green)}
+.rate.bad{background:var(--rc);color:var(--on-rc)}
+.rate.bad svg.i{color:var(--red)}
+.pill{flex:none;height:40px;padding:0 24px;border-radius:20px;background:var(--primary);color:var(--on-primary);font-size:15px;font-weight:500}
+.pill:active{filter:brightness(.92)}
+
+.secH{display:flex;align-items:center;padding:28px 8px 6px 20px}
+.secH .grow{font-size:22px;line-height:1.3}
+.secH small{font-size:14px;font-weight:700}
+.secH .ib{width:48px;height:48px;border-radius:24px;display:grid;place-items:center;color:var(--on-sv)}
+.li{display:flex;align-items:center;gap:16px;width:100%;padding:10px 20px;text-align:left;transition:background .2s}
+.li:active{background:var(--s)}
+.ico{flex:none;width:64px;height:64px;border-radius:15px;display:grid;place-items:center;font-size:15px;font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.14),0 4px 8px rgba(0,0,0,.06)}
+.ico svg.i{width:30px;height:30px}
+.ico.done{background:var(--gc);color:var(--on-gc)}
+.ico.now{background:var(--primary);color:var(--on-primary)}
+.ico.new{background:var(--s-high);color:var(--on-sv)}
+.ico.bad{background:var(--rc);color:var(--red)}
+.ico.card{background:var(--pc);color:var(--on-pc)}
+.carousel{display:flex;gap:12px;overflow-x:auto;padding:8px 20px 4px;scrollbar-width:none}
+.carousel::-webkit-scrollbar{display:none}
+.bk{flex:none;width:108px;text-align:left}
+.bk .cover{width:108px;height:108px;border-radius:24px;font-size:20px}
+.bk .t{font-size:14px;line-height:1.35;margin-top:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.bk .m{font-size:13px;color:var(--on-sv);margin-top:2px}
+.bk.add .cover{background:none;box-shadow:inset 0 0 0 1px var(--ov);color:var(--primary)}
+.bk.add svg.i{width:32px;height:32px}
+.empty{padding:20px;font-size:14px;line-height:1.6;color:var(--on-sv)}
+
+.h-nav{flex:none;height:88px;display:flex;padding:12px 0 24px;background:var(--s)}
+.h-nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;font-weight:500;color:var(--on-sv)}
+.h-nav .ind{position:relative;width:56px;height:32px;border-radius:16px;display:grid;place-items:center;transition:background .25s}
+.h-nav .on{color:var(--primary)}
+.h-nav .on .ind{background:var(--sc);color:var(--on-sc)}
+.h-nav .bd{position:absolute;top:0;left:30px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--red);color:var(--surface);font-size:11px;line-height:16px}
+.phone[data-screen=home] #toast{bottom:104px}
+
+.side{width:300px;flex:none;font-size:14px;line-height:1.6;color:var(--on-s)}
+.side h1{font-size:32px;font-weight:400}
+.side .lead{color:var(--on-sv);margin:4px 0 18px}
+.side .tg{display:inline-flex;margin-bottom:20px}
+.side .tg button{height:40px;padding:0 16px;font-size:14px;font-weight:500;box-shadow:inset 0 0 0 1px var(--outline);border-radius:20px 0 0 20px;display:flex;align-items:center;gap:6px}
+.side .tg button+button{border-radius:0 20px 20px 0;margin-left:-1px}
+.side .tg button.on{background:var(--sc);color:var(--on-sc)}
+.side h2{font-size:14px;font-weight:700;margin-bottom:6px}
+.side ol{padding-left:18px;margin-bottom:18px}
+.side li{margin:4px 0}
+.side a{color:var(--primary);text-decoration:none;font-weight:500}
+@media (max-width:780px){.stage{flex-direction:column}.side{width:390px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="phone" id="phone" data-screen="home">
+    <div class="sbar"><span>21:40</span><span class="cam"></span><span class="r"><svg viewBox="0 0 24 24"><path d="M12 21L1 8.5C3.9 5.7 7.8 4 12 4s8.1 1.7 11 4.5z"/></svg><svg viewBox="0 0 24 24"><path d="M2 22h20V2z"/></svg><svg viewBox="0 0 24 24"><path d="M15.7 4H14V2h-4v2H8.3C7.6 4 7 4.6 7 5.3v15.3c0 .8.6 1.4 1.3 1.4h7.3c.8 0 1.4-.6 1.4-1.3V5.3C17 4.6 16.4 4 15.7 4z"/></svg></span></div>
+    <header id="appbar"></header>
+    <div id="modebar"></div>
+    <div id="top"></div>
+    <main id="view"></main>
+    <div id="dock"></div>
+    <section id="home" aria-label="书架">
+      <div class="h-top" id="htop"></div>
+      <div class="h-tabs" id="htabs" role="tablist"></div>
+      <div class="h-body" id="hbody"></div>
+      <nav class="h-nav" id="hnav"></nav>
+    </section>
+    <div id="overlay"></div>
+    <div id="toast" role="status"></div>
+    <div class="homebar"></div>
+  </div>
+  <aside class="side">
+    <h1>新谷歌风</h1>
+    <p class="lead">照现在 Google Play 的样子：白底、Google 蓝、下划线标签页、圆角方图标列表、灰色小标签、底部胶囊导航。比其他几版多做了一个书架首页。</p>
+    <div class="tg"><button data-t="light" onclick="setTheme('light')">浅色</button><button data-t="dark" onclick="setTheme('dark')">深色</button></div>
+    <h2>可以试试</h2>
+    <ol>
+      <li>书架首页点「继续」或 3.5.2 那一行，进入听讲</li>
+      <li>顶部标签切到「我的书」「卡点」「闪卡」</li>
+      <li>点讲解里的 <b>p.103</b>：从底部弹出原书预览，再点「在读书模式打开」</li>
+      <li>输入"这跟前面的 3.4.2 有什么关系"，进入岔路（绿色），再点「回到主线」看折叠</li>
+      <li>点「懂了，下一步」几次，再点左上角返回，书架上的进度会跟着变</li>
+    </ol>
+    <h2>对比</h2>
+    <p><a href="google.html">谷歌风（Expressive）</a> · <a href="apple.html">苹果风</a> · <a href="microsoft.html">微软风</a> · <a href="meta.html">Meta 风</a> · <a href="../prototype.html">原来的原型</a></p>
+  </aside>
+</div>
+<script>
+const THEME = 'play';
+const ICONS = (() => {
+  const s = d => '<svg class="i" viewBox="0 0 24 24"><path d="' + d + '"/></svg>';
+  return {
+    back: s('M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z'),
+    more: s('M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z'),
+    check: s('M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z'),
+    skip: s('M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z'),
+    next: s('M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z'),
+    mic: s('M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z'),
+    send: s('M3.4 20.4l17.45-7.48c.81-.35.81-1.49 0-1.84L3.4 3.6c-.66-.29-1.39.2-1.39.91L2 9.12c0 .5.37.93.87.99L17 12 2.87 13.88c-.5.07-.87.5-.87 1l.01 4.61c0 .71.73 1.2 1.39.91z'),
+    book: s('M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.05C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zm0 13.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z'),
+    bookopen: '', teach: '',
+    derive: s('M18 4H6v2l6.5 6L6 18v2h12v-3h-7l5-5-5-5h7z'),
+    spark: s('M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z'),
+    clock: s('M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z'),
+    chev: s('M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z'),
+    branch: s('M14 4l2.29 2.29-2.88 2.88 1.42 1.42 2.88-2.88L20 10V4zm-4 0H4v6l2.29-2.29 4.71 4.7V20h2v-8.41l-5.29-5.3z'),
+    pin: s('M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z'),
+    flag: s('M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z'),
+    search: s('M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'),
+    bell: s('M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z'),
+    person: s('M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'),
+    shelf: s('M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z'),
+    cards: s('M2.53 19.65l1.34.56v-9.03l-2.43 5.86c-.41 1.02.08 2.19 1.09 2.61zm19.5-3.7L17.07 3.98c-.31-.75-1.04-1.21-1.81-1.23-.26 0-.53.04-.79.15L7.1 5.95c-.75.31-1.21 1.03-1.23 1.8-.01.27.04.54.15.8l4.96 11.97c.31.76 1.05 1.22 1.83 1.23.26 0 .52-.05.77-.15l7.36-3.05c1.02-.42 1.51-1.59 1.09-2.6zM7.88 8.75c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-2 11c0 1.1.9 2 2 2h1.45l-3.45-8.34v6.34z'),
+    note: s('M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z'),
+    add: s('M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z'),
+    play: s('M8 5v14l11-7z'),
+    sync: s('M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z')
+  };
+})();
+/* Pagewise 风格探索 · 演示数据
+ * 书名和小节标题来自《人工智能：现代方法（第4版）》；页码、"原文"、讲解都是为原型写的示意内容，不是原书文字。 */
+'use strict';
+const STEPS = [
+  { t: 'A* 的直觉', p: 102 },
+  { t: '可容许的启发式', p: 103 },
+  { t: '一致性', p: 104 },
+  { t: '最优性证明', p: 105 }
+];
+
+const FIG = '<svg viewBox="0 0 320 150" class="figsvg" aria-hidden="true">' +
+  '<g class="e"><path d="M50 75L160 28M50 75L160 122"/><path class="dash" d="M160 122L270 75"/><path class="on" d="M50 75L160 28L270 75"/></g>' +
+  '<g class="w"><text x="98" y="44">1</text><text x="98" y="114">5</text><text x="218" y="44">5</text><text x="218" y="114">6</text></g>' +
+  '<g class="n"><circle cx="50" cy="75" r="17"/><circle class="on" cx="160" cy="28" r="17"/><circle cx="160" cy="122" r="17"/><circle class="goal" cx="270" cy="75" r="17"/></g>' +
+  '<g class="l"><text x="50" y="80">S</text><text x="160" y="33">A</text><text x="160" y="127">B</text><text x="270" y="80">G</text></g>' +
+  '<g class="s"><text x="50" y="108">h=5</text><text x="214" y="22">h=4 · f=5</text><text x="214" y="138">h=2 · f=7</text><text x="270" y="108">h=0</text></g></svg>';
+
+// 内容块：和 MinerU 内容块一样带页码；s = 属于本节路线图的第几步
+const BLOCKS = [
+  { id: 'b1', p: 102, s: 0, t: 'h', x: '3.5.2　A* 搜索' },
+  { id: 'b2', p: 102, s: 0, t: 'p', x: '最常见的有信息搜索算法是 A* 搜索。它用 f(n) = g(n) + h(n) 评估结点：g(n) 是从初始状态到 n 的路径代价，h(n) 是从 n 到目标的最短路径代价的估计值。' },
+  { id: 'b3', p: 102, s: 0, t: 'eq', x: 'f(n) = g(n) + h(n)' },
+  { id: 'b4', p: 102, s: 0, t: 'p', x: '因为 f(n) 是经过 n 到达目标的最优解代价的估计，所以每次扩展 f 值最小的结点是合理的策略。和一致代价搜索一样，A* 在扩展结点时才做目标测试。' },
+  { id: 'b5', p: 103, s: 1, t: 'p', x: '如果启发式函数 h(n) 从不高估到达目标的代价，则称 h(n) 是可容许的。可容许的启发式本质上是乐观的。' },
+  { id: 'b6', p: 103, s: 1, t: 'fig', x: '图 3.18（示意）　从 S 到 G：贪心先去 h 最小的 B，A* 先去 f 最小的 A' },
+  { id: 'b7', p: 103, s: 1, t: 'p', x: '直线距离 h_SLD 是可容许的启发式，因为两点之间直线最短，它不可能高估真实的路程。' },
+  { id: 'b8', p: 104, s: 2, t: 'p', x: '一个稍强的条件叫一致性：对每个结点 n 和由行动 a 生成的每个后继 n′，都有' },
+  { id: 'b9', p: 104, s: 2, t: 'eq', x: 'h(n) ≤ c(n, a, n′) + h(n′)' },
+  { id: 'b10', p: 104, s: 2, t: 'p', x: '这是三角不等式的一种形式。每个一致的启发式都是可容许的，反之不一定成立。' },
+  { id: 'b11', p: 105, s: 3, t: 'p', x: '使用可容许的启发式时，A* 的树搜索版本是代价最优的；使用一致的启发式时，图搜索版本也是代价最优的。' },
+  { id: 'b12', p: 105, s: 3, t: 'p', x: '证明思路：假设 A* 返回了代价 C > C* 的解，那么最优路径上一定有某个结点 n 还没被扩展，而 f(n) ≤ C* < C，A* 应当先扩展 n，矛盾。' },
+  { id: 'd1', p: 91, s: -1, sec: '3.4.2', t: 'p', x: '一致代价搜索每次扩展路径代价 g(n) 最小的结点，等价于图上的 Dijkstra 算法。' }
+];
+const BLK = Object.fromEntries(BLOCKS.map(b => [b.id, b]));
+
+// 讲解脚本。标记：**粗体**  $公式$  [[b1]] 引用
+const LESSON = [
+  [
+    { k: 'ai', t: 'A* 的想法很直接：把**已经走了多远** $g(n)$ 和**估计还剩多远** $h(n)$ 加起来，每次挑 $f(n)$ 最小的结点扩展 [[b2]]。' },
+    { k: 'ex', t: '像导航：你已经开了 30 公里（g），导航估计还要 20 公里（h），这条路线的总估计就是 50 公里。A* 总是先看总估计最短的那条。' }
+  ],
+  [
+    { k: 'ai', t: 'A* 找到的路一定最便宜吗？答案取决于 h。书里给的条件叫**可容许的（admissible）**：h 从不高估到终点的真实代价 [[b5]]。' },
+    { k: 'src', b: 'b5' },
+    { k: 'derive', t: '设 $C*$ 为最优解代价。h 可容许时，最优路径上任一结点 n 都满足 $f(n) = g(n) + h(n) ≤ C*$。' },
+    { k: 'ex', t: '看图 3.18：A 到 G 实际要 5，h(A)=4，没有高估；B 到 G 实际要 6，h(B)=2，也没有高估。所以这个 h 是可容许的 [[b6]]。' },
+    { k: 'check', t: '想一想：如果把 h(B) 改成 8，还可容许吗？' }
+  ],
+  [
+    { k: 'ai', t: '比可容许更强一点的条件叫**一致性（consistency）**：每走一步，h 的下降不能超过这一步的代价 [[b8]]。' },
+    { k: 'src', b: 'b9' },
+    { k: 'derive', t: '一致 ⇒ 可容许：沿着到目标的最优路径，把 $h(n) ≤ c + h(n′)$ 一步步展开，最后 $h(n) ≤$ 剩余的真实代价。' },
+    { k: 'ex', t: '直线距离满足三角不等式：A 到 G 的直线，不会比"A 到 B 再到 G"的直线更长，所以它也是一致的 [[b10]]。' }
+  ],
+  [
+    { k: 'ai', t: '两个条件各管一种搜索：**可容许 → 树搜索最优**，**一致 → 图搜索最优** [[b11]]。' },
+    { k: 'derive', t: '反证：若 A* 返回了 $C > C*$ 的解，最优路径上没扩展的结点 n 满足 $f(n) ≤ C* < C$，A* 本该先扩展 n [[b12]]。' },
+    { k: 'check', t: '最后一个问题：图搜索只要求 h 可容许够不够？为什么？' }
+  ]
+];
+const ALT = [
+  { re: '换个说法：A* 就是"已花的 + 预计还要花的"，谁加起来最小先看谁 [[b4]]。', ex: '再举一个：从家到公司，地铁已坐 3 站（g=3），App 估计还有 5 站（h=5），f=8。', dv: '展开：f(n) 是"经过 n 的最优解代价"的估计，所以按 f 排序就是按"这条路最终大概多贵"排序 [[b4]]。' },
+  { re: '换个说法：可容许 = 乐观。h 只能说"还差这么多或更多"，不能把路说远了 [[b5]]。', ex: '再举一个：地图上的直线距离永远不会比实际道路更长，所以它可容许 [[b7]]。', dv: '展开：若 h 高估了最优路径上的某个结点，f 会被抬高，A* 可能先走一条更贵的路并提前返回。' },
+  { re: '换个说法：一致 = h 在每条边上都"讲道理"，走一步，估计值最多少掉这一步的代价 [[b8]]。', ex: '再举一个：h(A)=4，A 到 B 代价 1，那 h(B) 至少得是 3，不能突然变成 1。', dv: '展开：一致性保证沿任何路径 f 不减，所以第一次扩展到某个状态时，走的就是到它的最优路径 [[b10]]。' },
+  { re: '换个说法：A* 不会在还有更便宜的路时停下，因为那条路上的结点 f 更小，会先被扩展 [[b12]]。', ex: '回到图 3.18：B 的 f=7 > 6，所以 A* 先走 A，找到代价 6 的最优解 [[b6]]。', dv: '展开：图搜索会丢掉重复到达的状态，只可容许时可能丢掉更优的那条；一致性保证第一次到达就是最优 [[b11]]。' }
+];
+const SKIP_NOTE = ['', '跳过了第 2 步：h 不高估真实代价，A* 才保证最优。', '跳过了第 3 步：一致性是逐边的三角不等式，比可容许更强。', ''];
+
+// 读书模式：问答便签、解释
+const PINS = { b4: { q: '为什么扩展时才判断目标？', a: '生成时就判断，可能先碰到一条贵的路就返回了；等到扩展时，优先队列已经保证 f 最小的先出来，第一次扩展到目标时就是最优解 [[b4]]。' } };
+const EXPLAIN = {
+  b2: 'g 是"已经花掉的"，h 是"估计还要花的"，两个加起来就是"走这条路总共大概多少"[[b2]]。',
+  b5: '"不高估"就是只会往少里估。估少了没关系，A* 会多看几条路；估多了才会错过最优解 [[b5]]。',
+  b8: '每走一步，h 最多少掉这一步的代价，不能"一步省太多" [[b8]]。'
+};
+const GUIDE = '本节讲 A* 怎么用 f = g + h 挑结点，以及 h 满足什么条件时结果最优。前置：3.4.2 一致代价搜索。分 4 步：直觉、可容许、一致性、最优性。';
+
+/* Pagewise 风格探索 · 共用交互：听讲 ⇄ 读书、路线图、引用预览、岔路折叠、问答便签、从这里开始讲 */
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const sleep = ms => new Promise(r => setTimeout(r, REDUCED ? 0 : ms));
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const I = n => ICONS[n] || '';
+const H = []; const on = fn => 'H[' + (H.push(fn) - 1) + '](event)';
+
+let S;
+function reset() {
+  S = { mode: 'listen', cur: 1, st: ['done', 'now', 'todo', 'todo'], msgs: [], detour: null, busy: false, guide: false, hl: new Set(['b7']), pins: Object.assign({}, PINS), finished: false };
+  S.msgs.push({ k: 'sys', t: '3 天前 · 第 1 步' });
+  S.msgs.push({ k: 'head', i: 0 }, ...LESSON[0]);
+  S.msgs.push({ k: 'fold', open: false, title: 'A* 和一致代价搜索的关系', items: [
+    { k: 'user', t: '这跟前面的一致代价搜索有什么关系？' },
+    { k: 'tool', t: '读取 3.4.2 一致代价搜索（p.90–93）' },
+    { k: 'ai', t: '$h(n)$ 恒为 0 时，$f(n) = g(n)$，A* 就是一致代价搜索 [[d1]]。A* 多了 h 这个"方向感"，所以通常扩展的结点更少 [[b4]]。' }
+  ] });
+  S.msgs.push({ k: 'resume', t: '上次讲完了第 1 步。你在 3.4.2 问过"为什么扩展时才判断目标"，第 4 步还会用到。' });
+  S.msgs.push({ k: 'head', i: 1 }, ...LESSON[1]);
+}
+
+// ---------- 富文本 ----------
+function md(t) {
+  return esc(t)
+    .replace(/\$([^$]+)\$/g, '<span class="math">$1</span>')
+    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+    .replace(/\s?\[\[(\w+)\]\]/g, (_, id) => cite(id));
+}
+function cite(id) {
+  const b = BLK[id];
+  return '<button class="cite' + (b.sec ? ' dt' : '') + '" onclick="' + on(e => { e.stopPropagation(); peek(id); }) + '">p.' + b.p + '</button>';
+}
+const blockText = b => b.t === 'eq' ? '<span class="math">' + esc(b.x) + '</span>' : esc(b.x);
+
+// ---------- 听讲 ----------
+function item(m, idx) {
+  switch (m.k) {
+    case 'sys': return '<div class="sys">' + esc(m.t) + '</div>';
+    case 'head': return '<div class="head" id="step-' + m.i + '"><span class="sn">第 ' + (m.i + 1) + ' 步</span><b>' + esc(STEPS[m.i].t) + '</b><span class="pg">p.' + STEPS[m.i].p + '</span></div>';
+    case 'ai': return '<div class="ai">' + md(m.t) + '</div>';
+    case 'user': return '<div class="user">' + esc(m.t) + '</div>';
+    case 'tool': return '<div class="tool">' + I('book') + esc(m.t) + '</div>';
+    case 'src': { const b = BLK[m.b]; return '<button class="src" onclick="' + on(() => peek(m.b)) + '"><span class="lbl">原文 · p.' + b.p + '</span><span class="q">' + blockText(b) + '</span></button>'; }
+    case 'derive': return '<div class="aux derive"><span class="lbl">' + I('derive') + '补充推导</span><div>' + md(m.t) + '</div></div>';
+    case 'ex': return '<div class="aux ex"><span class="lbl">' + I('spark') + 'AI 举例</span><div>' + md(m.t) + '</div></div>';
+    case 'check': return '<div class="check"><span class="lbl">检查一下</span>' + esc(m.t) + '</div>';
+    case 'resume': return '<div class="resume"><span class="lbl">' + I('clock') + '接着上次</span>' + esc(m.t) + '</div>';
+    case 'fold': return '<div class="fold' + (m.open ? ' open' : '') + '"><button class="fold-h" onclick="' + on(() => { m.open = !m.open; renderView(false); }) + '">' + I('check') + '<span class="grow">已解决：' + esc(m.title) + '</span><span class="n">' + m.items.length + ' 条</span>' + I('chev') + '</button>' + (m.open ? '<div class="fold-b">' + m.items.map(item).join('') + '</div>' : '') + '</div>';
+    case 'detour': return '<div class="detour-run">' + m.items.map(item).join('') + '</div>';
+    case 'done': return '<div class="donecard"><span class="lbl">' + I('check') + '本节讲完了</span><p>4 步里讲了 ' + S.st.filter(s => s === 'done').length + ' 步' + (S.st.includes('skipped') ? '，跳过 ' + S.st.filter(s => s === 'skipped').length + ' 步' : '') + '。点「懂了，下一节」生成摘要和闪卡草稿。</p></div>';
+    case 'typing': return '<div class="typing"><i></i><i></i><i></i></div>';
+  }
+  return '';
+}
+function renderRail() {
+  return '<div class="rail" role="tablist" aria-label="本节路线图">' + STEPS.map((s, i) => {
+    const st = S.st[i];
+    return '<button class="step ' + st + '" onclick="' + on(() => tapStep(i)) + '" aria-label="第 ' + (i + 1) + ' 步 ' + esc(s.t) + '"><span class="ic">' + (st === 'done' ? I('check') : st === 'skipped' ? I('skip') : (i + 1)) + '</span><span class="t">' + esc(s.t) + '</span></button>';
+  }).join('') + '</div>';
+}
+function listenTop() {
+  if (S.detour) return '<div class="banner">' + I('branch') + '<span class="grow"><small>岔路</small>' + esc(S.detour.sec) + '</span><button onclick="' + on(backToMain) + '">回到主线</button></div>';
+  return renderRail() + (THEME === 'google' ? wave() : THEME === 'microsoft' || THEME === 'play' || THEME === 'windows11' ? bar() : '');
+}
+function wave() {
+  const done = S.st.filter(s => s === 'done' || s === 'skipped').length, f = Math.max(.06, (done + .5) / 4);
+  const end = Math.round(356 * f); let d = 'M2 6'; for (let x = 2; x <= end; x += 2) d += ' L' + x + ' ' + (6 + 3 * Math.sin(x / 7)).toFixed(2);
+  return '<svg class="wave" viewBox="0 0 358 12" aria-hidden="true"><path class="tr" d="M' + Math.min(352, end + 12) + ' 6 L356 6"/><path class="pr" d="' + d + '"/></svg>';
+}
+function bar() {
+  const done = S.st.filter(s => s === 'done' || s === 'skipped').length, f = Math.max(.04, (done + .5) / 4);
+  return '<div class="pbar" role="progressbar" aria-valuenow="' + done + '" aria-valuemax="4"><i style="width:' + Math.round(f * 100) + '%"></i></div>';
+}
+function listenDock() {
+  if (S.finished) return '';
+  const last = S.cur === 3 && S.st[3] === 'done';
+  const chips = S.detour ? [['再问问', () => ask('那 A* 一定比一致代价搜索快吗？')], ['回到主线', backToMain]] :
+    last ? [] : [['换个说法', () => alt('re', '换个说法')], ['举个例子', () => alt('ex', '举个例子')], ['展开推导', () => alt('dv', '展开推导')], ['这步熟，跳过', skip]];
+  const pri = S.detour ? null : last ? ['懂了，下一节', finish] : ['懂了，下一步', next];
+  return '<div class="chips">' + (pri ? '<button class="chip pri" onclick="' + on(pri[1]) + '">' + I('next') + pri[0] + '</button>' : '') + chips.map(c => '<button class="chip" onclick="' + on(c[1]) + '">' + c[0] + '</button>').join('') + '</div>' +
+    '<form class="composer" onsubmit="' + on(e => { e.preventDefault(); const v = $('#q').value.trim(); if (v) { $('#q').value = ''; ask(v); } }) + '"><input id="q" autocomplete="off" placeholder="' + (S.detour ? '在岔路里继续问…' : '问点什么…') + '"><button type="button" class="mic" aria-label="语音提问" onclick="' + on(() => toast('语音提问：按住说话（M5）')) + '">' + I('mic') + '</button><button class="send" aria-label="发送">' + I('send') + '</button></form>';
+}
+
+// ---------- 读书 ----------
+function readerView() {
+  const doneTo = S.st.lastIndexOf('done');
+  let h = '<button class="guide' + (S.guide ? ' open' : '') + '" onclick="' + on(() => { S.guide = !S.guide; renderView(false); }) + '"><span class="lbl">' + I('spark') + '本节导读</span>' + (S.guide ? '<span class="gt">' + esc(GUIDE) + '</span>' : '<span class="gt one">A* 怎么挑结点，h 满足什么条件才最优</span>') + I('chev') + '</button>';
+  h += '<article class="page">';
+  let lastP = 0;
+  BLOCKS.filter(b => !b.sec).forEach(b => {
+    if (b.p !== lastP) { if (lastP) h += '<div class="pno">p.' + lastP + '</div>'; lastP = b.p; }
+    const cls = ['blk', 'b-' + b.t, b.s <= doneTo ? 'heard' : '', b.s === S.cur && !S.finished ? 'now' : '', S.hl.has(b.id) ? 'hl' : ''].join(' ');
+    h += '<div class="' + cls + '" id="' + b.id + '" onclick="' + on(() => blockMenu(b.id)) + '">' + (b.t === 'fig' ? FIG + '<div class="cap">' + esc(b.x) + '</div>' : blockText(b)) + '</div>';
+    const pin = S.pins[b.id];
+    if (pin) h += '<button class="pin" onclick="' + on(() => openPin(b.id)) + '">' + I('pin') + '<span>已解决：' + esc(pin.q) + '</span></button>';
+  });
+  h += '<div class="pno">p.' + lastP + '</div></article>';
+  h += '<div class="readend"><button class="btn pri" onclick="' + on(finish) + '">读完这一节</button><small>和听讲一样生成摘要和闪卡草稿</small></div>';
+  return h;
+}
+
+// ---------- 渲染 ----------
+function render() {
+  $('#appbar').innerHTML = '<button class="ib back" aria-label="返回书的地图" onclick="' + on(typeof goBack === 'function' ? goBack : () => toast('返回书的地图')) + '">' + I('back') + (THEME === 'apple' ? '<span>地图</span>' : '') + '</button><div class="ttl"><b>3.5.2 A* 搜索</b><small>人工智能：现代方法 · p.102–106</small></div><button class="ib" aria-label="更多" onclick="' + on(() => toast('更多：AI 看到的内容、讲解偏好')) + '">' + I('more') + '</button>';
+  $('#modebar').innerHTML = '<div class="seg" role="tablist"><span class="thumb ' + S.mode + '"></span>' + [['read', '读书', 'bookopen'], ['listen', '听讲', 'teach']].map(([k, l, ic]) => '<button role="tab" aria-selected="' + (S.mode === k) + '" class="' + (S.mode === k ? 'on' : '') + '" onclick="' + on(() => setMode(k)) + '">' + (THEME === 'google' && S.mode === k ? I('check') : '') + l + '</button>').join('') + '</div>';
+  $('#phone').dataset.mode = S.mode;
+  renderView(true);
+}
+function renderView(toEnd) {
+  const v = $('#view'), top = v.scrollTop;
+  $('#top').innerHTML = S.mode === 'listen' ? listenTop() : '';
+  $('#dock').innerHTML = S.mode === 'listen' ? listenDock() : '';
+  v.innerHTML = S.mode === 'listen' ? '<div class="thread">' + S.msgs.map(item).join('') + '</div>' : readerView();
+  if (S.mode === 'listen' && toEnd) v.scrollTop = v.scrollHeight; else v.scrollTop = top;
+  const cur = $('.rail .step.now'); if (cur) cur.parentNode.scrollLeft = Math.max(0, cur.offsetLeft - 60);
+}
+function scrollEnd() { const v = $('#view'); v.scrollTo({ top: v.scrollHeight, behavior: REDUCED ? 'auto' : 'smooth' }); }
+
+// ---------- 讲解推进 ----------
+async function say(items, opts) {
+  S.busy = true;
+  const tgt = S.detour ? S.detour.items : S.msgs;
+  tgt.push({ k: 'typing' }); renderView(true);
+  await sleep(650); tgt.pop();
+  for (const it of items) { tgt.push(it); renderView(false); const el = $('#view .thread').lastElementChild; if (el) el.classList.add('enter'); scrollEnd(); await sleep(260); }
+  S.busy = false; renderView(false); scrollEnd();
+}
+async function next() {
+  if (S.busy) return;
+  S.st[S.cur] = 'done';
+  if (S.cur === 3) { S.msgs.push({ k: 'done' }); renderView(true); return; }
+  S.cur++; S.st[S.cur] = 'now';
+  S.msgs.push({ k: 'head', i: S.cur });
+  await say(LESSON[S.cur]);
+}
+async function skip() {
+  if (S.busy || S.cur === 3) return toast(S.cur === 3 ? '最后一步不能跳过' : '');
+  S.st[S.cur] = 'skipped';
+  S.msgs.push({ k: 'sys', t: SKIP_NOTE[S.cur] || '跳过了第 ' + (S.cur + 1) + ' 步' });
+  S.cur++; S.st[S.cur] = 'now';
+  S.msgs.push({ k: 'head', i: S.cur });
+  await say(LESSON[S.cur]);
+}
+async function alt(kind, label) {
+  if (S.busy) return;
+  S.msgs.push({ k: 'user', t: label });
+  await say([{ k: kind === 'ex' ? 'ex' : kind === 'dv' ? 'derive' : 'ai', t: ALT[S.cur][kind] }]);
+}
+async function ask(text) {
+  if (S.busy) return;
+  if (!S.detour && /3\.4|一致代价|前面|Dijkstra/i.test(text)) {
+    S.detour = { sec: '3.4.2 一致代价搜索', items: [{ k: 'user', t: text }] };
+    S.msgs.push({ k: 'detour', items: S.detour.items });
+    render();
+    await say([{ k: 'tool', t: '读取 3.4.2 一致代价搜索（p.90–93）' }, { k: 'ai', t: '一致代价搜索按 $g(n)$ 扩展 [[d1]]；A* 按 $g(n) + h(n)$ 扩展。h 恒为 0 时两者完全一样。所以 A* 可以看成"带方向感的一致代价搜索" [[b2]]。' }]);
+    return;
+  }
+  (S.detour ? S.detour.items : S.msgs).push({ k: 'user', t: text });
+  if (S.detour) return say([{ k: 'ai', t: '不一定更快，但 h 越准，A* 扩展的结点越少；h 可容许时两者找到的都是最优解 [[b11]]。' }]);
+  await say([{ k: 'ai', t: '按书里的说法：' + ALT[S.cur].re.replace(/^换个说法：/, '') }]);
+}
+function backToMain() {
+  const d = S.detour; if (!d) return;
+  const i = S.msgs.findIndex(m => m.k === 'detour');
+  S.msgs[i] = { k: 'fold', open: false, title: 'A* 和一致代价搜索的关系', items: d.items };
+  S.detour = null;
+  S.msgs.push({ k: 'sys', t: '回到主线 · 第 ' + (S.cur + 1) + ' 步 ' + STEPS[S.cur].t });
+  render(); toast('岔路已折叠，问答记进了 3.4.2 的笔记');
+}
+function tapStep(i) {
+  if (S.busy) return;
+  const el = $('#step-' + i);
+  if (el) return el.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' });
+  sheet('从第 ' + (i + 1) + ' 步开始讲？', '<p class="sp">「' + esc(STEPS[i].t) + '」· p.' + STEPS[i].p + '。中间没讲的步骤会留着，随时可以回来讲。</p>', [['开始讲', () => jumpTo(i), 'pri'], ['取消', closeSheet]]);
+}
+async function jumpTo(i) {
+  closeSheet();
+  if (S.st[S.cur] === 'now') S.st[S.cur] = 'todo';
+  S.cur = i; S.st[i] = 'now';
+  S.msgs.push({ k: 'head', i });
+  if (S.mode !== 'listen') { S.mode = 'listen'; render(); }
+  await say(LESSON[i]);
+}
+
+// ---------- 模式切换（位置不丢） ----------
+function setMode(m, focus) {
+  if (m === S.mode && !focus) return;
+  if (m === 'listen') {
+    let b = focus;
+    if (!b && S.mode === 'read') { const v = $('#view'), y = v.getBoundingClientRect().top + 90; b = ($$('.blk', v).find(el => el.getBoundingClientRect().bottom > y) || {}).id; }
+    S.mode = 'listen'; render();
+    if (b) { const s = BLK[b].s; if ($('#step-' + s)) { $('#step-' + s).scrollIntoView({ block: 'start' }); toast('听讲 · 第 ' + (s + 1) + ' 步'); } else jumpTo(s); }
+    return;
+  }
+  S.mode = 'read'; render();
+  const id = focus || BLOCKS.find(b => b.s === S.cur).id;
+  const el = $('#' + id); if (!el) return;
+  el.scrollIntoView({ block: 'center' });
+  el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 2000);
+}
+
+// ---------- 浮层 ----------
+function sheet(title, body, acts, sub) {
+  $('#overlay').innerHTML = '<div class="scrim" onclick="' + on(closeSheet) + '"></div><div class="sheet" role="dialog" aria-label="' + esc(title) + '"><div class="grab"></div><div class="sh"><b>' + title + '</b>' + (sub ? '<small>' + sub + '</small>' : '') + '</div><div class="sb">' + body + '</div>' + (acts ? '<div class="sf">' + acts.map(a => '<button class="btn ' + (a[2] || '') + '" onclick="' + on(a[1]) + '">' + a[0] + '</button>').join('') + '</div>' : '') + '</div>';
+  requestAnimationFrame(() => $('#overlay').classList.add('show'));
+}
+function closeSheet() { $('#overlay').classList.remove('show'); setTimeout(() => { if (!$('#overlay').classList.contains('show')) $('#overlay').innerHTML = ''; }, REDUCED ? 0 : 260); }
+function peek(id) {
+  const b = BLK[id], same = BLOCKS.filter(x => x.p === b.p && (x.sec || '') === (b.sec || ''));
+  const body = '<div class="peek">' + (b.sec ? '<div class="pblk">3.4.2　Dijkstra 算法或一致代价搜索</div>' : '') + same.map(x => '<div class="pblk b-' + x.t + (x.id === id ? ' tgt' : '') + '">' + (x.t === 'fig' ? FIG : blockText(x)) + '</div>').join('') + '<div class="pno">— ' + b.p + ' —</div></div>';
+  sheet('原书 p.' + b.p, body, b.sec ? [['好的', closeSheet, 'pri']] : [['在读书模式打开', () => { closeSheet(); setMode('read', id); }, 'pri'], ['关闭', closeSheet]], b.sec ? '3.4.2 一致代价搜索 · 岔路里读过的原文' : '3.5.2 A* 搜索 · 高亮的是被引用的段落');
+  const t = $('.peek .tgt'); if (t) t.scrollIntoView({ block: 'center' });
+}
+function blockMenu(id) {
+  const b = BLK[id]; if (b.t === 'h') return;
+  $$('.blk.sel').forEach(e => e.classList.remove('sel')); $('#' + id).classList.add('sel');
+  const acts = [
+    ['解释这段', () => explain(id)],
+    ['从这里开始讲', () => { closeSheet(); setMode('listen', id); }, 'pri'],
+    [S.hl.has(id) ? '取消高亮' : '高亮', () => { S.hl.has(id) ? S.hl.delete(id) : S.hl.add(id); closeSheet(); renderView(false); }],
+    ['问 AI', () => { closeSheet(); setMode('listen', id); setTimeout(() => { const q = $('#q'); if (q) { q.value = '「' + b.x.slice(0, 14) + '…」'; q.focus(); } }, 120); }]
+  ];
+  sheet('第 ' + (b.s + 1) + ' 步 · p.' + b.p, '<p class="sp quote">' + blockText(b) + '</p>', acts);
+}
+function explain(id) {
+  const t = EXPLAIN[id] || '这一段在说：' + BLK[id].x.slice(0, 40) + '…… 换句话说，它是第 ' + (BLK[id].s + 1) + ' 步「' + STEPS[BLK[id].s].t + '」的依据 [[' + id + ']]。';
+  sheet('解释', '<div class="ai">' + md(t) + '</div>', [['带到听讲里继续问', () => { closeSheet(); setMode('listen', id); }, 'pri'], ['好的', () => { closeSheet(); S.pins[id] = S.pins[id] || { q: '这段在说什么', a: t }; renderView(false); toast('已贴成问答便签'); }]]);
+}
+function openPin(id) {
+  const p = S.pins[id];
+  sheet(esc(p.q), '<div class="ai">' + md(p.a) + '</div>', [['在听讲里继续问', () => { closeSheet(); setMode('listen', id); }, 'pri'], ['好的', closeSheet]], '问答便签 · p.' + BLK[id].p);
+}
+function finish() {
+  const cards = [['A* 的评价函数是什么？', 'f(n) = g(n) + h(n)'], ['什么是可容许的启发式？', '从不高估到达目标的真实代价'], ['一致性和可容许性是什么关系？', '一致 ⇒ 可容许，反之不一定']];
+  S.cardSel = S.cardSel || cards.map(() => true);
+  const row = (c, i) => '<button class="ck' + (S.cardSel[i] ? ' on' : '') + '" onclick="' + on(() => { S.cardSel[i] = !S.cardSel[i]; finish(); }) + '"><span class="bx">' + I('check') + '</span><span class="grow"><b>' + esc(c[0]) + '</b><small>' + esc(c[1]) + '</small></span></button>';
+  sheet('3.5.2 学完了', '<p class="sp">A* 按 f = g + h 扩展；h 可容许时树搜索最优，一致时图搜索也最优。</p><div class="sub">卡点</div><p class="sp stuck">' + I('flag') + '为什么图搜索需要一致性而不只是可容许</p><div class="sub">闪卡草稿 · 默认全选</div>' + cards.map(row).join(''), [['保存，进入 3.5.3', () => { closeSheet(); S.finished = true; renderView(false); toast('已保存 ' + S.cardSel.filter(Boolean).length + ' 张闪卡，进度移到 3.5.3'); }, 'pri']], '摘要 · 卡点 · 闪卡');
+}
+let toastT;
+function toast(t) { if (!t) return; const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 2200); }
+
+// ---------- 外部控制 ----------
+function setTheme(t) { document.documentElement.dataset.theme = t; $$('.side .tg button').forEach(b => b.classList.toggle('on', b.dataset.t === t)); }
+function start() {
+  reset();
+  setTheme(matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  render();
+  const m = location.hash.slice(1); if (m === 'read') setMode('read');
+}
+document.addEventListener('DOMContentLoaded', start);
+
+</script>
+<script>
+// ---------- 书架首页（只在新谷歌风里有） ----------
+const BOOKS_H = [
+  { id: 'aima', t: '人工智能：现代方法（第4版）', c: '#3B4F7A', g: '人工\n智能', m: 'PDF • 1136 页' },
+  { id: 'slm', t: '统计学习方法（第2版）', c: '#7A3B3B', g: '统计\n学习', m: 'PDF • 470 页' },
+  { id: 'ddia', t: 'Designing Data-Intensive Applications', c: '#3B7A5C', g: 'DDIA', m: 'EPUB • 12 章' }
+];
+const SECS_H = [['3.5.1', '贪心最佳优先搜索', 'p.100–102'], ['3.5.2', 'A* 搜索', 'p.102–106'], ['3.5.3', '搜索等值线', 'p.106–108']];
+const DUE_H = [['3.4.2', '一致代价搜索为什么在扩展时才做目标测试？'], ['3.3.2', '边界（frontier）是什么？'], ['3.3.3', '为什么要记录已达状态（reached）？'], ['3.4.4', '迭代加深搜索的优点是什么？'], ['3.4.1', '广度优先搜索什么时候是代价最优的？'], ['3.1.2', '一个搜索问题由哪几部分形式化？'], ['2.2', 'PEAS 指什么？'], ['2.1', '智能体函数和智能体程序有什么区别？']];
+const HTABS = [['now', '在读'], ['books', '我的书'], ['stuck', '卡点'], ['cards', '闪卡']];
+const HS = { tab: 'now', nav: 'shelf' };
+
+const ART = '<svg viewBox="0 0 358 208" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs>' +
+  '<linearGradient id="ag" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0B1440"/><stop offset=".55" stop-color="#1F2F86"/><stop offset="1" stop-color="#3C5BD8"/></linearGradient>' +
+  '<radialGradient id="ar" cx=".72" cy=".3" r=".6"><stop offset="0" stop-color="#8AB4F8" stop-opacity=".45"/><stop offset="1" stop-color="#8AB4F8" stop-opacity="0"/></radialGradient>' +
+  '<filter id="gl" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4"/></filter></defs>' +
+  '<rect width="358" height="208" fill="url(#ag)"/><rect width="358" height="208" fill="url(#ar)"/>' +
+  '<text x="342" y="52" text-anchor="end" font-family="Times New Roman,serif" font-style="italic" font-size="30" fill="#fff" fill-opacity=".13">f(n) = g(n) + h(n)</text>' +
+  '<g stroke="#fff" stroke-opacity=".3" stroke-width="1.5" fill="none"><path d="M60 98L168 50M60 98L168 140M168 140L280 92"/></g>' +
+  '<path d="M60 98L168 50L280 92" stroke="#FBBC04" stroke-width="6" fill="none" filter="url(#gl)" opacity=".8"/>' +
+  '<path d="M60 98L168 50L280 92" stroke="#FDE293" stroke-width="2.5" fill="none" stroke-linecap="round"/>' +
+  '<g font-family="Google Sans,Roboto,sans-serif" font-size="13" font-weight="700" text-anchor="middle">' +
+  '<circle cx="60" cy="98" r="15" fill="#fff" fill-opacity=".14" stroke="#fff" stroke-opacity=".7"/><text x="60" y="103" fill="#fff">S</text>' +
+  '<circle cx="168" cy="50" r="15" fill="#FBBC04"/><text x="168" y="55" fill="#3D2E00">A</text>' +
+  '<circle cx="168" cy="140" r="15" fill="#fff" fill-opacity=".14" stroke="#fff" stroke-opacity=".5"/><text x="168" y="145" fill="#fff" fill-opacity=".8">B</text>' +
+  '<circle cx="280" cy="92" r="15" fill="#34A853"/><text x="280" y="97" fill="#fff">G</text></g>' +
+  '<g font-family="Google Sans,Roboto,sans-serif" font-size="11" fill="#fff" fill-opacity=".75" text-anchor="middle"><text x="210" y="40">h=4 · f=5</text><text x="214" y="150">h=2 · f=7</text></g></svg>';
+
+const cover = b => '<span class="cover" style="background:' + b.c + '">' + esc(b.g) + '</span>';
+const rate = (ic, t, cls) => '<span class="rate ' + (cls || '') + '">' + I(ic) + esc(t) + '</span>';
+const secH = (pre, t) => '<div class="secH"><div class="grow"><small>' + esc(pre) + ' · </small>' + esc(t) + '</div><button class="ib" aria-label="更多" onclick="' + on(() => toast('更多（原型没做）')) + '">' + I('more') + '</button></div>';
+const row = (ico, t, meta, chip, fn) => '<button class="li" onclick="' + on(fn) + '">' + ico + '<span class="grow"><div class="tt">' + esc(t) + '</div><div class="meta">' + esc(meta) + '</div>' + (chip || '') + '</span></button>';
+const stuckList = () => [['一致代价搜索为什么在扩展时才做目标测试？', '3.4.2 一致代价搜索 • 第 4 步会用到']].concat(S.finished ? [['为什么图搜索需要一致性而不只是可容许', '3.5.2 A* 搜索 • 刚刚标记']] : []);
+const progress = () => S.st.filter(s => s === 'done' || s === 'skipped').length;
+
+function hNow() {
+  const n = progress();
+  const cap = S.finished ? '3.5.2 学完了。下一节：3.5.3 搜索等值线' : '3.5.2 A* 搜索：接着讲第 ' + (S.cur + 1) + ' 步「' + STEPS[S.cur].t + '」';
+  let h = '<div class="hero"><button class="art" onclick="' + on(() => openStudy('listen')) + '">' + ART + '<span class="eb">' + I('clock') + (S.finished ? '刚刚' : '接着上次 · 3 天前') + '</span><span class="cap2">' + esc(cap) + '</span></button>' +
+    '<div class="row">' + cover(BOOKS_H[0]) + '<div class="grow"><div class="tt">' + esc(BOOKS_H[0].t) + '</div>' + rate(S.finished ? 'check' : 'play', S.finished ? '本节已学完' : '第 ' + Math.min(n + 1, 4) + '/4 步 · 听讲', S.finished ? 'ok' : '') + '</div>' +
+    '<button class="pill" onclick="' + on(() => S.finished ? toast('3.5.3 原型没做') : openStudy('listen')) + '">' + (S.finished ? '开始' : '继续') + '</button></div></div>';
+  h += secH('第 3 章', '有信息搜索');
+  h += SECS_H.map(([no, t, pg], i) => {
+    const st = i === 0 || (i === 1 && S.finished) ? 'done' : i === 1 ? 'now' : 'new';
+    const chip = st === 'done' ? rate('check', '已学', 'ok') : st === 'now' ? rate('play', n + '/4 步') : rate('book', '未开始');
+    return row('<span class="ico ' + st + '">' + no + '</span>', t, pg + (st === 'done' ? ' • 2 张闪卡' : st === 'now' ? ' • 在学' : ''), chip, () => i === 1 ? openStudy('listen') : toast('原型只做了 3.5.2'));
+  }).join('');
+  h += secH('还没弄懂', '卡点');
+  h += stuckList().map(([q, m]) => row('<span class="ico bad">' + I('flag') + '</span>', q, m, rate('flag', '卡点', 'bad'), () => toast('打开卡点（原型没做）'))).join('');
+  h += secH('今天到期', '复习');
+  h += row('<span class="ico card">' + I('cards') + '</span>', DUE_H.length + ' 张闪卡', '第 2–3 章 • 都是今天到期', rate('clock', '今天'), () => toast('复习（原型没做）'));
+  h += secH('书架', '我的书') + '<div class="carousel">' + BOOKS_H.map(b => '<button class="bk" onclick="' + on(() => b.id === 'aima' ? openStudy('listen') : toast('原型只做了这一本')) + '">' + cover(b) + '<div class="t">' + esc(b.t) + '</div><div class="m">' + bookState(b) + '</div></button>').join('') +
+    '<button class="bk add" onclick="' + on(() => toast('导入 PDF / EPUB（原型没做）')) + '"><span class="cover">' + I('add') + '</span><div class="t">导入一本书</div></button></div>';
+  return h;
+}
+const bookState = b => b.id === 'aima' ? (S.finished ? '在学 3.5.3' : '在学 3.5.2') : b.id === 'slm' ? '解析中 61%' : '已就绪';
+function hBooks() {
+  return '<div style="height:8px"></div>' + BOOKS_H.map(b => row(cover(b), b.t, b.m, b.id === 'aima' ? rate('play', bookState(b)) : b.id === 'slm' ? rate('sync', '解析中 61%') : rate('check', '已就绪', 'ok'), () => b.id === 'aima' ? openStudy('listen') : toast('原型只做了这一本'))).join('') +
+    row('<span class="ico new">' + I('add') + '</span>', '导入一本书', 'PDF 或 EPUB • 用你自己的 MinerU Token 解析', '', () => toast('导入 PDF / EPUB（原型没做）'));
+}
+function hStuck() {
+  return '<div style="height:8px"></div>' + stuckList().map(([q, m]) => row('<span class="ico bad">' + I('flag') + '</span>', q, m, rate('flag', '卡点', 'bad'), () => toast('打开卡点（原型没做）'))).join('') +
+    '<p class="empty">学的时候说"没懂"或者自己标记的地方会留在这里，讲到相关内容时 AI 会提起。</p>';
+}
+function hCards() {
+  return secH('今天到期', DUE_H.length + ' 张') + DUE_H.map(([sec, q]) => row('<span class="ico card">' + esc(sec) + '</span>', q, sec + ' • 今天到期', '', () => toast('复习（原型没做）'))).join('');
+}
+function renderHome() {
+  $('#htop').innerHTML = '<div class="logo"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M8 3h11l7 7v17a2 2 0 01-2 2H8a2 2 0 01-2-2V5a2 2 0 012-2z" fill="#4285F4"/><path d="M19 3l7 7h-5a2 2 0 01-2-2z" fill="#AECBFA"/><rect x="10" y="15.5" width="12" height="4" rx="1" fill="#FBBC04"/><path d="M11 13h10M11 17.5h10M11 22h7" stroke="#fff" stroke-width="2" stroke-linecap="round"/><path d="M9 3h4v8l-2-1.6L9 11z" fill="#EA4335"/><circle cx="23" cy="23" r="3" fill="#34A853"/></svg>Pagewise</div>' +
+    '<button class="ib" aria-label="搜索书架" onclick="' + on(() => toast('按书名、章节、原文搜索（原型没做）')) + '">' + I('search') + '</button>' +
+    '<button class="ib" aria-label="通知" onclick="' + on(() => toast('统计学习方法：解析到 61%')) + '">' + I('bell') + '<span class="dot">1</span></button>' +
+    '<button class="avatar" aria-label="我的" onclick="' + on(() => toast('我的（原型没做）')) + '">' + I('person') + '</button>';
+  if (!$('#htabs .ind')) $('#htabs').innerHTML = HTABS.map(([k, l]) => '<button role="tab" data-k="' + k + '" onclick="' + on(() => { HS.tab = k; renderHome(); $('#hbody').scrollTop = 0; }) + '"><span>' + l + '</span></button>').join('') + '<span class="ind"></span>';
+  $$('#htabs button').forEach(b => { b.classList.toggle('on', b.dataset.k === HS.tab); b.setAttribute('aria-selected', b.dataset.k === HS.tab); });
+  $('#hbody').innerHTML = { now: hNow, books: hBooks, stuck: hStuck, cards: hCards }[HS.tab]();
+  const NAV = [['shelf', '书架', 'shelf'], ['review', '复习', 'cards'], ['notes', '笔记', 'note'], ['me', '我的', 'person']];
+  $('#hnav').innerHTML = NAV.map(([k, l, ic]) => '<button class="' + (HS.nav === k ? 'on' : '') + '" onclick="' + on(() => k === 'shelf' ? (HS.tab = 'now', renderHome()) : toast('原型只做了书架和学习页')) + '"><span class="ind">' + I(ic) + (k === 'review' ? '<span class="bd">' + DUE_H.length + '</span>' : '') + '</span>' + l + '</button>').join('');
+  placeInd();
+}
+function placeInd() {
+  const box = $('#htabs'), t = $('#htabs .on span'), ind = $('#htabs .ind');
+  if (!t || !box.offsetWidth) return;
+  const a = box.getBoundingClientRect(), r = t.getBoundingClientRect();
+  ind.style.left = (r.left - a.left) + 'px'; ind.style.width = r.width + 'px';
+}
+function openStudy(mode) {
+  $('#phone').dataset.screen = 'study';
+  if (mode !== S.mode) setMode(mode); else render();
+}
+function goBack() { closeSheet(); renderHome(); $('#phone').dataset.screen = 'home'; }
+document.addEventListener('DOMContentLoaded', () => {
+  if (/^(listen|read)$/.test(location.hash.slice(1))) $('#phone').dataset.screen = 'study';
+  renderHome();
+  if (document.fonts) document.fonts.ready.then(placeInd);
+});
+</script>
+</body>
+</html>

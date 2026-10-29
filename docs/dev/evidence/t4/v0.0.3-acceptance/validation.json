@@ -1,0 +1,51 @@
+{
+  "baselineCloud": {
+    "commit": "c9ea9301ce9febbb20a14f517f11d954c2502774",
+    "quality": "success",
+    "androidBuild": "success",
+    "jestSuites": {
+      "passed": 79,
+      "skipped": 1,
+      "total": 80
+    },
+    "jestTests": {
+      "passed": 1197,
+      "skipped": 2,
+      "total": 1199
+    },
+    "snapshotsPassed": 15
+  },
+  "localFocusFix": {
+    "eslint": {
+      "exitCode": 0,
+      "files": [
+        "src/features/study/StudyScreens.tsx",
+        "__tests__/features/study.test.tsx"
+      ],
+      "node": "/usr/local/bin/node v25.2.1 x64"
+    },
+    "typecheck": {
+      "exitCode": 0,
+      "command": "npm run typecheck"
+    },
+    "relatedTests": {
+      "exitCode": 0,
+      "suitesPassed": 4,
+      "testsPassed": 42,
+      "files": [
+        "__tests__/features/study.test.tsx",
+        "__tests__/features/notes.test.tsx",
+        "__tests__/ui/studyFinishingFidelity.test.tsx",
+        "__tests__/ui/notesReviewFidelity.test.tsx"
+      ]
+    },
+    "release": {
+      "exitCode": 0,
+      "command": ":app:assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a",
+      "duration": "1m 4s",
+      "productionEntryRestoredBeforeBuild": true
+    },
+    "cloudRunForLocalFix": false,
+    "fullBaselineCheckReused": true
+  }
+}

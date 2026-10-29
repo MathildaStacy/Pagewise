@@ -1,0 +1,26 @@
+{
+  "baseline": "c9ea9301ce9febbb20a14f517f11d954c2502774",
+  "demoOnly": true,
+  "import": "Existing Demo PDF settings -> confirmation -> existing BookMap; no upload or duplicate import",
+  "note": {
+    "section": "3.4.2",
+    "text": "Acceptance_v003_f=g+h",
+    "reopened": true,
+    "sourceSection": "3.4.2"
+  },
+  "review": {
+    "completed": 8,
+    "good": 6,
+    "hard": 1,
+    "again": 1
+  },
+  "sectionSave": {
+    "before": "3.5.2",
+    "after": "3.5.3",
+    "shelfCompletedSections": "25/35",
+    "editedDraftCard": "A* 的评价函数是什么？_v003",
+    "saveReturnedNextSection": true,
+    "newSavedCardReopenedInReview": false,
+    "newSavedCardReopenNote": "Optional follow-up could not acquire an active accessibility root; no native re-open claim is made. Transaction and card persistence are covered by the related feature tests."
+  }
+}

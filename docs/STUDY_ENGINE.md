@@ -12,12 +12,16 @@ Block       id · book_id · seq · page · bbox[x0,y0,x1,y1] · type(title|text
             · level(标题层级, 仅 title) · text · latex · image_path · section_id
 Section     id("3.5.2") · book_id · parent_id · level(1 章 / 2 节 / 3 小节) · title · block_from · block_to
             · page_from · page_to · chars · parts(讲解段数) · status(new|learning|done) · summary · source(auto|bookmark|manual)
-StudyState  book_id · main(section_id, part) · detours[stack of section_id] · last_active_at
+StudyState  book_id · main(section_id, part, step) · detours[stack of section_id] · mode(read|lecture)
+            · read_anchor(block_id) · last_active_at
+LessonPlan  section_id · part · steps[{no, title, kind(intuition|definition|derivation|example|check), block_from, block_to,
+            status(todo|done|skipped)}]
 Message     id · book_id · section_id · role · content · citations[block_id] · is_detour · created_at
 SectionNote section_id · summary · qa[{q, a, from_section}] · stuck[{text, resolved}] · user_text
 Card        id · section_id · front · back · box(1–5) · due_at
 ReviewLog   card_id · rated(again|hard|good) · at
 Highlight   block_id · range · color · note
+Pin         id · block_id · section_id · question · answer_summary · message_ids[] · created_at
 ```
 
 `Block` 直接来自 MinerU 的内容块 JSON（每块有页码和位置框）；`seq` 是全书顺序号，分片解析后按原书页码重排、重新编号。
@@ -66,9 +70,23 @@ Highlight   block_id · range · color · note
 2. 只讲当前段的内容；当前段讲完前不主动跳到下一段。
 3. 术语第一次出现时中英对照，例如"可容许的（admissible）"。
 4. 引用：每个依赖书中内容的说法，后面写引用标记 `[[b:<block_id>]]`。只能引用本轮上下文里出现过的块。
-5. 书里没有、是你自己补充的内容，明确说"书里没有直接讲，这是补充"。
+5. 书里没有、是你自己补充的推导或例子，用 §4.2 的标记包起来。
 6. 用户答错检查题时，换一个角度再讲一次，而不是重复原话。
 7. 用户问到其他小节的内容时，先调用 `load_section`，不要凭记忆回答。
+
+### 4.1 本节路线图
+
+进入一个小节（或长小节的一段）时，先让整理模型生成 `LessonPlan`：
+
+1. 输入：该段全部内容块（带块 ID）和第 2 层的书的地图。
+2. 输出 2–5 步，每步：一句话标题、类型、`block_from`–`block_to`。
+3. 校验：各步的块范围必须连续、不重叠、覆盖整段；公式、算法框图、图和它的说明不能被拆到两步。不通过就退回到"按标题和段落数平均切"。
+4. 讲解时第 3 层仍放整段原文，系统提示里写明"现在讲第 k 步（块 a–b）"。
+5. 「这步熟，跳过」把该步标 `skipped`，讲下一步时 AI 用一句话交代跳过的内容。
+
+### 4.2 来源标记
+
+规则 5 的落地方式：AI 自己补的推导写在 `[[derive]]…[[/derive]]` 里，自己举的例子写在 `[[example]]…[[/example]]` 里。界面用不同底色和小标签渲染；标记内的引用照常校验。标记外、又没有引用的整段陈述，计入 §8 的"未核实"统计。
 
 ## 5. 上下文组装
 
@@ -122,6 +140,14 @@ Highlight   block_id · range · color · note
 - 回到主线时，AI 用一句话接上："回到 A\*：刚才讲到……"。
 - 岔路深度到 2 时再问别的小节，先提示"要不要先回主线"。
 - 用户在岔路里说"从这里开始学"，主线指针改到 X，原主线小节保持 `learning`。
+- 回到主线时，这次岔路的消息在主线里折叠成一条摘要（问题标题 + 条数），可以展开；第 6 层只保留这条摘要。
+
+### 7.1 读书 ⇄ 听讲
+
+- 读书 → 听讲：取 `read_anchor`（屏幕中间那个块，或长按选中的块），找到包含它的步骤 k。k 已讲过就滚到那一步的讲解；没讲过就把 `main.step` 设为 k 并开始讲，k 之前没讲的步骤保持 `todo`。
+- 听讲 → 读书：读书模式定位到 `main.step` 的 `block_from`，高亮该步的块范围 2 秒。
+- 读书模式里滚动时节流更新 `read_anchor`（停止滚动 500 ms 后）。
+- 问答便签：一次问答结束后，如果问题是从某个块发起的（划词、长按），贴在那个块上；否则贴在答案里第一个属于当前小节的引用块上；都没有就不贴。
 
 ## 8. 引用校验
 

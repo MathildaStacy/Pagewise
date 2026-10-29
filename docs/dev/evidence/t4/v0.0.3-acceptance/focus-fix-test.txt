@@ -1,0 +1,34 @@
+
+> pagewise@0.0.3 test
+> jest --runInBand __tests__/features/study.test.tsx
+
+jest-haste-map: Haste module naming collision: pagewise
+  The following files share their name; please adjust your hasteImpl:
+    * <rootDir>/package.json
+    * <rootDir>/.claude/worktrees/feature+smooth-ai-streaming/package.json
+
+PASS __tests__/features/study.test.tsx
+  ✓ calculates exact quick actions at last step, quiz, ready, detour and resume (50 ms)
+  ✓ keeps busy chips, blocks their actions and permits switching to read (23 ms)
+  ✓ reader excludes titles from selection and preserves main when asking about a block (16 ms)
+  ✓ opens a full-text result in its own section and at its block without moving the main lesson (warm session: false) (15 ms)
+  ✓ opens a full-text result in its own section and at its block without moving the main lesson (warm session: true) (15 ms)
+  ✓ reader explanation stays outside thread, saves a pin, and block note persists (24 ms)
+  ✓ opening citations displays actual blocks and moves to read with flash (21 ms)
+  ✓ theme changes preserve composer, overlay and the same session (247 ms)
+  ✓ removes hidden study blur without reopening the session or losing the draft (57 ms)
+  ✓ section draft edits and checked choices save once and advance to the next leaf (17 ms)
+  ✓ keeps structural and pending cards visible even though cards are outside model context (13 ms)
+  ✓ failed draft generation remains editable, and failed transaction keeps the draft on screen (20 ms)
+  ✓ historical unknown citations never become page capsules (13 ms)
+  ✓ renders normal, empty, loading, error, and long pages in paper (85 ms)
+  ✓ renders normal, empty, loading, error, and long pages in glass (68 ms)
+  ✓ renders imported PDF pages through app IO with simultaneous marks and keeps anchors across orig/flow changes (22 ms)
+  ✓ renders native page cards and routes PDF marks/pins to the existing block menu and notes (17 ms)
+  ✓ keeps Demo and EPUB original mode guidance explicit (16 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       18 passed, 18 total
+Snapshots:   0 total
+Time:        2.48 s
+Ran all test suites matching /__tests__\/features\/study.test.tsx/i.

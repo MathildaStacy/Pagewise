@@ -1,0 +1,335 @@
+{
+  "apple-light-menu-font1": [
+    {
+      "label": "解释",
+      "boundsPx": [
+        48,
+        1266,
+        198,
+        1410
+      ],
+      "heightDp": 48.0
+    },
+    {
+      "label": "翻译",
+      "boundsPx": [
+        198,
+        1266,
+        349,
+        1410
+      ],
+      "heightDp": 48.0
+    },
+    {
+      "label": "问 AI",
+      "boundsPx": [
+        349,
+        1266,
+        508,
+        1410
+      ],
+      "heightDp": 48.0
+    },
+    {
+      "label": "从这里开始讲",
+      "boundsPx": [
+        508,
+        1266,
+        827,
+        1410
+      ],
+      "heightDp": 48.0
+    },
+    {
+      "label": "高亮",
+      "boundsPx": [
+        827,
+        1266,
+        978,
+        1410
+      ],
+      "heightDp": 48.0
+    },
+    {
+      "label": "笔记",
+      "boundsPx": [
+        978,
+        1266,
+        1129,
+        1410
+      ],
+      "heightDp": 48.0
+    },
+    {
+      "label": "材质容器",
+      "boundsPx": [
+        48,
+        1278,
+        1232,
+        1398
+      ],
+      "heightDp": 40.0
+    }
+  ],
+  "apple-light-menu-font2-start": [
+    {
+      "label": "解释",
+      "boundsPx": [
+        48,
+        1717,
+        270,
+        1861
+      ],
+      "heightDp": 48.0
+    },
+    {
+      "label": "翻译",
+      "boundsPx": [
+        270,
+        1717,
+        493,
+        1861
+      ],
+      "heightDp": 48.0
+    },
+    {
+      "label": "问 AI",
+      "boundsPx": [
+        493,
+        1717,
+        730,
+        1861
+      ],
+      "heightDp": 48.0
+    },
+    {
+      "label": "从这里开始讲",
+      "boundsPx": [
+        730,
+        1717,
+        1232,
+        1861
+      ],
+      "heightDp": 48.0
+    },
+    {
+      "label": "高亮",
+      "boundsPx": [
+        1265,
+        1717,
+        1232,
+        1861
+      ],
+      "heightDp": 48.0
+    },
+    {
+      "label": "材质容器",
+      "boundsPx": [
+        48,
+        1729,
+        1232,
+        1849
+      ],
+      "heightDp": 40.0
+    }
+  ],
+  "apple-light-menu-font2-end": [
+    {
+      "label": "翻译",
+      "boundsPx": [
+        48,
+        1717,
+        14,
+        1861
+      ],
+      "heightDp": 48.0
+    },
+    {
+      "label": "问 AI",
+      "boundsPx": [
+        48,
+        1717,
+        251,
+        1861
+      ],
+      "heightDp": 48.0
+    },
+    {
+      "label": "从这里开始讲",
+      "boundsPx": [
+        251,
+        1717,
+        786,
+        1861
+      ],
+      "heightDp": 48.0
+    },
+    {
+      "label": "高亮",
+      "boundsPx": [
+        786,
+        1717,
+        1009,
+        1861
+      ],
+      "heightDp": 48.0
+    },
+    {
+      "label": "笔记",
+      "boundsPx": [
+        1009,
+        1717,
+        1232,
+        1861
+      ],
+      "heightDp": 48.0
+    },
+    {
+      "label": "材质容器",
+      "boundsPx": [
+        48,
+        1729,
+        1232,
+        1849
+      ],
+      "heightDp": 40.0
+    }
+  ],
+  "apple-dark-menu-reopen": [
+    {
+      "label": "解释",
+      "boundsPx": [
+        48,
+        1294,
+        198,
+        1438
+      ],
+      "heightDp": 48.0
+    },
+    {
+      "label": "翻译",
+      "boundsPx": [
+        198,
+        1294,
+        349,
+        1438
+      ],
+      "heightDp": 48.0
+    },
+    {
+      "label": "问 AI",
+      "boundsPx": [
+        349,
+        1294,
+        508,
+        1438
+      ],
+      "heightDp": 48.0
+    },
+    {
+      "label": "从这里开始讲",
+      "boundsPx": [
+        508,
+        1294,
+        827,
+        1438
+      ],
+      "heightDp": 48.0
+    },
+    {
+      "label": "高亮",
+      "boundsPx": [
+        827,
+        1294,
+        978,
+        1438
+      ],
+      "heightDp": 48.0
+    },
+    {
+      "label": "笔记",
+      "boundsPx": [
+        978,
+        1294,
+        1129,
+        1438
+      ],
+      "heightDp": 48.0
+    },
+    {
+      "label": "材质容器",
+      "boundsPx": [
+        48,
+        1306,
+        1232,
+        1426
+      ],
+      "heightDp": 40.0
+    }
+  ],
+  "images": {
+    "f310": {
+      "sourcePx": [
+        960,
+        360
+      ],
+      "alphaRange": [
+        0,
+        255
+      ],
+      "native": [
+        {
+          "capture": "apple-light-f310-reader",
+          "boundsPx": [
+            108,
+            2052,
+            1172,
+            2451
+          ],
+          "displayPx": [
+            1064,
+            399
+          ]
+        }
+      ]
+    },
+    "f318": {
+      "sourcePx": [
+        960,
+        450
+      ],
+      "alphaRange": [
+        0,
+        255
+      ],
+      "native": [
+        {
+          "capture": "apple-light-reader-final",
+          "boundsPx": [
+            108,
+            1467,
+            1172,
+            1966
+          ],
+          "displayPx": [
+            1064,
+            499
+          ]
+        },
+        {
+          "capture": "apple-dark-reader-reopen",
+          "boundsPx": [
+            108,
+            1495,
+            1172,
+            1994
+          ],
+          "displayPx": [
+            1064,
+            499
+          ]
+        }
+      ]
+    }
+  }
+}

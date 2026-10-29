@@ -1,0 +1,212 @@
+/* Pagewise 书页排版风原型 · 基础：Token、书桌舞台、手机外框、顶栏 / Tab 栏、通用组件、浮层、控制台
+   依据：Edward Tufte 的书和 tufte-css（宽页边、旁注、细线代替方框）、Stripe Press（衬线、留白、一个强调色），
+   配色基调借电子墨水阅读器（Kindle / reMarkable / Daylight）：低饱和的纸色和墨色，不用纯白、纯黑，白天和夜里都能长时间读。
+
+   ▍Token 命名：CSS 变量名 = src/ui/kit/tokens.ts 里 ColorTokens 的 key 改成 kebab-case（accentBg → --accent-bg）。
+     这套皮肤特有的名字：--desk（舞台的书桌）、--rule / --rule2（发丝线，代替阴影和描边）、--ai（朱批色，AI 的标记）。
+   ▍三条原则：① 层级靠字号、字重和细线，不靠阴影和色块；② 原书是宋体排在书页上，AI 是黑体、左边一条朱色细线；
+     ③ 只有一个强调色（墨蓝 = 主线），AI 用朱色，其他语义色都是低饱和的「墨水色」。 */
+:root{
+  /* 纸：书桌 → 手机底（纸）→ 书页（更亮一档）→ 卡片（和纸同色，只画细线） */
+  --desk:#D9D3C6;
+  --bg:#F1ECE1;
+  --paper:#F8F5EE;--paper-ink:#2A2620;
+  --card:#F5F1E8;--card-hi:#FAF7F1;--card-lo:#ECE6D9;
+  --rule:rgba(60,48,30,.14);--rule2:rgba(60,48,30,.28);--line:rgba(60,48,30,.12);
+  --surface-alt:rgba(60,48,30,.06);--pressed:rgba(60,48,30,.08);
+  --scrim:rgba(40,32,20,.32);
+  /* 墨 */
+  --ink:#2A2620;--ink2:#6B6456;--ink3:#9C9483;--on-accent:#F8F5EE;
+  /* 语义色：前景 / 浅底 / 深前景（小字用 -ink） */
+  --accent:#2F5577;--accent-hover:#284A68;--accent-press:#203D57;--accent-bg:rgba(47,85,119,.08);--accent-bg2:rgba(47,85,119,.16);--accent-ink:#2A4D6C;
+  --detour:#6E4F7E;--detour-bg:rgba(110,79,126,.09);--detour-ink:#5F4170;--on-detour:#F8F5EE;
+  --stuck:#A2741E;--stuck-bg:rgba(162,116,30,.11);--stuck-ink:#7A5511;
+  --ok:#4E6E3E;--ok-bg:rgba(78,110,62,.1);--ok-ink:#3F5C31;
+  --bad:#9C3A2E;--bad-bg:rgba(156,58,46,.08);--bad-ink:#8A3025;
+  --highlight:rgba(222,186,72,.34);
+  --pin:#7A5E14;--pin-bg:rgba(190,150,50,.12);
+  --derive:#3D6B66;--derive-bg:rgba(61,107,102,.08);
+  --example-ink:#9A4428;
+  /* 朱批：AI 的标记色（AI 小印、AI 标签、当前步、导读、续学回顾）。只用在小面积上 */
+  --ai:#B4532F;--ai-soft:rgba(180,83,47,.07);--ai-ink:#9A4428;
+  /* 主按钮是墨色实底（排版物里最常见的「黑底白字」，但用的是暖墨，不是纯黑） */
+  --btn:#2A2620;--on-btn:#F8F5EE;
+  /* 阴影只留给浮起来的东西（浮层、段落菜单），平面上一律用细线 */
+  --sh-float:0 14px 36px rgba(40,30,15,.18),0 0 0 1px var(--rule);
+  --r-xs:2px;--r-sm:3px;--r-md:4px;--r-lg:6px;--r-sheet:12px;
+  --ease:cubic-bezier(.2,0,0,1);--ease-std:cubic-bezier(.4,0,.2,1);
+  /* 字体：标题和书正文用衬线（拉丁字母走 Iowan / Palatino，中文走宋体），界面和 AI 用黑体，数字用旧式数字 */
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Songti SC","Noto Serif SC","Source Han Serif SC","STSong","SimSun",serif;
+  --display:var(--serif);
+  --font:-apple-system,"PingFang SC","Noto Sans SC","Microsoft YaHei UI",system-ui,sans-serif;
+  --math:"STIX Two Math","Cambria Math","Iowan Old Style","Times New Roman",serif;
+  --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  --fz-ai:15.5px;--fz-book:16.5px;
+  --dockfade:#F1ECE1;
+  color-scheme:light;
+}
+/* 深色：不是黑底白字，是 Kindle 夜间那种暖炭灰底 + 米色字，对比够读但不刺眼 */
+:root[data-theme=dark]{
+  --desk:#121110;
+  --bg:#1D1B18;
+  --paper:#24221E;--paper-ink:#E2DCCD;
+  --card:#211F1B;--card-hi:#292621;--card-lo:#191714;
+  --rule:rgba(226,218,200,.12);--rule2:rgba(226,218,200,.24);--line:rgba(226,218,200,.1);
+  --surface-alt:rgba(226,218,200,.06);--pressed:rgba(226,218,200,.08);
+  --scrim:rgba(0,0,0,.5);
+  --ink:#E2DCCD;--ink2:#A69F8F;--ink3:#787161;--on-accent:#1D1B18;
+  --accent:#8EAECB;--accent-hover:#A3BED7;--accent-press:#7A9CBB;--accent-bg:rgba(142,174,203,.1);--accent-bg2:rgba(142,174,203,.2);--accent-ink:#A9C3DB;
+  --detour:#B7A0C6;--detour-bg:rgba(183,160,198,.1);--detour-ink:#C9B6D6;--on-detour:#1D1B18;
+  --stuck:#D3A458;--stuck-bg:rgba(211,164,88,.12);--stuck-ink:#E0B977;
+  --ok:#9DBB86;--ok-bg:rgba(157,187,134,.1);--ok-ink:#B2CB9F;
+  --bad:#DE8C7B;--bad-bg:rgba(222,140,123,.1);--bad-ink:#E8A698;
+  --highlight:rgba(214,176,70,.24);
+  --pin:#D9BC6A;--pin-bg:rgba(217,188,106,.11);
+  --derive:#8EC0B8;--derive-bg:rgba(142,192,184,.09);
+  --example-ink:#E39A78;
+  --ai:#DB805A;--ai-soft:rgba(219,128,90,.09);--ai-ink:#E39A78;
+  --btn:#E2DCCD;--on-btn:#1D1B18;
+  --sh-float:0 16px 40px rgba(0,0,0,.5),0 0 0 1px var(--rule2);
+  --dockfade:#1D1B18;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%}
+body{font-family:var(--font);background:var(--desk);color:var(--ink);-webkit-font-smoothing:antialiased;font-size:14px;line-height:1.55}
+button,input,select,textarea{font:inherit;color:inherit;background:none;border:0;outline:0}
+button{cursor:pointer;text-align:inherit}
+:focus-visible{outline:1.5px solid var(--accent);outline-offset:2px;border-radius:2px}
+svg.i{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.35;stroke-linecap:round;stroke-linejoin:round}
+svg.i.f{fill:currentColor;stroke:none}
+.n{font-variant-numeric:tabular-nums}
+.muted{color:var(--ink2)}
+.math{font-family:var(--math);font-style:italic;font-size:1.05em;padding:0 1px;white-space:nowrap}
+.math.blk{display:block;text-align:center;margin:12px 0;font-size:1.12em;white-space:normal}
+.grad-t{color:var(--ai-ink)}
+/* 小型大写式的标签：中文用字距代替小型大写字母 */
+.sc{font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:500;color:var(--ink2)}
+
+/* ---------- 舞台：书桌 + 手机 + 版权页式的说明 ---------- */
+.stage{display:flex;flex-wrap:wrap;gap:40px 48px;justify-content:center;align-items:flex-start;padding:40px 16px 40px;min-height:100vh;
+  background:radial-gradient(rgba(60,48,30,.05) 1px,transparent 1px) 0 0/4px 4px,var(--desk)}
+:root[data-theme=dark] .stage{background:radial-gradient(rgba(255,255,255,.025) 1px,transparent 1px) 0 0/4px 4px,var(--desk)}
+.phone{width:390px;height:844px;flex:none;position:relative;overflow:hidden;border-radius:42px;background:var(--bg);
+  box-shadow:0 0 0 8px #2B2824,0 0 0 9px #46413A,0 30px 70px rgba(40,30,15,.28),0 8px 18px rgba(40,30,15,.12)}
+#view{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;overscroll-behavior:contain}
+#view::-webkit-scrollbar{display:none}
+.sbar{height:40px;display:flex;align-items:center;justify-content:space-between;padding:4px 26px 0 30px;font:500 13px var(--font);position:relative}
+.sbar .cam{position:absolute;left:50%;top:12px;width:12px;height:12px;border-radius:50%;background:#14120F;transform:translateX(-50%)}
+.sbar .r{display:flex;gap:5px}.sbar .r svg{width:15px;height:15px;fill:currentColor}
+.homebar{position:absolute;bottom:8px;left:50%;width:134px;height:4px;margin-left:-67px;border-radius:2px;background:var(--ink);opacity:.7;z-index:40;pointer-events:none}
+
+/* ---------- 顶栏 AppBar ----------
+   根页像一本杂志的刊头：一行字距拉开的小字（日期 / 说明）+ 32 号衬线大标题，下面一条墨线。
+   push 页：左「←」、左对齐 17 号衬线标题 + 一行小字副标题；底部发丝线。
+   顶栏实色纸底，不做模糊。 */
+#head{position:absolute;top:0;left:0;right:0;z-index:10;background:var(--bg)}
+#head.scrolled{box-shadow:0 1px 0 var(--rule)}
+#nav{display:flex;align-items:center;gap:2px;min-height:52px;padding:2px 8px 4px}
+#nav .ttl{flex:1;min-width:0;line-height:1.3;padding-left:2px}
+#nav .ttl b{display:block;font:500 17px/1.3 var(--display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#nav .ttl small{display:block;font-size:11.5px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+#nav .r{display:flex;align-items:center;gap:0;flex:none;min-width:40px;justify-content:flex-end}
+#nav.root{align-items:flex-end;min-height:86px;margin:0 22px;padding:14px 0 12px;box-shadow:inset 0 -1.5px 0 var(--ink)}
+#nav.root .ttl{padding:0}
+#nav.root .ttl small{font-size:11px;letter-spacing:.16em;color:var(--ink2)}
+#nav.root .ttl h1{font:500 32px/1.15 var(--display);letter-spacing:.01em;margin-top:6px}
+#nav.root .r{padding-bottom:0;margin-right:-8px}
+.ib{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;flex:none;color:var(--ink);transition:background .15s}
+.ib:hover{background:var(--surface-alt)}
+.ib:active{background:var(--pressed)}
+.avatar{width:36px;height:36px;border-radius:50%;color:var(--ink);display:grid;place-items:center;box-shadow:inset 0 0 0 1px var(--rule2);flex:none;margin:0 6px 2px 0}
+.avatar svg.i{width:18px;height:18px}
+.nt{height:34px;padding:0 12px;font-size:14px;font-weight:500;color:var(--accent-ink);white-space:nowrap;border-radius:var(--r-sm)}
+.nt:hover{background:var(--accent-bg)}
+.nt.pri{background:var(--btn);color:var(--on-btn)}
+
+/* SelectorBar：读书 / 听讲（和原版 / 重排、Markdown / Anki 等分段选择）。
+   像书的目录页：文字标签，选中项墨色 + 下面 1.5px 墨线；没选中的是灰字 */
+.selbar{display:flex;align-items:center;gap:18px}
+.selbar button{position:relative;height:36px;padding:0;font-size:14.5px;color:var(--ink3);display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;transition:color .15s}
+.selbar button svg.i{width:17px;height:17px}
+.selbar button:hover{color:var(--ink)}
+.selbar button.on{color:var(--ink);font-weight:500;cursor:default}
+.selbar button.on::after{content:"";position:absolute;left:0;right:0;bottom:2px;height:1.5px;background:var(--ink);animation:rl .25s var(--ease)}
+@keyframes rl{from{transform:scaleX(0)}}
+.selbar.fill button{flex:1}
+/* boxed：小型分段（原版 / 重排、短 / 中 / 长…）：细线框，选中项墨色实底 */
+.selbar.boxed{gap:0;border-radius:var(--r-sm);box-shadow:inset 0 0 0 1px var(--rule2);overflow:hidden}
+.selbar.boxed button{height:32px;font-size:13px;color:var(--ink2)}
+.selbar.boxed button+button{box-shadow:inset 1px 0 0 var(--rule2)}
+.selbar.boxed button.on{background:var(--btn);color:var(--on-btn);box-shadow:none}
+.selbar.boxed button.on::after{display:none}
+
+/* ---------- Tab 栏：通栏贴底，顶部一条发丝线；选中项墨色 + 顶部 2px 墨线（像书签） ---------- */
+#tabbar{position:absolute;left:0;right:0;bottom:0;height:80px;display:flex;padding:0 6px 22px;z-index:7;background:var(--bg);box-shadow:0 -1px 0 var(--rule)}
+#tabbar:empty{display:none}
+#tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;letter-spacing:.06em;color:var(--ink3);position:relative;transition:color .15s}
+#tabbar button:hover{color:var(--ink2)}
+#tabbar button svg.i{width:21px;height:21px}
+#tabbar button.on{color:var(--ink);font-weight:500}
+#tabbar button.on svg.i{stroke-width:1.7}
+#tabbar button.on::before{content:"";position:absolute;top:0;left:calc(50% - 12px);width:24px;height:2px;background:var(--ink);animation:rl .3s var(--ease)}
+.badge{position:absolute;top:8px;left:calc(50% + 6px);min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--ai);color:var(--on-accent);font:600 10px/16px var(--font);letter-spacing:0;text-align:center}
+#fab:empty{display:none}
+.fab{position:absolute;right:20px;bottom:96px;z-index:7;height:46px;padding:0 20px 0 16px;border-radius:var(--r-sm);background:var(--btn);color:var(--on-btn);font-size:15px;font-weight:500;display:flex;align-items:center;gap:6px;box-shadow:0 6px 18px rgba(40,30,15,.2);transition:transform .15s var(--ease)}
+.fab:active{transform:translateY(1px)}
+.fab svg.i{width:19px;height:19px;stroke-width:1.8}
+
+/* ---------- 卡片、分组列表 ListSection / Row ----------
+   卡片不是「浮起来的盒子」，是纸上用细线框出来的一块；分组列表是上下两条细线 + 行间发丝线，没有底色和圆角 */
+.card{background:transparent;border-radius:var(--r-sm);box-shadow:inset 0 0 0 1px var(--rule)}
+.grp{margin:0 20px 26px}
+.grp-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font:500 11px/1.3 var(--font);letter-spacing:.16em;color:var(--ink2);padding:0 0 8px}
+.grp-h span,.grp-h small{font:400 12px var(--font);letter-spacing:0;color:var(--ink3)}
+.grp-h a,.grp-h .lk{font:500 12.5px var(--font);letter-spacing:0;color:var(--accent-ink);text-decoration:none;cursor:pointer}
+.grp-h.big{font:500 19px/1.3 var(--display);letter-spacing:0;color:var(--ink);padding:0 0 10px}
+.grp-f{font-size:12px;color:var(--ink2);padding:8px 0 0;line-height:1.6}
+.list{border-radius:0;box-shadow:inset 0 1px 0 var(--ink),inset 0 -1px 0 var(--rule)}
+.card.list{box-shadow:inset 0 1px 0 var(--ink),inset 0 -1px 0 var(--rule);border-radius:0}
+.row{display:flex;align-items:center;gap:12px;min-height:52px;padding:11px 2px;position:relative;width:100%;text-align:left}
+.list>*+*{box-shadow:inset 0 1px 0 var(--line)}
+.row.tap{cursor:pointer;transition:background .12s}
+.row.tap:hover{background:var(--surface-alt)}
+.row.tap:active{background:var(--pressed)}
+.row .grow{flex:1;min-width:0}
+.row .grow>b{display:block;font-size:14.5px;font-weight:500;line-height:1.4}
+.row .grow>small{display:block;font-size:12px;color:var(--ink2);margin-top:2px;line-height:1.5}
+.row .val{color:var(--ink2);font-size:13px;white-space:nowrap;flex:none}
+.row .chev{color:var(--ink3);flex:none;width:15px;height:15px}
+.row.link{color:var(--accent-ink);font-weight:500;gap:8px}
+.row.link svg.i{width:18px;height:18px}
+.row.danger{color:var(--bad-ink)}
+/* 行首图标：单色细线图标，外面一个发丝线小方框（T3）。颜色只表达语义：AI 朱、卡点赭、对绿、错红、岔路紫，其他是墨灰 */
+.ico3d{width:36px;height:36px;flex:none;border-radius:var(--r-sm);display:grid;place-items:center;color:var(--ink2);box-shadow:inset 0 0 0 1px var(--rule)}
+.ico3d svg.i{width:19px;height:19px}
+.ico3d.sm{width:30px;height:30px}.ico3d.sm svg.i{width:17px;height:17px}
+.ico3d.lg{width:56px;height:56px;border-radius:50%}.ico3d.lg svg.i{width:26px;height:26px;stroke-width:1.2}
+.ico3d.xs{width:auto;height:auto;box-shadow:none;background:none!important}.ico3d.xs svg.i{width:15px;height:15px;stroke-width:1.6}
+.ico3d.t-ai{color:var(--ai)}.ico3d.t-acc{color:var(--accent)}.ico3d.t-ok{color:var(--ok)}.ico3d.t-stuck{color:var(--stuck)}.ico3d.t-bad{color:var(--bad)}.ico3d.t-dt{color:var(--detour)}.ico3d.t-dv{color:var(--derive)}.ico3d.t-pin{color:var(--pin)}
+.ico{width:30px;height:30px;display:grid;place-items:center;color:var(--ink2);flex:none}
+
+/* ---------- 按钮 Button：小圆角矩形。primary 墨色实底；secondary 细线框；detour 紫；danger 红字；text 下划线链接 ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:40px;padding:0 18px;border-radius:var(--r-sm);font-size:14px;font-weight:500;white-space:nowrap;
+  box-shadow:inset 0 0 0 1px var(--rule2);transition:background .15s,color .15s,transform .1s}
+.btn:hover{background:var(--surface-alt)}
+.btn:active{transform:translateY(1px)}
+.btn.pri{background:var(--btn);color:var(--on-btn);box-shadow:none}
+.btn.pri:hover{background:var(--accent-press)}
+:root[data-theme=dark] .btn.pri:hover{background:#F2ECDD}
+.btn.dt{background:var(--detour);color:var(--on-detour);box-shadow:none}
+.btn.ai{color:var(--ai-ink);box-shadow:inset 0 0 0 1px var(--ai)}
+.btn.ai:hover{background:var(--ai-soft)}
+.btn.danger{color:var(--bad-ink)}
+.btn.danger.fill{background:var(--bad);color:var(--on-accent);box-shadow:none}
+.btn.text{box-shadow:none;color:var(--accent-ink);padding:0 6px;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:4px;text-decoration-color:var(--accent-bg2)}
+.btn.text:hover{background:none;text-decoration-color:currentColor}
+.btn.sm{height:32px;padding:0 13px;font-size:13px}
+.btn.block{display:flex;width:100%}
+.btn[disabled]{opacity:.4;cursor:not-allowed;transform:none}
+.btn.pri[disabled]{background:var(--surface-alt);color:var(--ink3);opacity:1}
+.btn svg.i{width:17px;height:17px}
+.btns{display:flex;gap:8px;flex-wrap:wrap}

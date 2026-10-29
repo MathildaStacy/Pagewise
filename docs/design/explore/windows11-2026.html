@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pagewise · Win11 2026</title>
+<style>
+/* Windows 11（2026）：壁纸透过 Mica Alt 染色、Copilot 彩虹光、药丸主按钮、12–16px 大圆角卡片、Fluent 3D 彩色小图标、悬浮亚克力底栏 */
+:root{
+  --wall:radial-gradient(40% 55% at 18% 30%,#3D7BFF 0%,transparent 70%),radial-gradient(38% 50% at 78% 22%,#A06BFF 0%,transparent 70%),radial-gradient(45% 55% at 70% 85%,#FF7AB8 0%,transparent 70%),radial-gradient(35% 45% at 25% 90%,#FFB36B 0%,transparent 70%),#DCE6FF;
+  --mica:linear-gradient(165deg,#E6EEFF 0%,#F1ECFC 38%,#F7F5F8 62%,#F6F6F7 100%);
+  --card:rgba(255,255,255,.74);--card-hi:rgba(255,255,255,.92);--card-lo:rgba(255,255,255,.5);
+  --stroke:rgba(0,0,0,.06);--stroke2:rgba(0,0,0,.1);--div:rgba(0,0,0,.07);
+  --fg1:#16161A;--fg2:#5B5B66;--fg3:#8C8C96;
+  --acc:#0067C0;--acc-h:#1975C5;--on-acc:#FFFFFF;--acc-soft:rgba(0,103,192,.09);--acc-soft2:rgba(0,103,192,.16);--acc-fg:#0058A8;
+  --ai:linear-gradient(110deg,#2B7BFF 0%,#7C5CFF 38%,#E2549F 70%,#FF9A4D 100%);
+  --ai-soft:linear-gradient(120deg,rgba(43,123,255,.10),rgba(124,92,255,.10) 45%,rgba(226,84,159,.08) 75%,rgba(255,154,77,.08));
+  --purple:#7B4FE0;--purple-soft:rgba(123,79,224,.1);
+  --green:#0E8A4F;--green-soft:rgba(14,138,79,.1);--red:#C42B1C;--red-soft:rgba(196,43,28,.08);
+  --hl:rgba(255,214,0,.38);
+  --acrylic:rgba(250,250,252,.72);
+  --sh-card:0 1px 2px rgba(20,20,60,.04),0 4px 14px rgba(20,20,60,.05);
+  --sh-float:0 8px 28px rgba(20,20,60,.14),0 1px 3px rgba(20,20,60,.08);
+  --font:"Segoe UI Variable Text","Segoe UI","PingFang SC","Microsoft YaHei UI",system-ui,sans-serif;
+  --display:"Segoe UI Variable Display","Segoe UI","PingFang SC","Microsoft YaHei UI",system-ui,sans-serif;
+  --serif:"Songti SC","Noto Serif SC","SimSun",serif;
+  --ease:cubic-bezier(0,0,0,1);
+  color-scheme:light;
+}
+:root[data-theme=dark]{
+  --wall:radial-gradient(40% 55% at 18% 30%,#1840B8 0%,transparent 70%),radial-gradient(38% 50% at 78% 22%,#5A2FB8 0%,transparent 70%),radial-gradient(45% 55% at 70% 85%,#9E2E6E 0%,transparent 70%),radial-gradient(35% 45% at 25% 90%,#8A4A1E 0%,transparent 70%),#070A1A;
+  --mica:linear-gradient(165deg,#18213A 0%,#1E1A2E 38%,#1B1B20 62%,#1A1A1C 100%);
+  --card:rgba(255,255,255,.06);--card-hi:rgba(255,255,255,.1);--card-lo:rgba(255,255,255,.035);
+  --stroke:rgba(255,255,255,.08);--stroke2:rgba(255,255,255,.13);--div:rgba(255,255,255,.08);
+  --fg1:#FFFFFF;--fg2:rgba(255,255,255,.72);--fg3:rgba(255,255,255,.48);
+  --acc:#4CC2FF;--acc-h:#6CCDFF;--on-acc:#001A2B;--acc-soft:rgba(76,194,255,.12);--acc-soft2:rgba(76,194,255,.2);--acc-fg:#7FD3FF;
+  --ai:linear-gradient(110deg,#5AA0FF 0%,#9C84FF 38%,#F07AB8 70%,#FFB070 100%);
+  --ai-soft:linear-gradient(120deg,rgba(90,160,255,.12),rgba(156,132,255,.12) 45%,rgba(240,122,184,.09) 75%,rgba(255,176,112,.08));
+  --purple:#B79CFF;--purple-soft:rgba(183,156,255,.12);
+  --green:#5FD49A;--green-soft:rgba(95,212,154,.12);--red:#FF8A7A;--red-soft:rgba(255,138,122,.1);
+  --hl:rgba(255,214,0,.22);
+  --acrylic:rgba(36,36,44,.72);
+  --sh-card:0 1px 2px rgba(0,0,0,.2),0 4px 14px rgba(0,0,0,.18);
+  --sh-float:0 10px 30px rgba(0,0,0,.45),0 1px 3px rgba(0,0,0,.3);
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%}
+body{font-family:var(--font);background:var(--wall) fixed;color:var(--fg1);-webkit-font-smoothing:antialiased;padding-bottom:64px}
+button,input{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+input{cursor:text;outline:0}
+:focus-visible{outline:2px solid var(--fg1);outline-offset:2px;border-radius:8px}
+svg.i{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+
+.stage{display:flex;flex-wrap:wrap;gap:56px 36px;justify-content:center;align-items:flex-start;padding:48px 16px 28px}
+.phone{width:390px;height:844px;flex:none;position:relative;overflow:hidden;border-radius:44px;background:var(--mica);display:flex;flex-direction:column;
+  box-shadow:0 0 0 9px #111216,0 0 0 10px #34353C,0 40px 90px rgba(10,20,80,.35)}
+.cap{position:absolute;top:-32px;left:50%;transform:translateX(-50%);height:24px;padding:0 12px;display:flex;align-items:center;border-radius:999px;font-size:12px;font-weight:600;background:var(--acrylic);box-shadow:inset 0 0 0 1px var(--stroke2);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+.stage>div{position:relative}
+.sbar{height:40px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:4px 26px 0 30px;font-size:13px;font-weight:600;position:relative;z-index:3}
+.sbar .cam{position:absolute;left:50%;top:12px;width:12px;height:12px;border-radius:50%;background:#000;transform:translateX(-50%)}
+.sbar .r{display:flex;gap:5px}.sbar .r svg{width:15px;height:15px;fill:currentColor}
+.scroll{flex:1;overflow-y:auto;min-height:0;scrollbar-width:none}
+.scroll::-webkit-scrollbar{display:none}
+
+/* ---------- 通用控件 ---------- */
+.pill{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:40px;padding:0 18px;border-radius:999px;font-size:14px;font-weight:600;white-space:nowrap;transition:background .15s,transform .15s var(--ease)}
+.pill:active{transform:scale(.97)}
+.pill.pri{background:var(--acc);color:var(--on-acc);box-shadow:inset 0 -1px 0 rgba(0,0,0,.18),0 2px 8px rgba(0,103,192,.25)}
+.pill.pri:hover{background:var(--acc-h)}
+.pill.sec{background:var(--card-hi);box-shadow:inset 0 0 0 1px var(--stroke2)}
+.pill.sec:hover{background:var(--card)}
+.pill svg.i{width:18px;height:18px}
+.card{background:var(--card);border-radius:16px;box-shadow:inset 0 0 0 1px var(--stroke),var(--sh-card);backdrop-filter:blur(20px) saturate(1.4);-webkit-backdrop-filter:blur(20px) saturate(1.4)}
+.ico3d{width:40px;height:40px;flex:none;border-radius:12px;display:grid;place-items:center}
+.ico3d svg{width:28px;height:28px}
+
+/* ---------- 页面 1：今天 ---------- */
+.home-h{display:flex;align-items:flex-end;justify-content:space-between;padding:12px 20px 14px}
+.home-h small{font-size:13px;color:var(--fg2)}
+.home-h h1{font:600 30px/1.2 var(--display);letter-spacing:-.01em;margin-top:2px}
+.avatar{width:40px;height:40px;border-radius:50%;background:var(--ai);color:#fff;font-weight:700;font-size:15px;box-shadow:0 0 0 2px var(--card-hi),0 4px 12px rgba(124,92,255,.3)}
+
+/* AI 搜索框：像 2026 Settings 顶部的 agent 搜索，悬停时出 Copilot 彩边 */
+.ask{display:flex;align-items:center;gap:10px;margin:0 16px 16px;height:48px;padding:0 6px 0 16px;border-radius:999px;background:var(--card-hi);position:relative;width:calc(100% - 32px);text-align:left;color:var(--fg3);font-size:15px;box-shadow:var(--sh-card)}
+.ask::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.5px;background:var(--ai);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.75}
+.ask .sp{width:22px;height:22px}
+.ask span{flex:1}
+.ask .mic{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:var(--fg2)}
+.ask .mic:hover{background:var(--acc-soft)}
+
+/* 继续学习：大 hero 卡，壁纸色从卡片背后透出来 */
+.hero{margin:0 16px 12px;border-radius:20px;overflow:hidden;position:relative;box-shadow:inset 0 0 0 1px var(--stroke),var(--sh-float)}
+.hero .bg{position:absolute;inset:0;background:radial-gradient(70% 90% at 100% 0%,rgba(124,92,255,.55),transparent 70%),radial-gradient(60% 80% at 0% 100%,rgba(43,123,255,.45),transparent 70%),radial-gradient(50% 60% at 85% 100%,rgba(255,122,184,.4),transparent 70%)}
+.hero .in{position:relative;margin:6px;border-radius:15px;padding:16px;background:var(--acrylic);backdrop-filter:blur(30px) saturate(1.6);-webkit-backdrop-filter:blur(30px) saturate(1.6)}
+.hero .top{display:flex;gap:14px}
+.cover{flex:none;width:68px;height:94px;border-radius:6px 10px 10px 6px;position:relative;overflow:hidden;color:#fff;padding:9px 8px;font:700 10.5px/1.25 var(--display);box-shadow:0 6px 14px rgba(0,0,0,.22),inset 3px 0 0 rgba(0,0,0,.18)}
+.cover::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,rgba(255,255,255,.28),transparent 40%)}
+.cover small{display:block;font-weight:400;font-size:8.5px;opacity:.8;margin-top:3px}
+.cv1{background:radial-gradient(80% 60% at 80% 85%,#FF8AB8,transparent),linear-gradient(160deg,#3156E8,#6A3FD8)}
+.cv2{background:radial-gradient(70% 60% at 20% 90%,#5FE3C0,transparent),linear-gradient(160deg,#0F6B5C,#1D3F6E)}
+.cv3{background:radial-gradient(80% 60% at 80% 80%,#FFC56B,transparent),linear-gradient(160deg,#C2412D,#7D1F4E)}
+.cv4{background:radial-gradient(80% 60% at 30% 85%,#8CC8FF,transparent),linear-gradient(160deg,#2C2F45,#4A3A78)}
+.cv5{background:radial-gradient(80% 60% at 70% 90%,#FFE36B,transparent),linear-gradient(160deg,#2F7A2A,#145060)}
+.hero .meta{flex:1;min-width:0}
+.eyebrow{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--acc-fg)}
+.eyebrow i{width:6px;height:6px;border-radius:50%;background:var(--acc);box-shadow:0 0 0 3px var(--acc-soft2)}
+.hero h3{font:600 20px/1.25 var(--display);margin:4px 0 2px}
+.hero .sub{font-size:13px;color:var(--fg2)}
+.segs{display:flex;gap:4px;margin:12px 0 6px}
+.segs i{flex:1;height:5px;border-radius:3px;background:var(--div)}
+.segs i.d{background:var(--acc)}
+.segs i.n{background:var(--ai)}
+.hero .stepn{display:flex;justify-content:space-between;font-size:12px;color:var(--fg2)}
+.hero .stepn b{color:var(--fg1);font-weight:600}
+.recap{display:flex;gap:8px;align-items:flex-start;margin:14px 0 14px;padding:10px 12px;border-radius:12px;background:var(--ai-soft);font-size:13px;line-height:1.5;color:var(--fg2)}
+.recap svg{width:16px;height:16px;margin-top:2px;flex:none}
+.recap b{color:var(--fg1);font-weight:600}
+.hero .acts{display:flex;gap:8px}
+.hero .acts .pri{flex:1}
+
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 16px 22px}
+.wid{padding:14px;display:flex;flex-direction:column;gap:10px;min-height:136px;text-align:left}
+.wid:hover{background:var(--card-hi)}
+.wid .num{font:600 28px/1 var(--display);letter-spacing:-.02em}
+.wid .num small{font-size:13px;font-weight:400;color:var(--fg2);margin-left:3px;letter-spacing:0}
+.wid .lab{font-size:13px;color:var(--fg2);margin-top:-4px}
+.wid .foot{margin-top:auto;font-size:12px;font-weight:600;color:var(--acc-fg);display:flex;align-items:center;gap:2px}
+.wid .foot svg.i{width:14px;height:14px}
+.days{display:flex;gap:5px;margin-top:auto}
+.days i{flex:1;height:22px;border-radius:6px;background:var(--div);display:grid;place-items:center;font-style:normal;font-size:10px;color:var(--fg3)}
+.days i.on{background:linear-gradient(180deg,#FFB547,#FF6A3D);color:#fff;font-weight:600}
+.days i.today{box-shadow:inset 0 0 0 1.5px #FF8A3D;color:#E2621B;font-weight:600;background:transparent}
+
+.sh{display:flex;align-items:baseline;justify-content:space-between;padding:0 20px 10px;font:600 17px/1.3 var(--display)}
+.sh a{font:600 13px var(--font);color:var(--acc-fg);text-decoration:none}
+.shelf{display:flex;gap:14px;overflow-x:auto;padding:4px 20px 22px;scrollbar-width:none}
+.shelf::-webkit-scrollbar{display:none}
+.bk{flex:none;width:84px;text-align:left}
+.bk .cover{width:84px;height:116px;font-size:12px;padding:10px 9px}
+.bk .cover small{font-size:9.5px}
+.bk p{font-size:12px;margin-top:8px;line-height:1.35;color:var(--fg2)}
+.bk .ring{height:3px;border-radius:2px;background:var(--div);margin-top:6px;overflow:hidden}
+.bk .ring i{display:block;height:100%;background:var(--acc);border-radius:2px}
+.bk.add .cover{background:var(--card);box-shadow:inset 0 0 0 1.5px var(--stroke2);display:grid;place-items:center;color:var(--fg2)}
+.bk.add .cover::after{display:none}
+.bk.add svg.i{width:26px;height:26px}
+
+.list{margin:0 16px 120px;overflow:hidden}
+.li{display:flex;align-items:center;gap:12px;padding:12px 14px;width:100%;text-align:left}
+.li+.li{border-top:1px solid var(--div)}
+.li:hover{background:var(--card-lo)}
+.li .t{flex:1;min-width:0}
+.li .t b{display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.li .t small{font-size:12px;color:var(--fg2)}
+.li>svg.i{width:16px;height:16px;color:var(--fg3)}
+
+/* 悬浮亚克力底栏：选中项是一颗彩色图标 + 下方强调色短药丸 */
+.tabbar{position:absolute;left:16px;right:16px;bottom:26px;height:64px;border-radius:22px;display:flex;padding:0 6px;background:var(--acrylic);backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8);box-shadow:inset 0 0 0 1px var(--stroke2),var(--sh-float);z-index:4}
+.tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;color:var(--fg2);position:relative;border-radius:16px;margin:6px 0}
+.tabbar button:hover{background:var(--card-lo)}
+.tabbar button svg.i{width:22px;height:22px}
+.tabbar button.on{color:var(--fg1);font-weight:600}
+.tabbar button.on svg.i{color:var(--acc)}
+.tabbar button.on::after{content:"";position:absolute;bottom:2px;width:16px;height:3px;border-radius:2px;background:var(--acc)}
+.homebar{position:absolute;bottom:8px;left:50%;width:134px;height:5px;margin-left:-67px;border-radius:3px;background:var(--fg1);opacity:.85;z-index:5}
+
+/* ---------- 页面 2：听讲 ---------- */
+.lt{display:flex;align-items:center;gap:4px;padding:2px 8px 4px;flex:none}
+.ib{width:40px;height:40px;border-radius:12px;display:grid;place-items:center}
+.ib:hover{background:var(--card-lo)}
+.lt .ttl{flex:1;min-width:0;text-align:center}
+.lt .ttl b{display:block;font:600 16px/1.3 var(--display)}
+.lt .ttl small{font-size:12px;color:var(--fg2)}
+/* SelectorBar：文字标签 + 强调色药丸，不再是灰盒子分段控件 */
+.selbar{display:flex;align-items:center;gap:4px;padding:2px 16px 8px;flex:none}
+.selbar button{position:relative;height:36px;padding:0 14px;border-radius:10px;font-size:14px;color:var(--fg2);display:flex;align-items:center;gap:6px}
+.selbar button svg.i{width:18px;height:18px}
+.selbar button:hover{background:var(--card-lo);color:var(--fg1)}
+.selbar button.on{color:var(--fg1);font-weight:600;background:var(--card-hi);box-shadow:inset 0 0 0 1px var(--stroke),var(--sh-card)}
+.selbar button.on::after{content:"";position:absolute;left:50%;bottom:3px;width:14px;height:3px;margin-left:-7px;border-radius:2px;background:var(--acc)}
+.selbar .grow{flex:1}
+.ctx{display:flex;align-items:center;gap:6px;height:30px;padding:0 10px 0 8px;border-radius:999px;font-size:12px;color:var(--fg2);background:var(--card-lo);box-shadow:inset 0 0 0 1px var(--stroke)}
+.ctx i{width:8px;height:8px;border-radius:50%;background:var(--green)}
+
+.stepper{flex:none;margin:0 16px 4px;padding:12px 14px;border-radius:16px}
+.stepper .row{display:flex;align-items:center;justify-content:space-between;font-size:13px;color:var(--fg2)}
+.stepper .row b{font-size:14px;color:var(--fg1);font-weight:600}
+.stepper .row .no{font-weight:600;color:var(--acc-fg);margin-right:6px}
+.stepper .segs{margin:10px 0 0}
+.stepper .names{display:flex;gap:4px;margin-top:6px}
+.stepper .names span{flex:1;font-size:11px;color:var(--fg3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stepper .names span.d{color:var(--fg2)}
+.stepper .names span.n{color:var(--fg1);font-weight:600}
+
+.chat{padding:14px 16px 210px;display:flex;flex-direction:column;gap:14px}
+.sys{align-self:center;font-size:12px;color:var(--fg3);display:flex;align-items:center;gap:8px}
+.sys::before,.sys::after{content:"";width:36px;height:1px;background:var(--div)}
+.fold{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:var(--purple-soft);box-shadow:inset 0 0 0 1px var(--stroke);text-align:left;width:100%}
+.fold .bi{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:var(--purple);color:#fff;flex:none}
+:root[data-theme=dark] .fold .bi{color:#1A1033}
+.fold .bi svg.i{width:16px;height:16px;stroke-width:1.8}
+.fold .t{flex:1;min-width:0;font-size:13px;line-height:1.35}
+.fold .t b{display:block;font-weight:600}
+.fold .t small{color:var(--fg2)}
+.fold>svg.i{width:16px;height:16px;color:var(--fg2)}
+/* AI 回答：不加气泡，像 Copilot；头像是彩虹星芒 */
+.ai{display:flex;flex-direction:column;gap:8px}
+.ai .who{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--fg2)}
+.ai .who .orb{width:24px;height:24px;border-radius:50%;background:var(--ai);display:grid;place-items:center;box-shadow:0 2px 8px rgba(124,92,255,.35)}
+.ai .who .orb svg{width:14px;height:14px;fill:#fff}
+.ai p{font-size:15.5px;line-height:1.7}
+.ai p b{font-weight:600}
+.math{font-family:"Cambria Math","STIX Two Math","Times New Roman",serif;font-style:italic;font-size:1.05em;padding:0 1px}
+.cite{display:inline-flex;align-items:center;gap:3px;height:22px;padding:0 8px 0 6px;margin:0 2px;border-radius:999px;vertical-align:1px;font:600 12px var(--font);font-style:normal;color:var(--acc-fg);background:var(--acc-soft)}
+.cite:hover{background:var(--acc-soft2)}
+.cite svg.i{width:12px;height:12px;stroke-width:2}
+.src{display:block;width:100%;text-align:left;padding:14px 16px 14px;border-radius:16px;position:relative;overflow:hidden}
+.src::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:0 3px 3px 0;background:var(--acc)}
+.src .lbl{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--fg2);margin-bottom:6px}
+.src .lbl b{font-weight:600;color:var(--fg1)}
+.src .lbl span{color:var(--acc-fg);font-weight:600;display:flex;align-items:center;gap:2px}
+.src .lbl span svg.i{width:13px;height:13px}
+.src q{font:16px/1.75 var(--serif);quotes:none}
+.src q mark{background:var(--hl);color:inherit;border-radius:3px;padding:0 1px}
+.ex{border-radius:16px;overflow:hidden}
+.ex .hd{display:flex;align-items:center;gap:8px;padding:12px 14px 0;font-size:12px;font-weight:600;color:var(--fg2)}
+.ex .hd .ico3d{width:26px;height:26px;border-radius:8px}
+.ex .hd .ico3d svg{width:18px;height:18px}
+.ex .fig{margin:10px 14px 0;border-radius:12px;background:var(--card-lo);box-shadow:inset 0 0 0 1px var(--stroke);padding:6px 4px 0}
+.ex p{padding:10px 14px 14px;font-size:14px;line-height:1.65;color:var(--fg2)}
+.ex p b{color:var(--fg1);font-weight:600}
+.figsvg{display:block;width:100%;height:auto}
+.figsvg .e path{fill:none;stroke:var(--fg3);stroke-width:1.5}
+.figsvg .e path.dash{stroke-dasharray:4 4}
+.figsvg .e path.on{stroke:url(#gline);stroke-width:3;stroke-linecap:round}
+.figsvg .n circle{fill:var(--card-hi);stroke:var(--stroke2);stroke-width:1.5}
+.figsvg .n circle.on{fill:var(--acc);stroke:none}
+.figsvg .n circle.goal{fill:var(--card-hi);stroke:var(--green);stroke-width:2.5}
+.figsvg text{font:600 13px var(--font);text-anchor:middle;fill:var(--fg1)}
+.figsvg .l text.on{fill:var(--on-acc)}
+.figsvg .w text{font-size:11px;font-weight:600;fill:var(--fg2)}
+.figsvg .s text{font-size:10.5px;font-weight:400;fill:var(--fg2)}
+.user{align-self:flex-end;max-width:80%;padding:10px 16px;border-radius:20px 20px 6px 20px;background:var(--acc);color:var(--on-acc);font-size:15px;line-height:1.5;box-shadow:0 4px 12px rgba(0,103,192,.22)}
+.check{padding:14px;border-radius:16px;background:var(--ai-soft);box-shadow:inset 0 0 0 1px var(--stroke)}
+.check .q{display:flex;gap:10px;font-size:15px;font-weight:600;line-height:1.5}
+.check .q .ico3d{width:30px;height:30px;border-radius:9px}
+.check .q .ico3d svg{width:20px;height:20px}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.opt{height:44px;border-radius:12px;background:var(--card-hi);box-shadow:inset 0 0 0 1px var(--stroke2);font-size:14px;display:flex;align-items:center;justify-content:center;gap:6px;transition:background .15s}
+.opt:hover{background:var(--card)}
+.opt svg.i{width:16px;height:16px;stroke-width:2}
+.opt.right{background:var(--green-soft);color:var(--green);box-shadow:inset 0 0 0 1.5px var(--green);font-weight:600}
+.opt.wrong{background:var(--red-soft);color:var(--red);box-shadow:inset 0 0 0 1px var(--red)}
+.fb{display:none;margin-top:10px;font-size:13.5px;line-height:1.6;color:var(--fg2)}
+.fb.show{display:block;animation:up .3s var(--ease)}
+@keyframes up{from{opacity:0;transform:translateY(6px)}}
+.typing{display:inline-block;width:8px;height:16px;border-radius:2px;background:var(--ai);vertical-align:-2px;animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* 底部：快捷动作 + Copilot 式输入框（彩虹描边 + 外发光） */
+.dock{position:absolute;left:0;right:0;bottom:0;padding:28px 0 26px;z-index:4;background:linear-gradient(180deg,transparent,var(--dockfade) 34%)}
+.phone{--dockfade:#F6F6F7}
+:root[data-theme=dark] .phone{--dockfade:#1A1A1C}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:0 16px 10px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;height:36px;padding:0 14px;border-radius:999px;font-size:13.5px;display:inline-flex;align-items:center;gap:6px;background:var(--card-hi);box-shadow:inset 0 0 0 1px var(--stroke2),var(--sh-card);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+.chip:hover{background:var(--card)}
+.chip svg.i{width:16px;height:16px}
+.chip.pri{background:var(--acc);color:var(--on-acc);box-shadow:inset 0 -1px 0 rgba(0,0,0,.18),0 2px 8px rgba(0,103,192,.25);font-weight:600}
+.composer{margin:0 16px;position:relative;border-radius:26px}
+.composer .glow{position:absolute;inset:-6px;border-radius:32px;background:var(--ai);filter:blur(14px);opacity:.28;transition:opacity .3s}
+.composer:focus-within .glow{opacity:.5}
+.composer .box{position:relative;display:flex;align-items:center;gap:4px;height:56px;padding:0 6px;border-radius:26px;background:var(--card-hi);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px)}
+:root[data-theme=dark] .composer .box{background:#26262E}
+.composer .box::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.5px;background:var(--ai);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+.composer input{flex:1;min-width:0;height:100%;font-size:15px;padding:0 4px}
+.composer input::placeholder{color:var(--fg3)}
+.composer .ib{width:42px;height:42px;border-radius:50%;color:var(--fg2)}
+.composer .send{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:var(--ai);color:#fff;box-shadow:0 4px 12px rgba(124,92,255,.35)}
+.composer .send svg.i{width:18px;height:18px;stroke-width:2}
+
+/* ---------- 说明窗：Win11 窗口，Mica 标题栏 ---------- */
+.side{width:320px;flex:none;border-radius:10px;overflow:hidden;background:var(--mica);box-shadow:inset 0 0 0 1px var(--stroke2),0 30px 70px rgba(10,20,80,.3),0 2px 8px rgba(0,0,0,.1);margin-top:20px}
+.side .tb{height:40px;display:flex;align-items:center;font-size:12px;padding-left:14px;gap:10px}
+.side .tb .app{width:16px;height:16px;border-radius:4px;background:var(--ai)}
+.side .tb span{flex:1}
+.side .tb i{width:46px;height:40px;display:grid;place-items:center}
+.side .tb i:hover{background:var(--card-lo)}
+.side .tb i.x:hover{background:#C42B1C;color:#fff}
+.side .tb i svg{width:10px;height:10px;stroke:currentColor;fill:none}
+.side .bd{padding:4px 22px 22px}
+.side h1{font:600 22px/1.25 var(--display);margin-bottom:8px}
+.side p,.side li{font-size:13.5px;line-height:1.65;color:var(--fg2)}
+.side h2{font:600 14px var(--display);margin:18px 0 8px}
+.side ul{padding-left:18px}
+.side li{margin-bottom:4px}
+.side li b{color:var(--fg1);font-weight:600}
+.side a{color:var(--acc-fg)}
+.tg{display:flex;gap:6px;margin-top:14px}
+.tg button{height:32px;padding:0 14px;border-radius:999px;font-size:13px;background:var(--card-hi);box-shadow:inset 0 0 0 1px var(--stroke2)}
+.tg button.on{background:var(--acc);color:var(--on-acc);box-shadow:none;font-weight:600}
+
+/* ---------- 任务栏 ---------- */
+.taskbar{position:fixed;left:0;right:0;bottom:0;height:52px;display:flex;align-items:center;justify-content:center;gap:4px;background:var(--acrylic);backdrop-filter:blur(40px) saturate(1.8);-webkit-backdrop-filter:blur(40px) saturate(1.8);box-shadow:inset 0 1px 0 var(--stroke2);z-index:10}
+.taskbar .tk{width:44px;height:44px;border-radius:8px;display:grid;place-items:center;position:relative}
+.taskbar .tk:hover{background:var(--card)}
+.taskbar .tk svg{width:24px;height:24px}
+.taskbar .tk.on::after{content:"";position:absolute;bottom:3px;width:16px;height:3px;border-radius:2px;background:var(--acc)}
+.taskbar .srch{display:flex;align-items:center;gap:8px;height:36px;width:180px;padding:0 12px;border-radius:999px;background:var(--card-hi);box-shadow:inset 0 0 0 1px var(--stroke);font-size:13px;color:var(--fg2);margin:0 4px}
+.taskbar .srch svg.i{width:16px;height:16px}
+.taskbar .clock{position:absolute;right:14px;text-align:right;font-size:12px;line-height:1.35}
+@media (max-width:860px){.taskbar .clock{display:none}.taskbar .srch{width:44px;padding:0;justify-content:center}.taskbar .srch span{display:none}}
+@media (max-width:430px){.phone{width:calc(100vw - 32px)}.side{width:100%}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="gai" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2B7BFF"/><stop offset=".45" stop-color="#7C5CFF"/><stop offset=".75" stop-color="#E2549F"/><stop offset="1" stop-color="#FF9A4D"/></linearGradient>
+    <linearGradient id="gline" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2B7BFF"/><stop offset=".6" stop-color="#7C5CFF"/><stop offset="1" stop-color="#E2549F"/></linearGradient>
+    <linearGradient id="gfire" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFD25A"/><stop offset=".55" stop-color="#FF8A3D"/><stop offset="1" stop-color="#E8432E"/></linearGradient>
+    <linearGradient id="gcard1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7FB6FF"/><stop offset="1" stop-color="#2D6BF0"/></linearGradient>
+    <linearGradient id="gcard2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#C6A8FF"/><stop offset="1" stop-color="#7A4BE6"/></linearGradient>
+    <linearGradient id="gpin" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF9EB8"/><stop offset="1" stop-color="#E23C6E"/></linearGradient>
+    <linearGradient id="gbulb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE97A"/><stop offset="1" stop-color="#FFB020"/></linearGradient>
+    <linearGradient id="gq" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#66D9A8"/><stop offset="1" stop-color="#109E68"/></linearGradient>
+    <linearGradient id="gfold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFD66B"/><stop offset="1" stop-color="#F2A814"/></linearGradient>
+    <linearGradient id="gstart" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4FB4FF"/><stop offset="1" stop-color="#0A62D8"/></linearGradient>
+    <symbol id="spark" viewBox="0 0 24 24"><path d="M12 2.5c.5 0 .8.3 1 .8l1.4 4.2c.3.9 1 1.6 1.9 1.9l4.2 1.4c.5.2.8.5.8 1s-.3.8-.8 1l-4.2 1.4c-.9.3-1.6 1-1.9 1.9L13 20.9c-.2.5-.5.8-1 .8s-.8-.3-1-.8l-1.4-4.2c-.3-.9-1-1.6-1.9-1.9L3.5 13.4c-.5-.2-.8-.5-.8-1s.3-.8.8-1l4.2-1.4c.9-.3 1.6-1 1.9-1.9L11 3.3c.2-.5.5-.8 1-.8z"/></symbol>
+  </defs>
+</svg>
+
+<div class="stage">
+  <!-- 页面 1：今天 -->
+  <div>
+    <div class="cap">① 今天</div>
+    <div class="phone">
+      <div class="sbar"><span>21:40</span><span class="cam"></span><span class="r"><svg viewBox="0 0 24 24"><path d="M12 21L1 8.5C3.9 5.7 7.8 4 12 4s8.1 1.7 11 4.5z"/></svg><svg viewBox="0 0 24 24"><path d="M2 22h20V2z"/></svg><svg viewBox="0 0 24 24"><path d="M15.7 4H14V2h-4v2H8.3C7.6 4 7 4.6 7 5.3v15.3c0 .8.6 1.4 1.3 1.4h7.3c.8 0 1.4-.6 1.4-1.3V5.3C17 4.6 16.4 4 15.7 4z"/></svg></span></div>
+      <div class="scroll">
+        <header class="home-h">
+          <div><small>周四 · 10 月 29 日</small><h1>晚上好</h1></div>
+          <button class="avatar" aria-label="我的">B</button>
+        </header>
+
+        <button class="ask"><svg class="sp" style="fill:url(#gai)"><use href="#spark"/></svg><span>问问你书架上的书…</span><i class="mic"><svg class="i" viewBox="0 0 24 24"><rect x="8.75" y="3" width="6.5" height="11" rx="3.25"/><path d="M5.5 11a6.5 6.5 0 0013 0M12 17.5V21"/></svg></i></button>
+
+        <section class="hero">
+          <div class="bg"></div>
+          <div class="in">
+            <div class="top">
+              <div class="cover cv1">人工智能<br>现代方法<small>第 4 版</small></div>
+              <div class="meta">
+                <span class="eyebrow"><i></i>继续听讲</span>
+                <h3>3.5.2 A* 搜索</h3>
+                <div class="sub">第 3 章 · 通过搜索解决问题</div>
+                <div class="segs"><i class="d"></i><i class="n"></i><i></i><i></i></div>
+                <div class="stepn"><span><b>第 2 / 4 步</b> · 可容许的启发式</span><span>p.103</span></div>
+              </div>
+            </div>
+            <div class="recap"><svg style="fill:url(#gai)"><use href="#spark"/></svg><span>3 天前讲完了第 1 步。你在 3.4.2 问过 <b>「为什么扩展时才判断目标」</b>，第 4 步会再用到。</span></div>
+            <div class="acts">
+              <button class="pill pri" onclick="go()"><svg class="i" viewBox="0 0 24 24" style="fill:currentColor;stroke:none"><path d="M8 5.6v12.8c0 .8.9 1.3 1.6.8l9.6-6.4c.6-.4.6-1.2 0-1.6L9.6 4.8C8.9 4.3 8 4.8 8 5.6z"/></svg>继续听讲</button>
+              <button class="pill sec"><svg class="i" viewBox="0 0 24 24"><path d="M12 6.5c-1.8-1.5-4.6-2-8-1.6v13.6c3.4-.4 6.2.1 8 1.6 1.8-1.5 4.6-2 8-1.6V4.9c-3.4-.4-6.2.1-8 1.6zM12 6.5V20"/></svg>读原文</button>
+            </div>
+          </div>
+        </section>
+
+        <div class="row2">
+          <button class="card wid">
+            <span class="ico3d" style="background:linear-gradient(135deg,rgba(45,107,240,.14),rgba(122,75,230,.14))"><svg viewBox="0 0 28 28"><rect x="9" y="4" width="15" height="19" rx="3" fill="url(#gcard2)" transform="rotate(12 16 14)"/><rect x="4" y="6" width="15" height="19" rx="3" fill="url(#gcard1)"/><path d="M8 12h7M8 16h5" stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity=".9"/></svg></span>
+            <div><div class="num">12<small>张</small></div></div>
+            <div class="lab">今天要复习的闪卡</div>
+            <div class="foot">开始复习<svg class="i" viewBox="0 0 24 24"><path d="M9 5.5l6.5 6.5L9 18.5"/></svg></div>
+          </button>
+          <button class="card wid">
+            <span class="ico3d" style="background:linear-gradient(135deg,rgba(255,138,61,.16),rgba(232,67,46,.12))"><svg viewBox="0 0 28 28"><path d="M14 3c1 3.5 6.5 6.5 6.5 13A6.5 6.5 0 017.5 16c0-3 1.5-5 3-6.5.3 2 1.2 3 2.2 3.3C12 9.5 12.5 5.8 14 3z" fill="url(#gfire)"/><path d="M14 14.5c.6 1.6 3 2.6 3 5a3 3 0 01-6 0c0-1.4.9-2.4 1.6-3 .1.8.5 1.3 1 1.4-.2-1.3 0-2.5.4-3.4z" fill="#FFE68A"/></svg></span>
+            <div><div class="num">6<small>天</small></div></div>
+            <div class="lab">连续学习</div>
+            <div class="days"><i class="on">一</i><i class="on">二</i><i class="on">三</i><i class="today">四</i><i>五</i></div>
+          </button>
+        </div>
+
+        <h2 class="sh">书架<a href="#">全部 5 本</a></h2>
+        <div class="shelf">
+          <button class="bk"><div class="cover cv1">人工智能<br>现代方法<small>第 4 版</small></div><p>3.5.2 A* 搜索</p><div class="ring"><i style="width:34%"></i></div></button>
+          <button class="bk"><div class="cover cv2">深度学习<small>Goodfellow</small></div><p>6.5 反向传播</p><div class="ring"><i style="width:52%"></i></div></button>
+          <button class="bk"><div class="cover cv3">算法导论<small>第 3 版</small></div><p>15.3 动态规划</p><div class="ring"><i style="width:21%"></i></div></button>
+          <button class="bk"><div class="cover cv4">数据密集型<br>应用设计</div><p>还没开始</p><div class="ring"><i style="width:0"></i></div></button>
+          <button class="bk add"><div class="cover"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div><p>导入 PDF</p></button>
+        </div>
+
+        <h2 class="sh">最近的卡点<a href="#">全部</a></h2>
+        <div class="card list">
+          <button class="li"><span class="ico3d" style="background:rgba(226,60,110,.1)"><svg viewBox="0 0 28 28"><path d="M14 3.5a7 7 0 017 7c0 4.6-5 9.6-6.3 11.2a1 1 0 01-1.4 0C12 20.1 7 15.1 7 10.5a7 7 0 017-7z" fill="url(#gpin)"/><circle cx="14" cy="10.5" r="2.6" fill="#fff"/></svg></span><div class="t"><b>为什么扩展时才判断目标？</b><small>3.4.2 一致代价搜索 · 3 天前</small></div><svg class="i" viewBox="0 0 24 24"><path d="M9 5.5l6.5 6.5L9 18.5"/></svg></button>
+          <button class="li"><span class="ico3d" style="background:rgba(255,176,32,.12)"><svg viewBox="0 0 28 28"><path d="M14 3.5a7.5 7.5 0 00-4.4 13.6c.6.4.9 1 .9 1.7V20h7v-1.2c0-.7.3-1.3.9-1.7A7.5 7.5 0 0014 3.5z" fill="url(#gbulb)"/><rect x="10.5" y="21" width="7" height="3.5" rx="1.5" fill="#9AA0B4"/></svg></span><div class="t"><b>一致性和可容许性哪个更强</b><small>3.5.2 A* 搜索 · 已解决</small></div><svg class="i" viewBox="0 0 24 24"><path d="M9 5.5l6.5 6.5L9 18.5"/></svg></button>
+        </div>
+      </div>
+      <nav class="tabbar">
+        <button class="on"><svg class="i" viewBox="0 0 24 24"><path d="M4 10.5L12 4l8 6.5V19a1 1 0 01-1 1h-4.5v-5.5h-5V20H5a1 1 0 01-1-1z"/></svg>今天</button>
+        <button><svg class="i" viewBox="0 0 24 24"><path d="M5 4h3.5v16H5zM10.5 4H14v16h-3.5zM16 5.2l3.3-.9 3 15.2-3.3.8z" transform="translate(-1 0)"/></svg>书架</button>
+        <button><svg class="i" viewBox="0 0 24 24"><rect x="4" y="6" width="13" height="15" rx="2.5"/><path d="M8 3h9.5A2.5 2.5 0 0120 5.5V17"/></svg>复习</button>
+        <button><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="4"/><path d="M4.5 20c1-3.6 4-5.5 7.5-5.5s6.5 1.9 7.5 5.5"/></svg>我的</button>
+      </nav>
+      <div class="homebar"></div>
+    </div>
+  </div>
+
+  <!-- 页面 2：听讲 -->
+  <div>
+    <div class="cap">② 听讲</div>
+    <div class="phone" id="lesson">
+      <div class="sbar"><span>21:42</span><span class="cam"></span><span class="r"><svg viewBox="0 0 24 24"><path d="M12 21L1 8.5C3.9 5.7 7.8 4 12 4s8.1 1.7 11 4.5z"/></svg><svg viewBox="0 0 24 24"><path d="M2 22h20V2z"/></svg><svg viewBox="0 0 24 24"><path d="M15.7 4H14V2h-4v2H8.3C7.6 4 7 4.6 7 5.3v15.3c0 .8.6 1.4 1.3 1.4h7.3c.8 0 1.4-.6 1.4-1.3V5.3C17 4.6 16.4 4 15.7 4z"/></svg></span></div>
+      <header class="lt">
+        <button class="ib" aria-label="返回"><svg class="i" viewBox="0 0 24 24"><path d="M10.5 5.5L4 12l6.5 6.5M4.5 12H20"/></svg></button>
+        <div class="ttl"><b>3.5.2 A* 搜索</b><small>人工智能：现代方法 · p.102–106</small></div>
+        <button class="ib" aria-label="更多"><svg class="i" viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/><circle cx="18.5" cy="12" r="1.2" fill="currentColor"/></svg></button>
+      </header>
+      <div class="selbar">
+        <button onclick="sel(this)"><svg class="i" viewBox="0 0 24 24"><path d="M12 6.5c-1.8-1.5-4.6-2-8-1.6v13.6c3.4-.4 6.2.1 8 1.6 1.8-1.5 4.6-2 8-1.6V4.9c-3.4-.4-6.2.1-8 1.6zM12 6.5V20"/></svg>读书</button>
+        <button class="on" onclick="sel(this)"><svg class="i" viewBox="0 0 24 24"><path d="M4 13v-1a8 8 0 0116 0v1"/><rect x="3.5" y="13" width="4.5" height="7" rx="2"/><rect x="16" y="13" width="4.5" height="7" rx="2"/></svg>听讲</button>
+        <span class="grow"></span>
+        <span class="ctx" title="AI 手边有本节完整原文"><i></i>本节原文 · 4 页</span>
+      </div>
+      <div class="card stepper">
+        <div class="row"><span><span class="no">第 2 步</span><b>可容许的启发式</b></span><span>p.103</span></div>
+        <div class="segs"><i class="d"></i><i class="n"></i><i></i><i></i></div>
+        <div class="names"><span class="d">直觉 ✓</span><span class="n">可容许</span><span>一致性</span><span>最优性</span></div>
+      </div>
+
+      <div class="scroll">
+        <div class="chat">
+          <div class="sys">3 天前 · 讲完了第 1 步</div>
+          <button class="fold"><span class="bi"><svg class="i" viewBox="0 0 24 24"><circle cx="6.5" cy="5.5" r="2"/><circle cx="6.5" cy="18.5" r="2"/><circle cx="17.5" cy="8.5" r="2"/><path d="M6.5 7.5v9M17.5 10.5c0 3.5-3 4.5-11 6"/></svg></span><span class="t"><b>岔路已解决 · A* 和一致代价搜索的关系</b><small>回到过 3.4.2 · 3 条</small></span><svg class="i" viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></svg></button>
+
+          <div class="ai">
+            <div class="who"><span class="orb"><svg><use href="#spark"/></svg></span>Pagewise</div>
+            <p>A* 找到的路一定最便宜吗？答案取决于 <span class="math">h</span>。书里给的条件叫<b>可容许的（admissible）</b>：<span class="math">h</span> 从不高估到终点的真实代价<button class="cite"><svg class="i" viewBox="0 0 24 24"><path d="M12 6.5c-1.8-1.5-4.6-2-8-1.6v13.6c3.4-.4 6.2.1 8 1.6 1.8-1.5 4.6-2 8-1.6V4.9c-3.4-.4-6.2.1-8 1.6z"/></svg>p.103</button>。</p>
+          </div>
+
+          <button class="card src">
+            <div class="lbl"><b>原文 · p.103</b><span>在书中打开<svg class="i" viewBox="0 0 24 24"><path d="M9 5.5l6.5 6.5L9 18.5"/></svg></span></div>
+            <q>如果启发式函数 h(n) <mark>从不高估</mark>到达目标的代价，则称 h(n) 是可容许的。可容许的启发式本质上是乐观的。</q>
+          </button>
+
+          <div class="card ex">
+            <div class="hd"><span class="ico3d" style="background:rgba(255,176,32,.14)"><svg viewBox="0 0 28 28"><path d="M14 3.5a7.5 7.5 0 00-4.4 13.6c.6.4.9 1 .9 1.7V20h7v-1.2c0-.7.3-1.3.9-1.7A7.5 7.5 0 0014 3.5z" fill="url(#gbulb)"/><rect x="10.5" y="21" width="7" height="3.5" rx="1.5" fill="#9AA0B4"/></svg></span>举个例子 · 图 3.18</div>
+            <div class="fig">
+              <svg viewBox="0 0 320 150" class="figsvg" aria-hidden="true">
+                <g class="e"><path d="M50 75L160 28M50 75L160 122"/><path class="dash" d="M160 122L270 75"/><path class="on" d="M50 75L160 28L270 75"/></g>
+                <g class="w"><text x="98" y="44">1</text><text x="98" y="114">5</text><text x="218" y="44">5</text><text x="218" y="114">6</text></g>
+                <g class="n"><circle cx="50" cy="75" r="17"/><circle class="on" cx="160" cy="28" r="17"/><circle cx="160" cy="122" r="17"/><circle class="goal" cx="270" cy="75" r="17"/></g>
+                <g class="l"><text x="50" y="80">S</text><text class="on" x="160" y="33">A</text><text x="160" y="127">B</text><text x="270" y="80">G</text></g>
+                <g class="s"><text x="50" y="108">h=5</text><text x="226" y="22">h=4 · f=5</text><text x="214" y="142">h=2 · f=7</text><text x="270" y="108">h=0</text></g>
+              </svg>
+            </div>
+            <p>A 到 G 实际要 5，<b>h(A)=4</b>，没有高估；B 到 G 实际要 6，<b>h(B)=2</b>，也没有高估。所以这个 h 是可容许的。</p>
+          </div>
+
+          <div class="user">那如果 h 高估了，会发生什么？</div>
+
+          <div class="ai">
+            <div class="who"><span class="orb"><svg><use href="#spark"/></svg></span>Pagewise</div>
+            <p>最优路径上的结点 <span class="math">f</span> 会被抬高，A* 可能先走一条更贵的路，并在扩展到目标时<b>提前返回</b>——找到的就不是最便宜的解了<button class="cite"><svg class="i" viewBox="0 0 24 24"><path d="M12 6.5c-1.8-1.5-4.6-2-8-1.6v13.6c3.4-.4 6.2.1 8 1.6 1.8-1.5 4.6-2 8-1.6V4.9c-3.4-.4-6.2.1-8 1.6z"/></svg>p.105</button>。</p>
+          </div>
+
+          <div class="check">
+            <div class="q"><span class="ico3d" style="background:rgba(16,158,104,.12)"><svg viewBox="0 0 28 28"><circle cx="14" cy="14" r="10.5" fill="url(#gq)"/><path d="M11.2 11.3a2.9 2.9 0 015.6.9c0 2-2.8 2.4-2.8 4.1" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="14" cy="19.8" r="1.2" fill="#fff"/></svg></span>想一想：把 h(B) 改成 8，这个 h 还可容许吗？</div>
+            <div class="opts">
+              <button class="opt" onclick="pick(this,false)">还可容许</button>
+              <button class="opt" onclick="pick(this,true)">不可容许了</button>
+            </div>
+            <div class="fb" id="fb"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dock">
+        <div class="chips">
+          <button class="chip pri"><svg class="i" viewBox="0 0 24 24"><path d="M5 12.5l4 4L19 7"/></svg>懂了，下一步</button>
+          <button class="chip"><svg class="i" viewBox="0 0 24 24"><path d="M4 12a8 8 0 0113.7-5.6L20 8.5M20 4v4.5h-4.5M20 12a8 8 0 01-13.7 5.6L4 15.5M4 20v-4.5h4.5"/></svg>换个说法</button>
+          <button class="chip"><svg class="i" viewBox="0 0 24 24"><path d="M12 4a6 6 0 00-3.5 10.9c.5.3.8.9.8 1.5V17h5.4v-.6c0-.6.3-1.2.8-1.5A6 6 0 0012 4zM9.5 20h5"/></svg>再举个例子</button>
+          <button class="chip"><svg class="i" viewBox="0 0 24 24"><path d="M5.5 5.8v12.4a.6.6 0 00.95.5l8.4-6.2a.6.6 0 000-1L6.45 5.3a.6.6 0 00-.95.5zM18.5 5v14"/></svg>这步熟，跳过</button>
+        </div>
+        <div class="composer">
+          <div class="glow"></div>
+          <div class="box">
+            <button class="ib" aria-label="添加"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+            <input placeholder="问点什么，或说「讲慢一点」">
+            <button class="ib" aria-label="语音"><svg class="i" viewBox="0 0 24 24"><rect x="8.75" y="3" width="6.5" height="11" rx="3.25"/><path d="M5.5 11a6.5 6.5 0 0013 0M12 17.5V21"/></svg></button>
+            <button class="send" aria-label="发送"><svg class="i" viewBox="0 0 24 24"><path d="M12 19V5M5.5 11.5L12 5l6.5 6.5"/></svg></button>
+          </div>
+        </div>
+      </div>
+      <div class="homebar"></div>
+    </div>
+  </div>
+
+  <aside class="side">
+    <div class="tb"><b class="app"></b><span>Pagewise · 说明</span><i><svg viewBox="0 0 10 10"><path d="M0 5h10"/></svg></i><i><svg viewBox="0 0 10 10"><rect x=".5" y=".5" width="9" height="9" rx="1.5"/></svg></i><i class="x"><svg viewBox="0 0 10 10"><path d="M0 0l10 10M10 0L0 10"/></svg></i></div>
+    <div class="bd">
+      <h1>Windows 11 · 2026</h1>
+      <p>上一版照着 WinUI 3 控件库做，灰、平、克制。这一版对齐现在的 Win11：新开始菜单、Settings 首页、Copilot 应用的那种气质。</p>
+      <h2>改了什么</h2>
+      <ul>
+        <li><b>壁纸透出来</b>：Mica Alt 被蓝紫粉的 Bloom 壁纸染色，hero 卡里能看到颜色</li>
+        <li><b>Copilot 彩虹</b>：AI 相关的地方（搜索框、输入框、头像、复习回顾）统一用蓝→紫→粉→橙渐变</li>
+        <li><b>药丸主按钮</b>，卡片 16–20px 圆角，底栏是悬浮亚克力</li>
+        <li><b>Fluent 3D 彩色图标</b>代替线框图标：火苗、闪卡、图钉、灯泡</li>
+        <li>读书 / 听讲用 <b>SelectorBar</b>，不再是灰盒子分段控件</li>
+        <li>AI 回答不加气泡，你的提问是强调色气泡</li>
+      </ul>
+      <h2>可以试试</h2>
+      <ul>
+        <li>回答听讲页底部的小测</li>
+        <li>点输入框，看彩虹光变亮</li>
+        <li>切换深色</li>
+      </ul>
+      <div class="tg"><button data-t="light" onclick="setTheme('light')">浅色</button><button data-t="dark" onclick="setTheme('dark')">深色</button></div>
+      <h2>对比</h2>
+      <p><a href="windows11.html">上一版 Win11</a> · <a href="microsoft.html">Fluent 2 网页版</a> · <a href="play.html">新谷歌风</a></p>
+    </div>
+  </aside>
+</div>
+
+<div class="taskbar">
+  <span class="tk"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="8.5" height="8.5" rx="1.2" fill="url(#gstart)"/><rect x="12.5" y="3" width="8.5" height="8.5" rx="1.2" fill="url(#gstart)"/><rect x="3" y="12.5" width="8.5" height="8.5" rx="1.2" fill="url(#gstart)"/><rect x="12.5" y="12.5" width="8.5" height="8.5" rx="1.2" fill="url(#gstart)"/></svg></span>
+  <span class="srch"><svg class="i" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg><span>搜索</span></span>
+  <span class="tk"><svg viewBox="0 0 24 24" style="fill:url(#gai)"><use href="#spark"/></svg></span>
+  <span class="tk"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4.5l2 2H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z" fill="url(#gfold)"/><path d="M3 10h18" stroke="#E09A0E" stroke-width="1"/></svg></span>
+  <span class="tk on"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5" fill="url(#gai)"/><path d="M12 8.5c-1.3-1-3.2-1.3-5-1v8c1.8-.3 3.7 0 5 1 1.3-1 3.2-1.3 5-1v-8c-1.8-.3-3.7 0-5 1zM12 8.5v8" stroke="#fff" stroke-width="1.4" fill="none" stroke-linejoin="round"/></svg></span>
+  <span class="clock">21:42<br>2026/10/29</span>
+</div>
+
+<script>
+function setTheme(t){document.documentElement.dataset.theme=t;document.querySelectorAll('.tg button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));try{localStorage.setItem('pw-w26',t)}catch(e){}}
+let t0='light';try{t0=localStorage.getItem('pw-w26')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')}catch(e){}
+setTheme(t0);
+function sel(b){b.parentNode.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b))}
+function go(){document.getElementById('lesson').scrollIntoView({behavior:'smooth',block:'center'})}
+function pick(b,ok){
+  const box=b.parentNode;box.querySelectorAll('.opt').forEach(o=>{o.classList.remove('right','wrong');o.innerHTML=o.textContent});
+  b.classList.add(ok?'right':'wrong');
+  b.insertAdjacentHTML('afterbegin',ok?'<svg class="i" viewBox="0 0 24 24"><path d="M5 12.5l4 4L19 7"/></svg>':'<svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>');
+  const fb=document.getElementById('fb');
+  fb.innerHTML=ok?'对。B 到 G 实际只要 6，h(B)=8 高估了，不再可容许。A* 会因为 f(B)=13 而一直不去看 B——这里碰巧没错过最优解，但换个图就可能错过。':'再想想：B 到 G 的真实代价是 6，h(B)=8 比它大，就是高估了。';
+  fb.classList.add('show');
+}
+</script>
+</body>
+</html>

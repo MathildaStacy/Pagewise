@@ -1,0 +1,13 @@
+
+> pagewise@0.0.3 test
+> jest --runInBand __tests__/features/notes.test.tsx __tests__/ui/studyFinishingFidelity.test.tsx __tests__/ui/notesReviewFidelity.test.tsx
+
+PASS __tests__/features/notes.test.tsx
+PASS __tests__/ui/notesReviewFidelity.test.tsx
+PASS __tests__/ui/studyFinishingFidelity.test.tsx
+
+Test Suites: 3 passed, 3 total
+Tests:       24 passed, 24 total
+Snapshots:   0 total
+Time:        3.172 s
+Ran all test suites matching /__tests__\/features\/notes.test.tsx|__tests__\/ui\/studyFinishingFidelity.test.tsx|__tests__\/ui\/notesReviewFidelity.test.tsx/i.

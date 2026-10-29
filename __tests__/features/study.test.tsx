@@ -1,5 +1,6 @@
 import ReactTestRenderer from 'react-test-renderer';
 import { AccessibilityInfo } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import { createTestDemoContainer } from '@app/testing';
 import type { Container } from '@app/container';
 import { ContainerProvider } from '@app/ContainerProvider';
@@ -29,6 +30,10 @@ import { StudyView } from '@ui/screens/StudyView';
 import { ReaderView } from '@ui/screens/ReaderView';
 import { SectionDoneView } from '@ui/screens/SectionDoneView';
 import { SkinProvider } from '@ui/kit';
+import { StudyScreen } from '@features/study/StudyScreens';
+jest.mock('@react-navigation/native', () => ({
+  useIsFocused: jest.fn(() => true),
+}));
 let c: Container, renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 const nav: AppNav = {
   open: jest.fn(),
@@ -48,6 +53,7 @@ beforeAll(() => {
 beforeEach(async () => {
   c = await createTestDemoContainer();
   jest.clearAllMocks();
+  jest.mocked(useIsFocused).mockReturnValue(true);
 });
 afterEach(async () => {
   if (renderer) await ReactTestRenderer.act(async () => renderer!.unmount());
@@ -349,6 +355,43 @@ it('theme changes preserve composer, overlay and the same session', async () => 
   expect(vm.state.listen.composer.quote).toEqual(quote);
   expect(getStudySession(c, 'aima')).toBe(session);
   expect(session.store.getState().messages).toHaveLength(count);
+});
+it('removes hidden study blur without reopening the session or losing the draft', async () => {
+  const tree = () => (
+    <ContainerProvider value={c}>
+      <AppNavProvider value={nav}>
+        <SkinProvider skinId="glass" scheme="light" reduceMotion>
+          <StudyScreen bookId="aima" autoStart={false} />
+        </SkinProvider>
+      </AppNavProvider>
+    </ContainerProvider>
+  );
+  const session = getStudySession(c, 'aima');
+  const open = jest.spyOn(session, 'open');
+  await act(() => {
+    renderer = ReactTestRenderer.create(tree());
+  });
+  const vm = () =>
+    renderer!.root.findByType(StudyView).props as ReturnType<typeof useStudyVM>;
+  await act(() => vm().intents.setText('保留这条未发送的问题'));
+  const main = session.store.getState().main;
+  expect(
+    renderer!.root.findAllByProps({ testID: 'glass-blur' }).length,
+  ).toBeGreaterThan(0);
+  jest.mocked(useIsFocused).mockReturnValue(false);
+  await act(() => renderer!.update(tree()));
+  expect(renderer!.root.findAllByProps({ testID: 'glass-blur' })).toHaveLength(
+    0,
+  );
+  expect(vm().state.listen.composer.value).toBe('保留这条未发送的问题');
+  jest.mocked(useIsFocused).mockReturnValue(true);
+  await act(() => renderer!.update(tree()));
+  expect(
+    renderer!.root.findAllByProps({ testID: 'glass-blur' }).length,
+  ).toBeGreaterThan(0);
+  expect(vm().state.listen.composer.value).toBe('保留这条未发送的问题');
+  expect(session.store.getState().main).toEqual(main);
+  expect(open).toHaveBeenCalledTimes(1);
 });
 it('section draft edits and checked choices save once and advance to the next leaf', async () => {
   const session = getStudySession(c, 'aima');

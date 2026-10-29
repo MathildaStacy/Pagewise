@@ -1,0 +1,47 @@
+{
+  "date": "2026-10-29",
+  "baseline": "main/c9ea9301ce9febbb20a14f517f11d954c2502774",
+  "device": "Pixel_10_Pro Android 17 arm64 emulator",
+  "build": "0.0.3 debug + Metro; temporary App bootstrap=createDemoContainer; product runtime and in-memory DB",
+  "service": "com.google.android.marvin.talkback/com.google.android.marvin.talkback.TalkBackService",
+  "version": "17.0.0.889642762",
+  "interaction": "passed",
+  "steps": [
+    {
+      "action": "Keyboard Tab from search to continue-learning card; Enter",
+      "evidence": "talkback-shelf-tab1.json, talkback-study-open.json"
+    },
+    {
+      "action": "Explore and double-tap 直接继续; generated current lesson step",
+      "evidence": "talkback-listen-continued.json"
+    },
+    {
+      "action": "Explore and double-tap question field; paste Chinese question 这跟前面的 3.4.2 有什么关系？",
+      "evidence": "talkback-question-typed.json; editable=true, focused=true, a11yFocused=true"
+    },
+    {
+      "action": "Explore and double-tap 发送; entered detour 3.4.2",
+      "evidence": "talkback-question-sent.json"
+    },
+    {
+      "action": "Dismiss keyboard, explore and double-tap 回到主线 3.5.2",
+      "evidence": "talkback-return-main.json; 3.5.2 title, collapsed resolved detour with 3 messages"
+    }
+  ],
+  "serviceRemainedBound": true,
+  "probe": "Separate temporary instrumentation uses FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES; no UIAutomator during TalkBack path",
+  "speech": {
+    "audioCaptured": true,
+    "spokenAudioReviewed": false,
+    "reason": "This agent environment explicitly does not support audio input. Recordings require human listening.",
+    "files": [
+      "talkback-open.m4a",
+      "talkback-listen.wav",
+      "talkback-question.wav"
+    ]
+  },
+  "cleanup": {
+    "enabled_accessibility_services": "deleted, originally absent",
+    "accessibility_enabled": 0
+  }
+}

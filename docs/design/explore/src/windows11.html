@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pagewise · Windows 11 风探索</title>
+<style>
+/*CSS*/
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="phone" id="phone">
+    <div class="sbar"><span>21:40</span><span class="cam"></span><span class="r"><svg viewBox="0 0 24 24"><path d="M12 21L1 8.5C3.9 5.7 7.8 4 12 4s8.1 1.7 11 4.5z"/></svg><svg viewBox="0 0 24 24"><path d="M2 22h20V2z"/></svg><svg viewBox="0 0 24 24"><path d="M15.7 4H14V2h-4v2H8.3C7.6 4 7 4.6 7 5.3v15.3c0 .8.6 1.4 1.3 1.4h7.3c.8 0 1.4-.6 1.4-1.3V5.3C17 4.6 16.4 4 15.7 4z"/></svg></span></div>
+    <header id="appbar"></header>
+    <div id="modebar"></div>
+    <div id="top"></div>
+    <main id="view"></main>
+    <div id="dock"></div>
+    <div id="overlay"></div>
+    <div id="toast" role="status"></div>
+    <div class="homebar"></div>
+  </div>
+  <aside class="side">
+    <div class="tb"><b class="app"></b><span>Pagewise · 说明</span><i><svg viewBox="0 0 10 10"><path d="M0 5h10"/></svg></i><i><svg viewBox="0 0 10 10"><rect x=".5" y=".5" width="9" height="9" rx="1.5"/></svg></i><i class="x"><svg viewBox="0 0 10 10"><path d="M0 0l10 10M10 0L0 10"/></svg></i></div>
+    <div class="bd">
+    <h1>Windows 11 风</h1>
+    <p class="lead">WinUI 3：背后是被壁纸染色的 Mica，底栏和通知是毛玻璃 Acrylic；控件 4px、浮层 8px 圆角，按钮底边略深一像素；选中项统一用一根强调色短药丸。读书 / 听讲是 Segmented 控件，岔路是 InfoBar，已解决的岔路是 Expander，弹出面板像 ContentDialog，自己的提问像「手机连接」里发出的短信。只做了「听讲」和「读书」两个页面。</p>
+    <div class="tg"><button data-t="light" onclick="setTheme('light')">浅色</button><button data-t="dark" onclick="setTheme('dark')">深色</button></div>
+    <h2>可以试试</h2>
+    <ol>
+      <li>点讲解里的 <b>p.103</b>：从底部弹出原书预览，再点「在读书模式打开」</li>
+      <li>点「懂了，下一步」「这步熟，跳过」，看顶部路线图和进度条</li>
+      <li>输入"这跟前面的 3.4.2 有什么关系"，进入岔路，再点「回到主线」看折叠</li>
+      <li>切到「读书」：点段落 → 「从这里开始讲」；点黄色便笺</li>
+      <li>讲完第 4 步 → 「懂了，下一节」看闪卡草稿</li>
+    </ol>
+    <h2>对比</h2>
+    <p><a href="microsoft.html">微软风（Fluent 2 网页版）</a> · <a href="apple.html">苹果风</a> · <a href="google.html">谷歌风</a> · <a href="meta.html">Meta 风</a> · <a href="play.html">新谷歌风</a> · <a href="../prototype.html">原来的原型</a></p>
+    </div>
+  </aside>
+</div>
+<script>
+const THEME = 'windows11';
+const ICONS = (() => {
+  const s = d => '<svg class="i" viewBox="0 0 24 24">' + d + '</svg>';
+  return {
+    back: s('<path d="M10.5 5.5L4 12l6.5 6.5M4.5 12H20"/>'),
+    more: s('<circle cx="5.5" cy="12" r="1.25" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.25" fill="currentColor" stroke="none"/><circle cx="18.5" cy="12" r="1.25" fill="currentColor" stroke="none"/>'),
+    check: s('<path d="M5 12.5l4 4L19 7"/>'),
+    skip: s('<path d="M5.5 5.8v12.4a.6.6 0 00.95.5l8.4-6.2a.6.6 0 000-1L6.45 5.3a.6.6 0 00-.95.5zM18.5 5v14"/>'),
+    next: s('<path d="M4 12h15.5M13.5 5.5L20 12l-6.5 6.5"/>'),
+    mic: s('<rect x="8.75" y="3" width="6.5" height="11" rx="3.25"/><path d="M5.5 11a6.5 6.5 0 0013 0M12 17.5V21M9 21h6"/>'),
+    send: s('<path d="M4.2 3.9l16.3 7.6c.4.2.4.8 0 1L4.2 20.1c-.5.2-1-.2-.8-.7L6 12 3.4 4.6c-.2-.5.3-.9.8-.7zM6 12h7.5"/>'),
+    book: s('<path d="M12 6.5c-1.8-1.5-4.6-2-8-1.6v13.6c3.4-.4 6.2.1 8 1.6 1.8-1.5 4.6-2 8-1.6V4.9c-3.4-.4-6.2.1-8 1.6zM12 6.5V20"/>'),
+    bookopen: '', teach: '',
+    derive: s('<path d="M17.5 5H6.5l6 7-6 7h11"/>'),
+    spark: s('<path d="M12 3.5l1.7 4.6a2 2 0 001.2 1.2l4.6 1.7-4.6 1.7a2 2 0 00-1.2 1.2L12 18.5l-1.7-4.6a2 2 0 00-1.2-1.2L4.5 11l4.6-1.7a2 2 0 001.2-1.2zM18.5 16.5l.6 1.4 1.4.6-1.4.6-.6 1.4-.6-1.4-1.4-.6 1.4-.6z"/>'),
+    clock: s('<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>'),
+    chev: s('<path d="M9 5.5l6.5 6.5L9 18.5"/>'),
+    branch: s('<circle cx="6.5" cy="5.5" r="2"/><circle cx="6.5" cy="18.5" r="2"/><circle cx="17.5" cy="8.5" r="2"/><path d="M6.5 7.5v9M17.5 10.5c0 3.5-3 4.5-11 6"/>'),
+    pin: s('<path d="M5.5 4h13A1.5 1.5 0 0120 5.5V14l-6 6H5.5A1.5 1.5 0 014 18.5v-13A1.5 1.5 0 015.5 4z"/><path d="M14 20v-4.5a1.5 1.5 0 011.5-1.5H20"/>'),
+    flag: s('<path d="M5 21V4.5M5 4.5h12.5l-2.5 4 2.5 4H5"/>')
+  };
+})();
+/*JS*/
+</script>
+</body>
+</html>
