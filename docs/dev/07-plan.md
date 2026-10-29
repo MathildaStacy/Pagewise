@@ -128,13 +128,17 @@ T4a–c 在 T3 通过后同批实现，T4d 负责集成。VM 通过 `app/usecase
 
 - `core/markup`（含流式）、`core/citations`、`core/detour`、`core/lesson`（校验 + 兜底）、`core/context`（6 层、预算压缩、token 估算）、`core/review`。
 
+实施文件分工：T5a 主目标 `src/core/markup/index.ts`，辅助 `src/core/citations/index.ts`、`src/core/ids.ts`、`__tests__/core/{markup,citations}.test.ts`；T5b 主目标 `src/core/context/index.ts`，辅助 `src/core/detour/index.ts`、`src/core/text/index.ts`、`__tests__/core/{context,detour}.test.ts`；T5c 主目标 `src/core/lesson/index.ts`，辅助 `src/core/review/index.ts`、`__tests__/core/{lesson,review}.test.ts`。三组只依赖 T3 类型，可在页面原生走查时并行完成纯函数；不依赖 IO 或新包。
+
 验收：
-- [ ] 覆盖率 ≥ 90%（行）。
-- [ ] 标记解析：05 §2.3 列的所有情况；10k 字解析基准 < 8ms（Node 上 < 3ms 作为 CI 断言）。
-- [ ] 岔路：进入 → 嵌套 → 超深度提示 → 回主线 → 从岔路改主线，指针和效果序列正确。
-- [ ] 路线图：合法输入原样通过；切开公式组的会被修正；空 / 越界 / 重叠 / 不连续的退回兜底；兜底结果自身满足校验。
-- [ ] 上下文：给定输入的输出快照稳定（同输入同字节，保证缓存）；超预算时按 05 §4 的顺序压缩。
-- [ ] 复习：盒子升降、到期日、跨午夜、时区变化、每日上限顺延。
+- [x] 覆盖率 ≥ 90%（行）。
+- [x] 标记解析：05 §2.3 列的所有情况；10k 字解析基准 < 8ms（Node 上 < 3ms 作为 CI 断言）。
+- [x] 岔路：进入 → 嵌套 → 超深度提示 → 回主线 → 从岔路改主线，指针和效果序列正确。
+- [x] 路线图：合法输入原样通过；切开公式组的会被修正；空 / 越界 / 重叠 / 不连续的退回兜底；兜底结果自身满足校验。
+- [x] 上下文：给定输入的输出快照稳定（同输入同字节，保证缓存）；超预算时按 05 §4 的顺序压缩。
+- [x] 复习：盒子升降、到期日、跨午夜、时区变化、每日上限顺延。
+
+本地验收（2026-10-29）：6 suites / 114 tests、1 个稳定上下文快照通过；纯函数行/语句/函数覆盖率均为 100%，分支覆盖率 96.49%。10k 字流式标记解析满足 Node <3ms 断言。上下文 `<turn>` 保留合法 JSON，并将 `<` 编码为 `\u003c`，确保会话与脚本能直接解析。Q-15 记录稳定块号的实际邻接规则。
 
 ### T6 听讲、读书（重排）、小结——假 AI
 
@@ -145,6 +149,8 @@ T4a–c 在 T3 通过后同批实现，T4d 负责集成。VM 通过 `app/usecase
 - `ReaderView`（重排模式）：块列表、讲过 / 当前标记、高亮、便签、导读、读完这一节、块菜单；`Reader` 单独页。
 - `MathView` + 公式渲染 WebView 服务；`RichView`。
 - `SectionDone` 页与保存事务。
+
+实施文件分工：T6a 主目标 `src/app/study/StudySession.ts`，辅助 `src/app/study/{types,registry,finishSection,toolExec}.ts`、`__tests__/app/study/*.test.ts`；T6b 主目标 `src/features/study/useStudyVM.ts`，辅助 `src/features/study/{types,presenters,samples}.ts`、`src/features/study/StudyScreens.tsx`、`src/ui/screens/{Study,Reader,SectionDone}View.tsx`、`__tests__/features/study.test.tsx`；T6c 主目标 `src/services/math/renderer.ts`，辅助 `src/services/math/{types,WebViewHost}.tsx`（类型文件可为 `.ts`）、`src/app/math.ts`、`src/ui/kit/{MathProvider,index}.tsx`（index 沿用 `.ts`）、`src/ui/kit/base/content.tsx`、`scripts/copy-mathjax.js`、`android/app/src/main/assets/math/**`、数学渲染测试及 WebView/MathJax 的依赖锁文件。根代理负责假 AI、提示词、导航与容器集成；三组共享会话类型，不互改所属文件。
 
 验收（Demo 模式，两套皮肤都要过）：
 - [ ] explore 页面侧栏「可以试试」的 5 条全部能做到：点 p.103 弹出原文预览 → 在读书模式打开并闪烁；「懂了，下一步」「这步熟，跳过」进度正确；问「这跟前面的 3.4.2 有什么关系」进入岔路 → 回到主线后折叠成「已解决：…（n 条）」并记进 3.4.2 笔记；读书模式点段落「从这里开始讲」跳到对应步；点便签打开问答。
@@ -161,6 +167,8 @@ T4a–c 在 T3 通过后同批实现，T4d 负责集成。VM 通过 `app/usecase
 - `MeAI` / `MeAIEdit` 完整（读取模型列表、测试连接、模型分配）；用量统计。
 - 提示词模板全部写完（05 §12.3 列的每一个）；工具定义与执行器；工具次数限制；路线图生成 + 校验 + 兜底；续学回顾、小结草稿、解释、翻译、导读、岔路标题、便签标题、段摘要、对话压缩。
 - 「AI 看到的内容」面板接真实估算 + 上一轮真实用量。
+
+实施文件分工：T7a 主目标 `src/app/usecases/settings.ts`，辅助 `src/services/ai/gateway.ts`（测试连接取消信号）、`__tests__/services/ai/gateway.test.ts`、`src/features/settings/{types,useSettingsVM}.ts`、`src/ui/screens/{MeAI,MeAIEdit}View.tsx`、`__tests__/features/settings.test.tsx`、`__tests__/app/aiSettings.test.ts`。负责模型读取、连接测试、分配和用量；根代理负责提示词、eval 与会话集成，复用 T1 网关与模型目录。
 - 没配服务时的引导（03 §12）。
 
 验收：

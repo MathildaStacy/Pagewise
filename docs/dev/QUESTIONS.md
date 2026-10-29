@@ -18,3 +18,4 @@
 | Q-12 | glass 原稿若干语义色与辅助文字未达到 WCAG AA；paper 原色必须与原型一致 | paper 四套原始颜色保持；glass 亮色 ink2/accent/stuck/ok/bad/derive/example 与深色 detour/bad 按 02 记录微调；ok/stuck 保留给图标，小字用 ink/stuckInk，引用小字用 accentInk | T2 自动门禁通过 |
 | Q-13 | Glass 低端/省电自动降级不能只依赖手工 blurEnabled prop | T2 增加轻量 Android UiEnvironment TurboModule，读取 low-RAM / Power Save 并监听省电切换，应用层将结果传入 SkinProvider | T2 已实现并完成原生构建；降级分支有测试 |
 | Q-14 | 3.5.2 的原型正文与较新的 explore 正文块数不同，路线图以 explore 为准 | Demo 中 3.5.2 使用 explore 的 12 块和 4 步；其他已给正文保留 prototype，所有块标记示意内容；未给正文的目录叶仅生成演示占位，不进入正式库 | T3 已采用 |
+| Q-15 | 路线图 `to+1=from` 与跨页稳定块号有冲突；单块或不可拆公式组无法有 2 步 | 按实际块列表邻接验证连续覆盖；不可拆单组保留一步，空正文不生成引用；同步 05 §5.2 | T5 已采用 |
