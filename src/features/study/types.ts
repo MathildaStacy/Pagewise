@@ -143,7 +143,11 @@ export interface ReaderState {
   };
 }
 export type StudyOverlay =
-  | { kind: 'menu'; rows: { key: string; title: string; sub: string }[] }
+  | {
+      kind: 'menu';
+      title?: string;
+      rows: { key: string; title: string; sub: string }[];
+    }
   | {
       kind: 'roadmap';
       title: string;
@@ -238,6 +242,7 @@ export interface StudyIntents {
   back(): void;
   setMode(mode: 'listen' | 'read'): void;
   openMenu(): void;
+  openAdd?(): void;
   menuSelect(key: string): void;
   quick(key: string): void;
   setText(text: string): void;

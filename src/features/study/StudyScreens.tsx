@@ -6,6 +6,7 @@ import { StudyView } from '@ui/screens/StudyView';
 import { ReaderView } from '@ui/screens/ReaderView';
 import { SectionDoneView } from '@ui/screens/SectionDoneView';
 import { useReaderVM, useSectionDoneVM, useStudyVM } from './useStudyVM';
+import { useLearningActivity } from '@features/home/useHomeVM';
 export function StudyScreen({
   bookId,
   ...options
@@ -13,6 +14,7 @@ export function StudyScreen({
   const vm = useStudyVM(bookId, options);
   const skin = useSkin();
   const focused = useIsFocused();
+  useLearningActivity(focused);
   // 隐藏的 Android BlurView 会影响 push 页；会话与页面状态继续保留。
   return (
     <SkinContext.Provider
@@ -31,6 +33,7 @@ export function ReaderScreen({
   sectionId?: string;
   blockRef?: string;
 }) {
+  useLearningActivity(useIsFocused());
   return <ReaderView {...useReaderVM(bookId, sectionId, blockRef)} />;
 }
 export function SectionDoneScreen({

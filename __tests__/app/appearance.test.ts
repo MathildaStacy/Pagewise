@@ -190,3 +190,19 @@ it('关闭并重开真实SQLite文件后外观仍在', async () => {
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+it.each(['meta', 'google', 'win11'] as const)(
+  'persists and restores the %s prototype skin',
+  async skin => {
+    const repo = createSettingsRepo(db);
+    const original = await createAppearanceSettings(repo, db);
+    await original.update({ skin, scheme: 'dark' });
+    await original.flush();
+    const restored = await createAppearanceSettings(repo, db);
+    expect(restored.store.getState()).toMatchObject({
+      skin,
+      scheme: 'dark',
+      error: null,
+    });
+  },
+);

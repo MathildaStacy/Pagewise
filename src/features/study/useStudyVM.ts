@@ -738,6 +738,28 @@ export function useStudyVM(
     back: () =>
       standalone ? nav.back() : nav.replace({ name: 'BookMap', bookId }),
     setMode,
+    openAdd: () =>
+      setOverlay({
+        kind: 'menu',
+        title: '添加到问题',
+        rows: [
+          {
+            key: 'addRead',
+            title: '引用一段原文',
+            sub: '切到读书，点一段，选「问 AI」',
+          },
+          {
+            key: 'addStuck',
+            title: '从卡点里选',
+            sub: '让 AI 结合这个卡点回答',
+          },
+          {
+            key: 'addPhoto',
+            title: '拍一张图',
+            sub: '手写推导、书页照片（M5）',
+          },
+        ],
+      }),
     openMenu: () =>
       setOverlay({
         kind: 'menu',
@@ -758,6 +780,18 @@ export function useStudyVM(
           sectionId: readSection?.id ?? raw.main.sectionId,
         });
       else if (key === 'context') openContext();
+      else if (key === 'addRead') {
+        setMode('read');
+        setToast('点一段原文，选「问 AI」');
+      } else if (key === 'addStuck')
+        c.repos.notes.stuck
+          .list(bookId, undefined, { resolved: false })
+          .then(stuck => {
+            if (stuck.length) setText(`结合我的卡点「${stuck[0].text}」讲讲`);
+            else setToast('还没有卡点');
+          })
+          .catch(fail);
+      else if (key === 'addPhoto') setToast('拍照提问：M5');
       else if (key === 'finish') finish();
       else if (key === 'switchMain')
         setOverlay({

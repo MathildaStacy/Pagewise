@@ -83,6 +83,20 @@ async function act(action: () => void | Promise<void>) {
     await action();
   });
 }
+it('opens the Win11 add menu, uses an existing stuck point, and switches to source reading', async () => {
+  const vm = await mount(() => useStudyVM('aima', { autoStart: false }));
+  await act(() => vm().intents.openAdd!());
+  expect(vm().state.overlay).toMatchObject({
+    kind: 'menu',
+    title: '添加到问题',
+  });
+  await act(() => vm().intents.menuSelect('addStuck'));
+  expect(vm().state.listen.composer.value).toContain('结合我的卡点');
+  await act(() => vm().intents.openAdd!());
+  await act(() => vm().intents.menuSelect('addRead'));
+  expect(vm().state.mode).toBe('read');
+  expect(vm().state.toast).toBe('点一段原文，选「问 AI」');
+});
 it('calculates exact quick actions at last step, quiz, ready, detour and resume', async () => {
   const session = getStudySession(c, 'aima');
   await session.open({ autoStart: false });

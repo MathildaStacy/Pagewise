@@ -25,6 +25,7 @@ import {
   type ServiceCatalog,
 } from '@app/usecases/settings';
 import { useAppNav } from '@features/nav';
+import { loadHome } from '@app/usecases/home';
 import {
   loadStorage,
   clearParseCache,
@@ -105,10 +106,26 @@ export function useMeVM(): { state: MeState; intents: MeIntents } {
   const appearance = useStore(c.appearance.store);
   const { status, run } = useStatus();
   const [groups, setGroups] = useState<MeState['groups']>([]);
+  const [overview, setOverview] = useState<MeState['overview']>();
   const refresh = useCallback(
     () =>
       run(async () => {
         const data = await readSettingsOverview(c);
+        if (appearance.skin === 'win11') {
+          const home = await loadHome(c);
+          setOverview({
+            storage:
+              c.mode === 'demo'
+                ? '612 MB'
+                : formatBytes(
+                    data.books.reduce((sum, b) => sum + b.size_bytes, 0),
+                  ),
+            intuition: data.prefs.intuitionFirst,
+            quiz: data.prefs.quizAtEnd,
+            streak: home.stats.streak,
+            goal: home.goal,
+          });
+        }
         const expiry = tokenExpiry(data.mineru.tokenExpiresOn, data.today);
         const used =
           data.mineru.usedToday.date === data.today
@@ -176,33 +193,87 @@ export function useMeVM(): { state: MeState; intents: MeIntents } {
           ],
         ]);
       }),
-    [c, run],
+    [c, run, appearance.skin],
   );
   useEffect(refresh, [refresh]);
   return {
     state: {
       ...status,
+      overview,
       groups: groups.map(group =>
-        group.map(row =>
-          row.key === 'MeAppearance'
-            ? {
-                ...row,
-                subtitle: `${
-                  appearance.skin === 'glass' ? '苹果风' : '纸感'
-                } · ${
-                  { system: '跟随系统', light: '浅色', dark: '深色' }[
-                    appearance.scheme
-                  ]
-                } · 正文${
-                  { s: '小', m: '中', l: '大' }[appearance.readingSize]
-                }`,
-              }
-            : row,
-        ),
+        group
+          .map(row =>
+            row.key === 'MeAppearance'
+              ? {
+                  ...row,
+                  subtitle: `${
+                    {
+                      paper: '纸感',
+                      glass: '苹果风',
+                      meta: 'Meta 风',
+                      google: '新谷歌风',
+                      win11: 'Win11 风',
+                    }[appearance.skin]
+                  } · ${
+                    { system: '跟随系统', light: '浅色', dark: '深色' }[
+                      appearance.scheme
+                    ]
+                  } · 正文${
+                    { s: '小', m: '中', l: '大' }[appearance.readingSize]
+                  }`,
+                }
+              : row,
+          )
+          .flatMap(row =>
+            appearance.skin === 'win11' && row.key === 'MePrefs'
+              ? [
+                  row,
+                  {
+                    key: 'LearningStats',
+                    title: '学习记录',
+                    subtitle: `连续 ${overview?.streak ?? 0} 天 · 每日目标 ${
+                      overview?.goal ?? 20
+                    } 分钟`,
+                    tone: 'neutral' as const,
+                  },
+                ]
+              : appearance.skin === 'win11' && row.key === 'About'
+              ? [
+                  {
+                    key: 'Welcome',
+                    title: '新手引导',
+                    subtitle: '重新走一遍首次启动的三步',
+                    tone: 'neutral' as const,
+                  },
+                  row,
+                ]
+              : [row],
+          ),
       ),
     },
     intents: {
       refresh,
+      quick: key =>
+        run(async () => {
+          if (key === 'dark')
+            await c.appearance.update({
+              scheme: appearance.scheme === 'dark' ? 'light' : 'dark',
+            });
+          else {
+            const field = key === 'intuition' ? 'intuitionFirst' : 'quizAtEnd';
+            const prefs = await readPrefs(c);
+            const next = await patchPrefs(c, { [field]: !prefs[field] });
+            setOverview(value =>
+              value
+                ? {
+                    ...value,
+                    intuition: next.intuitionFirst,
+                    quiz: next.quizAtEnd,
+                  }
+                : value,
+            );
+          }
+        }),
       open: key => {
         if (
           key === 'MeMineru' ||
@@ -210,7 +281,9 @@ export function useMeVM(): { state: MeState; intents: MeIntents } {
           key === 'MePrefs' ||
           key === 'MeAppearance' ||
           key === 'MeStorage' ||
-          key === 'About'
+          key === 'About' ||
+          key === 'LearningStats' ||
+          key === 'Welcome'
         )
           nav.open({ name: key });
       },

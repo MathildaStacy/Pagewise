@@ -1,6 +1,6 @@
 export interface AppearanceState {
   error: string | null;
-  skin: 'paper' | 'glass';
+  skin: 'paper' | 'glass' | 'meta' | 'google' | 'win11';
   scheme: 'system' | 'light' | 'dark';
   readingSize: 's' | 'm' | 'l';
   skinOptions: { key: string; label: string }[];

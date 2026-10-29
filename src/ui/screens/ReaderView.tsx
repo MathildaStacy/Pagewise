@@ -830,7 +830,7 @@ export function StudyOverlays({
   }
   const title =
     overlay.kind === 'menu'
-      ? '伴读'
+      ? overlay.title ?? '伴读'
       : overlay.kind === 'roadmap'
       ? '本节路线图'
       : overlay.kind === 'context'
@@ -1002,6 +1002,7 @@ const useStyles = makeStyles(t => ({
     gap: t.layout.groupedLists ? 12 : 10,
     borderBottomWidth: t.layout.groupedLists ? 0 : 1,
     borderBottomColor: t.color.line,
+    ...(t.brand ? { backgroundColor: undefined } : {}),
   },
   segmentWidth: { width: t.layout.groupedLists ? 140 : 150 },
   hint: {
@@ -1017,17 +1018,34 @@ const useStyles = makeStyles(t => ({
     marginHorizontal: t.layout.groupedLists ? 16 : 12,
     paddingHorizontal: t.layout.groupedLists ? 20 : 16,
     backgroundColor: t.layout.groupedLists ? t.color.paper : undefined,
+    ...(t.brand ? { marginHorizontal: t.brand.kind === 'meta' ? 0 : 16 } : {}),
   },
   flowStart: {
     paddingTop: t.layout.groupedLists ? 22 : 18,
     borderTopLeftRadius: t.layout.groupedLists ? t.shape.lg : 0,
     borderTopRightRadius: t.layout.groupedLists ? t.shape.lg : 0,
+    ...(t.brand
+      ? {
+          borderTopLeftRadius:
+            t.brand.kind === 'meta' ? t.shape.xs * 0 : t.shape.lg,
+          borderTopRightRadius:
+            t.brand.kind === 'meta' ? t.shape.xs * 0 : t.shape.lg,
+        }
+      : {}),
   },
   flowEnd: {
     paddingBottom: t.layout.groupedLists ? 10 : 14,
     marginBottom: t.layout.groupedLists ? 0 : 14,
     borderBottomLeftRadius: t.layout.groupedLists ? t.shape.lg : 0,
     borderBottomRightRadius: t.layout.groupedLists ? t.shape.lg : 0,
+    ...(t.brand
+      ? {
+          borderBottomLeftRadius:
+            t.brand.kind === 'meta' ? t.shape.xs * 0 : t.shape.lg,
+          borderBottomRightRadius:
+            t.brand.kind === 'meta' ? t.shape.xs * 0 : t.shape.lg,
+        }
+      : {}),
   },
   guide: {
     marginHorizontal: 16,
@@ -1041,6 +1059,20 @@ const useStyles = makeStyles(t => ({
     alignItems: 'center',
     rowGap: 4,
     columnGap: 6,
+    ...(t.brand
+      ? {
+          marginHorizontal: t.brand.kind === 'meta' ? 0 : 16,
+          backgroundColor:
+            t.brand.kind === 'google'
+              ? t.brand.secondaryContainer
+              : t.color.surface,
+          backgroundImage:
+            t.brand.kind === 'win11'
+              ? `linear-gradient(120deg, ${t.brand.aiSoft.join(',')})`
+              : undefined,
+          borderRadius: t.brand.kind === 'meta' ? t.shape.xs * 0 : t.shape.lg,
+        }
+      : {}),
   },
   guideLabel: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   guideTitle: {

@@ -1646,6 +1646,7 @@ const useStyles = makeStyles(t => ({
     paddingBottom: t.layout.groupedLists ? 14 : 10,
     paddingHorizontal: t.layout.groupedLists ? 16 : 12,
     backgroundColor: t.layout.groupedLists ? t.color.stuckBg : t.color.surface,
+    ...(t.brand ? { borderRadius: t.shape.md } : {}),
   },
   proposalLabel: {
     color: t.layout.groupedLists ? t.color.stuckInk : t.color.accent,
@@ -1747,6 +1748,20 @@ const useStyles = makeStyles(t => ({
     borderWidth: t.layout.groupedLists ? 0 : 1,
     borderColor: t.color.line,
     backgroundColor: t.color.surface,
+    ...(t.brand
+      ? {
+          borderRadius: t.brand.kind === 'google' ? 20 : t.shape.md,
+          borderWidth: t.brand.kind === 'meta' ? 1 : 0,
+          backgroundColor:
+            t.brand.kind === 'google'
+              ? t.brand.secondaryContainer
+              : t.color.surface,
+          backgroundImage:
+            t.brand.kind === 'win11'
+              ? `linear-gradient(120deg, ${t.brand.aiSoft.join(',')})`
+              : undefined,
+        }
+      : {}),
   },
   resumeLabel: {
     ...studyType(
@@ -1775,6 +1790,7 @@ const useStyles = makeStyles(t => ({
     paddingTop: t.layout.groupedLists ? 13 : 10,
     paddingBottom: t.layout.groupedLists ? 14 : 10,
     paddingHorizontal: t.layout.groupedLists ? 16 : 12,
+    ...(t.brand ? { borderRadius: t.shape.md } : {}),
   },
   sourceText: {
     ...studyType(
@@ -1790,6 +1806,7 @@ const useStyles = makeStyles(t => ({
     paddingTop: 12,
     paddingBottom: t.layout.groupedLists ? 13 : 12,
     paddingHorizontal: t.layout.groupedLists ? 16 : 14,
+    ...(t.brand ? { borderRadius: t.shape.md } : {}),
   },
   auxText: {
     ...studyType(t, 16, t.layout.groupedLists ? 25.92 : 28.48),
@@ -1823,6 +1840,7 @@ const useStyles = makeStyles(t => ({
     borderWidth: t.layout.groupedLists ? 0 : 1,
     borderColor: t.color.line,
     overflow: 'hidden',
+    ...(t.brand ? { borderRadius: t.shape.md } : {}),
   },
   foldHeader: {
     minHeight: t.layout.groupedLists ? 52 : 44,
@@ -1881,6 +1899,13 @@ const useStyles = makeStyles(t => ({
     backgroundColor: t.color.surface,
     borderWidth: t.layout.groupedLists ? 0 : 1,
     borderColor: t.color.line,
+    ...(t.brand
+      ? {
+          borderRadius: t.brand.kind === 'meta' ? 20 : 8,
+          backgroundColor:
+            t.brand.kind === 'meta' ? t.color.surfaceAlt : 'transparent',
+        }
+      : {}),
   },
   historyLabel: {
     ...studyType(

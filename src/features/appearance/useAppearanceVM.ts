@@ -14,6 +14,9 @@ export function useAppearanceVM(back: () => void): {
       skinOptions: [
         { key: 'paper', label: '纸感' },
         { key: 'glass', label: '苹果风' },
+        { key: 'meta', label: 'Meta 风' },
+        { key: 'google', label: '新谷歌风' },
+        { key: 'win11', label: 'Win11 风' },
       ],
       schemeOptions: [
         { key: 'system', label: '跟随系统' },
@@ -28,7 +31,13 @@ export function useAppearanceVM(back: () => void): {
     },
     intents: {
       setSkin: value => {
-        if (value === 'paper' || value === 'glass')
+        if (
+          value === 'paper' ||
+          value === 'glass' ||
+          value === 'meta' ||
+          value === 'google' ||
+          value === 'win11'
+        )
           settings.update({ skin: value });
       },
       setScheme: value => {

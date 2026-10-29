@@ -14,12 +14,12 @@ type Overlay<K extends string, P = {}> = { kind: K } & P;   // VM.state.overlay:
 ```
 
 - 全局提示走 `toast` 店铺，页面不用管。
-- 下文「区域」= 两套皮肤共用的布局区域（02 §2 规定位置不能变）；「paper 参考」指向原型里的函数，样式以它为准。
+- 下文「区域」= 共有页面的布局区域（02 §2）；Paper / Apple 保留原契约，Meta / 新谷歌按各自原型实现组件形态。Win11 原稿的五 Tab、SelectorBar 和新增页面见 §13；「paper 参考」仍指向纸感原型函数。
 - 文案：表格里写的文案原样使用。
 
 ---
 
-## 1. 书架 `Shelf`（Tab 1）
+## 1. 书架 `Shelf`（Tab 1；Win11 为 Tab 2）
 
 paper 参考：`ui-shelf.js` `SCREENS.shelf`。
 
@@ -169,7 +169,7 @@ interface BookMapIntents {
 
 这是核心页面。两种模式共用顶栏，模式切换不换页面（位置不丢，见 05 §9）。
 
-区域（两套皮肤都一样）：
+共有学习区域（Win11 的模式切换改为顶栏下 SelectorBar，见 §13）：
 ```
 顶栏        ‹ 返回（到地图）  小节名 / 书名 · 页码   [读书 | 听讲]  ⋯
 ── 听讲模式 ──────────────────────────────
@@ -358,7 +358,7 @@ interface SectionDoneIntents {
 ```
 保存 = 一个事务：写摘要、卡点、闪卡（盒子 1）、小节 `done`、主线指针移到下一叶子小节并标 `learning`；然后 `replace('Study')`，新小节自动开始（先生成路线图）。
 
-## 8. 复习 `Review`（Tab 2）
+## 8. 复习 `Review`（Tab 2；Win11 为 Tab 3）
 
 paper 参考：`SCREENS.review`、`reteach()`。
 
@@ -388,7 +388,7 @@ interface ReviewSessionIntents { flip(): void; rate(k: 'again' | 'hard' | 'good'
 ```
 `askAi`：进入对应书的 `Study`，composer 预填「关于这张卡：<正面>」并把卡片所在小节作为岔路加载。
 
-## 10. 笔记 `Notes`（Tab 3）、`NotesBook`、`NoteDetail`
+## 10. 笔记 `Notes`（Tab 3；Win11 为 Tab 4）、`NotesBook`、`NoteDetail`
 
 paper 参考：`SCREENS.notes`、`notesBook`、`noteDetail`、`openExport()`。
 
@@ -412,7 +412,7 @@ interface NoteDetailState {
 ```
 意图：`openBook`、`openSection`、`openExport`、`setFormat`、`setStrip`、`exportNow`、`openSource`、`openHighlight(ref)`、`setUserText`（防抖 800ms 保存）。
 
-## 11. 我的（Tab 4）及子页
+## 11. 我的（Tab 4；Win11 为 Tab 5）及子页
 
 paper 参考：`ui-me.js`。
 
@@ -423,7 +423,7 @@ paper 参考：`ui-me.js`。
 | `MeAI` | 服务列表、＋ 添加服务、模型分配（讲解模型 / 整理模型）、用量（每本书 token 与缓存命中率、本月合计） | |
 | `MeAIEdit` | 名称、协议（Anthropic Messages / OpenAI Responses / OpenAI Chat Completions）、Base URL、API Key、模型（可「读取模型列表」）、测试连接、保存、删除 | 表单解析复用 AShareSim `parseServiceForm` |
 | `MePrefs` | 先讲直觉再讲公式、每段讲解长度（短/中/长）、每段结尾提一个问题、一节讲完做小测、术语中英对照、续学回顾、补充要求（多行） | 字段见 04 `setting` |
-| `MeAppearance` | 皮肤（纸感 / 苹果风，带小预览）、深浅色（跟随系统 / 浅色 / 深色）、读书正文字号（小 / 中 / 大，只影响重排和讲解正文） | 切换即时生效，不重启 |
+| `MeAppearance` | 皮肤（纸感 / 苹果风 / Meta 风 / 新谷歌风 / Win11 风，带小预览）、深浅色（跟随系统 / 浅色 / 深色）、读书正文字号（小 / 中 / 大，只影响重排和讲解正文） | 切换即时生效，不重启 |
 | `MeStorage` | 每本书：原文件大小、解析结果大小、清理解析缓存（保留学习记录）；导出备份（不含 Key/Token）；从备份恢复 | 备份格式见 04 §5 |
 | `About` | 名称、版本、说明（原型文案）、开源协议；开发版：导出日志、长按版本号进 SkinGallery | |
 
@@ -437,3 +437,42 @@ paper 参考：`ui-me.js`。
 | 没配 MinerU Token 就导入 PDF | 解析设置页底部按钮变「先配置 MinerU Token」→ `MeMineru` |
 | 断网 | 听讲：发送时 toast「网络不可用」，消息保留在输入框；解析：暂停轮询，恢复后继续 |
 | AI 出错 | thread 里 `error` 项（文案来自 `toAppError`）+ 重试；已收到的部分保留 |
+
+## 13. Win11 原稿新增页面
+
+依据 `docs/design/prototype-win11/README.md`、`ui-today.js`、`ui-welcome.js` 及同名 HTML。其他四主题仍为书架 · 复习 · 笔记 · 我的；Win11 冷启动默认「今天」，顺序为今天 · 书架 · 复习 · 笔记 · 我的。换肤不重建导航树；从 Win11「今天」切到其他主题时回到书架。
+
+学习页按 Win11 原稿把「读书 / 听讲」放在顶栏下的 SelectorBar，右侧是「AI 看到的内容」；其他四主题保留顶栏右侧模式切换。书架原有继续学习卡在 Win11 移到「今天」，现有导入、解析、地图、读书、学习、小结、复习与笔记流程继续复用。
+
+### 13.1 页面与 VM
+
+容器：`features/home/HomeScreens.tsx`；VM 与类型：`features/home/useHomeVM.ts` / `types.ts`；用例：`app/usecases/home.ts`。
+
+| 页面 | 状态与区域 | 真实行为 |
+| --- | --- | --- |
+| `Today` / `TodayView` | 日期问候、问书架入口、继续学习 hero、闪卡 / 连续学习两张小卡、横向书架、最近卡点；有加载、错误与空书架配置入口 | 复用 `loadShelf`、`useShelfVM`、闪卡统计和卡点仓库；继续听讲 / 读原文带同一本书进 `Study`，导入复用书架浮层 |
+| `AskShelf` / `AskShelfView` | 问题输入、全部 / 单书筛选、推荐问题与最近提问；检索过程、流式回答、按书分组的命中原文、错误重试与停止 | `searchShelf` 检索已解析块，`answerShelf` 调用户配置的 `teach` 服务；读命中原文、带到听讲、主动存到笔记 |
+| `LearningStats` / `LearningStatsView` | 连续 / 最长天数、今日目标圆环、本周柱图、当月热力图、汇总、每本书进度、每日 10 / 20 / 30 分钟目标 | 统计真实记录；从「今天」或「我的 → 学习记录」进入，目标本地保存 |
+| `Welcome` / `WelcomeView` | 欢迎 → AI 服务 → MinerU Token → 讲解偏好；上一步、测试连接、可跳过 AI / Token 配置 | 复用模型列表、连接测试、`saveService`、`patchMineru`、`patchPrefs`；完成后进入「今天」 |
+
+仅 Win11 的真实空书库且 `welcome.completed` 为 false 时自动打开引导；已有书库不强制弹出。「我的」增加学习记录和重新打开新手引导的入口。
+
+### 13.2 持久化与引用
+
+- `learning.seconds` 按本地日期存前台听讲 / 读书秒数；页面失焦或 App 进入后台结束本段计时，打开书架不计时。`loadHome` 据此计算当日分钟、本周、当月、达成目标的连续天数与最长天数。
+- `learning.goal` 保存每日目标；`learning.reminder` 只保存演示开关状态，尚无通知调度。真实页面开关禁用，并显示「本机通知尚未接入，可在演示书库预览」。
+- `shelf.questions` 保存最近 8 个不重复问题；`welcome.completed` 保存引导完成 / 先逛状态。服务配置、偏好和书籍学习记录继续使用现有仓库，真实设备的 Key / Token 通过已有 Keychain 存储，不写入普通设置。
+- 问书架只检索书库已解析的 blocks，可限制到单本书；把命中原文、书名、章节、原书页码交给 AI，禁用工具写操作。返回的 `[n]` 映射到本次命中列表：有效编号展示书名 + 页码并打开对应 `Reader(bookId, sectionId, blockRef)`，无对应命中的编号标为未核实。
+- 「带到听讲里继续问」使用首条命中的书 / 小节与原问题；「存到笔记」由用户点击后将问答写入首条命中小节的 QA 记录。不会自动确认摘要、闪卡或推进学习进度。
+
+### 13.3 演示与能力边界
+
+演示书库使用 `app/demo.ts` 的独立内存数据库、示意原文与演示 AI；原型统计数字、示意原文和脚本回答只在 demo 分支使用，不填入真实空书库。真实书籍从本地选择读取元信息，外部 PDF 解析和 AI 请求仍需要用户自己的 MinerU Token / AI 配置。
+
+学习页新增「添加到问题」菜单中的「拍一张图」保留 Win11 源稿的「手写推导、书页照片（M5）」提示和占位 Toast；未接通相机提问。学习提醒也仅可在 demo 预览。
+
+### 13.4 本次验证边界
+
+`npm run check` 已通过：85 suites passed / 1 skipped，1653 tests passed / 2 skipped，15 snapshots；Android `assembleDebug` 已通过。三品牌书架 / 读书 / 听讲 / Sheet、Win11 新增页、深色和字号 1.3 的原生捕获已检视，并与报告一起归档到本次会话的 `brand-ui-review/` 产物目录。独立复核对原先指出的 8 项差异均评分为 resolved，最终 disposition 为 ship；该结论限于这 8 项修复，不代表全应用验收或完整 AA。
+
+真实 PDF 已经由 App 本地文件选择器读取元信息：`ISLR统计学习导论-中文-mono.pdf` 为 615 页 / 18.6MB / 文字层与目录 / 4 片；`机器学习实战：基于Scikit-Learn、Keras和TensorFlow 第2版.pdf` 为 1052 页 / 34.9MB / 文字层与目录 / 6 片，展示实际标题与作者。上传确认已打开并取消；本次未远程上传 PDF，也未执行真实 AI 调用。

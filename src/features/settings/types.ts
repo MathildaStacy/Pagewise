@@ -7,6 +7,13 @@ export interface SettingStatus {
   notice?: string;
 }
 export interface MeState extends SettingStatus {
+  overview?: {
+    storage: string;
+    intuition: boolean;
+    quiz: boolean;
+    streak: number;
+    goal: number;
+  };
   groups: {
     key: string;
     title: string;
@@ -17,6 +24,7 @@ export interface MeState extends SettingStatus {
 export interface MeIntents {
   open(key: string): void;
   refresh(): void;
+  quick?(key: 'dark' | 'intuition' | 'quiz'): void;
 }
 export interface MineruState extends SettingStatus {
   token: string;

@@ -36,11 +36,31 @@ import {
   ArrowDown,
   ExternalLink,
   ChevronLeft,
+  House,
+  Flame,
+  ChartColumn,
+  KeyRound,
+  Rocket,
+  Lightbulb,
+  Grid2X2,
+  List,
+  Play,
+  LockKeyhole,
 } from 'lucide-react-native';
 import { SvgXml } from 'react-native-svg';
 import type { IconMap, IconGlyphProps } from '../kit/skin';
 
 const glyphs = {
+  play: Play,
+  lock: LockKeyhole,
+  home: House,
+  fire: Flame,
+  chart: ChartColumn,
+  key: KeyRound,
+  rocket: Rocket,
+  bulb: Lightbulb,
+  grid: Grid2X2,
+  list: List,
   back: ArrowLeft,
   more: MoreHorizontal,
   search: Search,

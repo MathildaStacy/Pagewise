@@ -8,6 +8,8 @@ export const iconNames = [
   'check',
   'skip',
   'next',
+  'play',
+  'lock',
   'send',
   'stop',
   'mic',
@@ -46,6 +48,14 @@ export const iconNames = [
   'drive',
   'logo',
   'updown',
+  'home',
+  'fire',
+  'chart',
+  'key',
+  'rocket',
+  'bulb',
+  'grid',
+  'list',
 ] as const;
 export type IconName = (typeof iconNames)[number];
 export type Tone =
@@ -128,6 +138,7 @@ export interface ButtonProps {
 }
 export interface IconButtonProps {
   icon: IconName;
+  variant?: 'root' | 'push';
   onPress(): void;
   label: string;
   badge?: number | string;
@@ -156,6 +167,7 @@ export interface ComposerProps {
   quote?: ComposerQuote & { onClear(): void };
   micAvailable: boolean;
   onMic?(): void;
+  onAdd?(): void;
   busy?: boolean;
   onStop?(): void;
 }
@@ -198,6 +210,8 @@ export interface FieldProps {
 }
 export interface NoteProps {
   tone: 'neutral' | 'accent' | 'warn' | 'bad';
+  variant?: 'ai';
+  icon?: IconName;
   children?: ReactNode;
 }
 export interface TagProps {
@@ -214,7 +228,9 @@ export interface StageStripProps {
 export interface CoverProps {
   title: string;
   color: string;
+  subtitle?: string;
   size?: 'sm' | 'md' | 'lg';
+  width?: number;
 }
 export interface StatusDotProps {
   tone: Tone;

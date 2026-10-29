@@ -1,6 +1,6 @@
 import { createContext, useContext, type PropsWithChildren } from 'react';
 
-export type TabName = 'Shelf' | 'Review' | 'Notes' | 'Me';
+export type TabName = 'Today' | 'Shelf' | 'Review' | 'Notes' | 'Me';
 export type AppRoute =
   | { name: 'Tabs'; tab?: TabName }
   | { name: 'BookMap' | 'ParseProgress' | 'NotesBook'; bookId: string }
@@ -28,6 +28,9 @@ export type AppRoute =
         | 'MeStorage'
         | 'About'
         | 'SkinGallery';
+    }
+  | {
+      name: 'AskShelf' | 'LearningStats' | 'Welcome';
     };
 
 export interface AppNav {

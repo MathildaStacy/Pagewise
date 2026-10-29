@@ -3,19 +3,22 @@
 ## 1. 目标
 
 - 业务和 UI 完全分开：同一份 ViewModel 可以由任意皮肤渲染。
-- V1 交付两套皮肤：
+- 当前交付五套皮肤：
   - **`paper` 纸感（默认）**：视觉、布局、交互以 `docs/design/prototype.html` 为准。
   - **`glass` 苹果风**：功能、信息架构、操作流程、按钮所在区域和 `paper` 一致；组件的样子、材质、字体、动效按 iOS（Liquid Glass）的习惯重新做，参考 `docs/design/explore/apple.html`。**不是给 paper 换一套颜色**，见 §2。
-- 以后加 Meta 风、谷歌风等，只新增 `src/ui/skins/<name>/`，不改业务代码，也尽量不改页面。
+  - **`meta` Meta 风**：以 `docs/design/prototype-meta.html` 和 `prototype-meta/` 为准，保留 Facebook / Messenger / Meta AI 的组件形态。
+  - **`google` 新谷歌风**：以 `docs/design/prototype-google.html` 和 `prototype-google/` 为准，保留 Material 3 / Google Play 的组件形态。
+  - **`win11` Win11 风**：以 `docs/design/prototype-win11.html` 和 `prototype-win11/` 为准，包含原稿新增的「今天」、问书架、学习记录、新手引导（03 §13）。
+- 新增主题保持既有设计与业务，优先通过 L1 / L2 和局部页面样式还原其原稿；Win11 新增功能通过 `features/home/` 接入现有服务与存储。三套新增主题的细节见各自的 `src/ui/skins/<id>/skin.md`。
 
 ## 2. 皮肤之间什么必须一样、什么可以不同
 
-这张表是给苹果风（以及以后的皮肤）的边界。实现时拿不准的情况，先查这张表。
+Paper / Apple 的原有边界保留；Meta 与新谷歌遵循相同页面和流程。Win11 仅按已提交原稿增加 §1 列出的功能，不据此重新设计其他主题。
 
 | | 必须一样（所有皮肤） | 可以不同（皮肤自己决定） |
 | --- | --- | --- |
-| 功能 | 每个页面能做的事、确认步骤、AI 只提议不直接写 | — |
-| 信息架构 | 4 个 Tab 及顺序、页面集合、导航关系、哪些内容在哪个页面 | 页面内的分组方式（如 iOS 的圆角分组列表 vs 通栏列表） |
+| 功能 | 共有页面能做的事、确认步骤、AI 只提议不直接写 | Win11 原稿新增功能见 03 §13 |
+| 信息架构 | paper / glass / meta / google：书架 · 复习 · 笔记 · 我的；共有页面的导航关系 | Win11：今天 · 书架 · 复习 · 笔记 · 我的；原稿定义的页面内分组 |
 | 操作位置 | 每个操作所在的**区域**：顶栏左返回 / 顶栏右操作、听讲页底部的快捷动作 + 输入框、顶部进度 + 岔路提示条、书架的导入入口、浮层底部的按钮区 | 区域内部的排布细节（对齐、间距、按钮宽窄）、按钮的样子（实心 / 胶囊 / 文字按钮） |
 | 文案 | 所有文案（VM 给的字符串原样显示） | 纯装饰性的标签（如 iOS 返回键旁显示上一页标题"地图"） |
 | 语义色 | 主线、岔路、高亮、卡点、补充推导、AI 举例、对 / 错，各自颜色互不相同；原书文字和 AI 讲解一眼能分开（原书用衬线体） | 具体色值、明暗、透明度 |
@@ -36,7 +39,8 @@ L3 页面插槽     某个页面的局部区域整体替换（如书架顶部的
 
 - `src/ui/kit/base/` 是一套**按契约写好、只读 Token 的基础实现**。paper 皮肤基本等于 base + paper Token。
 - glass 皮肤覆盖：`AppBar`、`TabBar`、`ModeSwitch`、`Segmented`、`Switch`、`Sheet`、`Dialog`、`Toast`、`SelectionMenu`、`StepProgress`、`QuickActions`、`Composer`、`ListSection`/`Row`、`Button`、`Glass`（新材质）。其余（富文本、消息气泡、卡片类）只靠 Token 区分。
-- V1 不允许 L3 整页替换；L3 插槽只开放 §6.3 列出的几个。
+- meta / google / win11 共用 `skins/brand/components.tsx`，覆盖 `Cover`、`AppBar`、`TabBar`、`IconButton`、`ModeSwitch`、`Segmented`、`Switch`、`Button`、`QuickActions`、`Composer`、`StepProgress`、`ListSection`、`Row`、`Field`、`Fab`、`Dialog`、`Toast`、`SelectionMenu`、`Glass`、`UserBubble`、`StepHeader`、`Note`。`Sheet` 仍共用 base 的同一函数，内部按品牌切换标题、材质、圆角与动作排列，避免换肤重建表单。
+- V1 不允许 L3 整页替换；§6.3 保留原插槽设计边界。当前 `Skin` 类型没有注册 slots；三套新增主题在共享 `ShelfView` / `BookMapView` / `StudyView` / `ReaderView` / `MeView` 中用 `brand.kind` 做原稿要求的局部适配，Win11 新增四页由独立 home VM 提供。
 
 ## 4. Token
 
@@ -184,6 +188,21 @@ T2 对比度实装调整（Q-12）：glass light 的 ink2 改为 `rgba(60,60,67,
 
 `skin.icons: Record<IconName, IconComponent>`。`IconName` 是固定枚举（`back`、`more`、`search`、`check`、`skip`、`next`、`send`、`mic`、`book`、`bookOpen`、`teach`、`derive`、`spark`、`clock`、`chev`、`branch`、`pin`、`flag`、`cards`、`note`、`person`、`shelf`、`add`、`close`、`sync`…，T2 列全）。paper 用 lucide 1.7 线宽；glass 用 lucide 1.9–2.4 线宽、圆头（接近 SF Symbols），返回键是「‹」细箭头。页面只写 `<Icon name="back" />`。
 
+### 4.5 Meta / Google / Win11 与原生适配
+
+| 主题说明 | L1 / 图标来源 | L2 / 页面来源 |
+| --- | --- | --- |
+| [Meta](../../src/ui/skins/meta/skin.md) | `prototype-meta/base.css`、`pages.css`、`icons.js` | `ui-base.js` 与同目录各页 JS |
+| [新谷歌](../../src/ui/skins/google/skin.md) | `prototype-google/base.css`、`pages.css`、`icons.js` | `ui-base.js` 与同目录各页 JS |
+| [Win11](../../src/ui/skins/win11/skin.md) | `prototype-win11/base.css`、`pages.css`、`icons.js`、`shell.html` 的 SVG 定义 | 各页 JS，新增流程为 `ui-today.js` / `ui-welcome.js` |
+
+三份单文件 HTML 与各自 `build.py` 拼接的源文件一致。L1 完整值在相应 `tokens.ts`；`Tokens.brand` 承载三品牌的实心填充、AI 渐变和 Win11 材质，不改变既有语义色含义。实现以保留原稿为准，仅作必要的原生适配：
+
+- Android 使用系统 `sans-serif` / `serif`；原稿中的 Optimistic、Google Sans、Segoe UI 等不作为已安装字体。真实状态栏、手势区和键盘由原生系统处理，页面、TabBar、Composer、Sheet 使用安全区；不画原型中的模拟手机外框或桌面控制台。
+- 正文保留 RN 系统字号缩放，容器用最小高度或随内容增长；读书字号设置只缩放 AI / 原书正文。32–40dp 的原稿小控件通过 `hitSlop` 补足 48dp 触控范围，减少动态效果设置继续生效。
+- `kit/Gradient.tsx` 用原生 SVG 画底色和描边，内容仍是原生文字与控件。SVG stop 将颜色拆为 RGB 与 alpha，并乘入 `stopOpacity`；胶囊半径限制为 `min(请求圆角, 宽/2, 高/2)`，避免 `999` 在矢量矩形上变形。渐变文字先按原生文字测量，再按系统字体倍率绘制 SVG 字色。
+- Win11 保留 Mica / 亚克力和源阴影；模糊关闭时使用实色亚克力兜底。Android 9 起使用源多层外阴影，Android 10 起加内阴影，较旧版本退回传统阴影 / `elevation`，细节见 Win11 `skin.md`。 Win11 根页图标按钮用前景内绘涟漪（`foreground=true`、`borderless=false`），避免 Android 背景涟漪覆盖 `cardHi`、描边和阴影。
+
 ## 5. 组件契约
 
 所有组件从 `@ui/kit` 导入；它们是**代理**，运行时从当前皮肤取实现：
@@ -208,11 +227,11 @@ export const Button = makeProxy('Button');
 | `Screen` | `scroll?`, `edges?`, `children` | 页面根容器：底色、安全区 |
 | **`AppBar`** | `title`, `subtitle?`, `variant: 'root'\|'push'`, `onBack?`, `backLabel?`, `right?: ReactNode`, `scrollY?` | paper：48dp 白底居中标题（root 左对齐 20 号）。glass：push 页居中标题 + 「‹ backLabel」，root 页大标题随 `scrollY` 收起成小标题 |
 | **`TabBar`** | `items: {key,label,icon,badge?}[]`, `active`, `onSelect` | paper：58dp 通栏。glass：悬浮胶囊毛玻璃，选中项胶囊底 |
-| **`ModeSwitch`** | `value: 'read'\|'listen'`, `onChange` | 「读书 \| 听讲」，放在顶栏右侧（两个皮肤都在这里）。paper：主色浅底 + 主色滑块（原型 `.nav .mode`）。glass：iOS 分段控件（灰底白滑块） |
+| **`ModeSwitch`** | `value: 'read'\|'listen'`, `onChange` | 「读书 \| 听讲」，paper / glass / meta / google 放在顶栏右侧；Win11 按原稿放在顶栏下的 SelectorBar。paper：主色浅底 + 主色滑块（原型 `.nav .mode`）。glass：iOS 分段控件（灰底白滑块） |
 | **`Segmented`** | `options`, `value`, `onChange` | 原版/重排、vlm/pipeline、短/中/长、Markdown/Anki |
 | **`Switch`** | `value`, `onChange`, `accessibilityLabel` | glass 打开态用 `ok` 绿 |
 | **`Button`** | `variant: 'primary'\|'secondary'\|'ghost'\|'detour'\|'danger'\|'text'`, `size: 'sm'\|'md'\|'block'`, `icon?`, `disabled?`, `onPress` | |
-| `IconButton` | `icon`, `onPress`, `label`, `badge?` | |
+| `IconButton` | `icon`, `variant?: 'root'\|'push'`, `onPress`, `label`, `badge?` | 默认 push；Win11 根页操作显式传 root，启用原稿卡片底与阴影 |
 | **`QuickActions`** | `items: {key,label,kind?:'primary'\|'detour',icon?}[]`, `onPress(key)` | 听讲页输入框上方横向滚动的快捷动作。glass：毛玻璃 chip，浮在内容上 |
 | **`Composer`** | `value`, `onChange`, `placeholder`, `onSend`, `sendDisabled`, `quote?: {label,onClear}`, `micAvailable`, `onMic?` | glass：毛玻璃胶囊 + 底部渐隐 |
 | **`StepProgress`** | `steps: {title, state:'done'\|'current'\|'skipped'\|'todo'}[]`, `label`, `onPressStep(i)`, `onPressBar`, `right?` | 听讲页顶部进度。paper：原型 `.stbar`（左「第 k/n 步」+ 细分段条 + 右「AI 看到的内容 ›」），点条打开路线图浮层。glass：同一位置的横向胶囊步骤条（apple.html `.rail`），点某一步直接触发 `onPressStep` |
@@ -264,7 +283,7 @@ export interface Skin {
   statusBar(t: Tokens): { style: 'light-content'|'dark-content'; background: string };
 }
 export const defineSkin = (s: Skin) => s;
-export const skins = { paper, glass } as const;
+export const skins = { paper, glass, meta, google, win11 } as const;
 ```
 
 ### 6.2 Provider 与切换
@@ -284,7 +303,7 @@ export const makeStyles = <T extends NamedStyles<T>>(fn: (t: Tokens) => T) =>
   () => { const t = useTokens(); return useMemo(() => StyleSheet.create(fn(t)), [t]); };
 ```
 
-### 6.3 L3 插槽（V1 只开放这几个）
+### 6.3 L3 插槽（原设计边界，当前未注册）
 
 | 插槽 | 位置 | 默认 | glass V1 |
 | --- | --- | --- | --- |
@@ -292,7 +311,7 @@ export const makeStyles = <T extends NamedStyles<T>>(fn: (t: Tokens) => T) =>
 | `ReviewHero` | 复习页顶部三个数字 + 盒子图 | 原型 `.rvhero` | 不覆盖 |
 | `ThreadBackground` | 听讲 thread 底部留白 / 渐隐 | 无 | 覆盖：底部 150dp 留白给悬浮输入区 |
 
-插槽组件的 props 也是 VM 数据，规则同 §5。
+上表及 §6.1 的 `slots` 字段是原设计扩展点；当前 `src/ui/kit/skin.ts` 尚无 slots 接口，新增三品牌也未注册它。后续若启用，插槽 props 仍只接收 VM 数据，规则同 §5。
 
 ## 7. glass 皮肤逐页要点
 
@@ -313,10 +332,10 @@ export const makeStyles = <T extends NamedStyles<T>>(fn: (t: Tokens) => T) =>
 
 ## 8. 质量门槛（自动检查）
 
-1. **对比度测试** `__tests__/ui/contrast.test.ts`：对每个皮肤 × 每个 scheme，检查这些组合 ≥ 4.5（正文）或 ≥ 3（≥ 18dp 粗体 / 图标）：ink/bg、ink/surface、ink2/surface、paperInk/paper、onAccent/accent、accent/surface、detour/detourBg、stuck/stuckBg、ok/surface、bad/badBg、derive/deriveBg、example/exampleBg、pin/pinBg、ink/highlight。半透明色先和下层底色混合再算。
+1. **对比度目标与实际覆盖** `__tests__/ui/contrast.test.ts` 当前枚举 paper / glass × light / dark，Apple 为保留原稿色值记录了明确例外。目标检查组合 ≥ 4.5（正文）或 ≥ 3（≥ 18dp 粗体 / 图标）：ink/bg、ink/surface、ink2/surface、paperInk/paper、onAccent/accent、accent/surface、detour/detourBg、stuck/stuckBg、ok/surface、bad/badBg、derive/deriveBg、example/exampleBg、pin/pinBg、ink/highlight。半透明色先和下层底色混合再算。新增三主题由 `brandFidelity.test.tsx` 核对源调色板、SVG alpha / 胶囊半径及五主题 Sheet 草稿保留；它不等于完整 AA 认证。
 2. **Token 完整性**：类型保证；再加测试遍历所有 key 不为空。
 3. **组件契约测试**：对每个皮肤，用同一组 props 渲染每个组件，断言不抛错、可访问性字段存在。
-4. **页面快照**：每个页面用 03 里的「示例状态」在 2 皮肤 × 2 scheme 下渲染（react-test-renderer），只断言不抛错和关键文案存在（不做像素快照）。
+4. **页面样本渲染**：`pagePreviews.test.tsx` 当前在五皮肤的 light 下渲染示例状态（react-test-renderer），只检查成功渲染，不做像素快照；组件契约覆盖五皮肤 × light / dark。深色、字体 1.3 和原生交互另看设备捕获，不能由这些测试推定全部视觉通过。
 5. **Lint**：`src/ui/screens/**` 禁止颜色字面量（`react-native/no-color-literals`）、禁止 `fontSize:`/`borderRadius:` 数字字面量（自定义 `no-restricted-syntax` 规则），禁止 import `@ui/skins/*`。
 
 ## 9. 皮肤对照页（SkinGallery，仅开发）
@@ -326,11 +345,11 @@ export const makeStyles = <T extends NamedStyles<T>>(fn: (t: Tokens) => T) =>
 - 所有 kit 组件的各个状态。
 - 每个页面的示例状态（用 03 的示例 VM 渲染，不连数据库）。
 
-负责人用它在手机上直接比较两套皮肤，验收 UI。
+负责人用它在手机上比较五套皮肤，验收 UI。
 
 ## 10. 新增一个皮肤的步骤（以后用）
 
 1. 复制 `skins/glass/` 为 `skins/<id>/`，改 `tokens.ts`（light + dark 都要给全）。
 2. 决定要覆盖哪些组件，其余删掉用 base。
-3. 在 `skins/index.ts` 注册；对比度和契约测试自动覆盖新皮肤。
+3. 在 `skins/index.ts` 注册，并显式扩展外观枚举、契约 / 页面测试及对比度 variants；当前对比度测试不会自动发现新皮肤。
 4. 在 SkinGallery 里逐页检查，对照 §2 的表确认没有改动"必须一样"的部分。

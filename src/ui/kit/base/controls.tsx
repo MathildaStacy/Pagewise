@@ -15,6 +15,7 @@ import { useSkin, useTokens } from '../context';
 import { Icon } from '../Icon';
 import { makeStyles } from '../makeStyles';
 import * as Kit from '../proxy';
+import { Gradient } from '../Gradient';
 import {
   Children,
   cloneElement,
@@ -72,7 +73,10 @@ export function Screen({ scroll, edges, children, style }: KitProps['Screen']) {
   const first = parts[0];
   const hasHeader =
     isValidElement<KitProps['AppBar']>(first) && first.type === Kit.AppBar;
-  const floatingHeader = hasHeader && t.layout.groupedLists;
+  const floatingHeader =
+    hasHeader &&
+    t.layout.groupedLists &&
+    (!t.brand || t.brand.kind === 'win11');
   const largeTitle = floatingHeader && first.props.variant === 'root';
   const header = hasHeader
     ? cloneElement(first, {
@@ -99,6 +103,15 @@ export function Screen({ scroll, edges, children, style }: KitProps['Screen']) {
       accessibilityLabel="页面"
       accessibilityState={{}}
     >
+      {t.brand?.kind === 'win11' ? (
+        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+          <Gradient
+            colors={t.brand.mica}
+            vertical
+            style={StyleSheet.create({ root: { flex: 1 } }).root}
+          />
+        </View>
+      ) : null}
       {scroll ? (
         <View style={layout.body}>
           {hasHeader ? (
@@ -120,6 +133,9 @@ export function Screen({ scroll, edges, children, style }: KitProps['Screen']) {
               s.scrollContent,
               floatingHeader ? layout.scrollInset : undefined,
               largeTitle ? s.floatingTabSpace : undefined,
+              t.brand && hasHeader && first.props.variant === 'root'
+                ? s.floatingTabSpace
+                : undefined,
             ]}
             keyboardShouldPersistTaps="handled"
           >
