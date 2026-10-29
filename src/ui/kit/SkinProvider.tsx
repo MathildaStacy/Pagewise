@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type PropsWithChildren } from 'react';
-import { AccessibilityInfo, useColorScheme } from 'react-native';
+import { AccessibilityInfo, Platform, useColorScheme } from 'react-native';
 import { skins } from '../skins';
 import { baseComponents } from './base';
 import { SkinContext } from './context';
@@ -84,7 +84,11 @@ export function SkinProvider({
       fontScale,
       reduceMotion: reduceMotion ?? systemReduceMotion,
       blurEnabled:
-        blurEnabled && !reduceTransparency && original.capabilities.blur,
+        // Android BlurView can tint the whole Fabric window; use the token fill.
+        Platform.OS !== 'android' &&
+        blurEnabled &&
+        !reduceTransparency &&
+        original.capabilities.blur,
     };
   }, [
     skinId,

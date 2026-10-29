@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   AccessibilityInfo,
   Modal,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -145,6 +146,41 @@ it('blurEnabled=false 有稳定填充且不挂载原生 blur', async () => {
     skins.glass.tokens.light.color.glassStrong,
   );
 });
+
+it.each(['light', 'dark'] as const)(
+  'Android %s uses the translucent fill for surfaces and scrolled headers',
+  async scheme => {
+    const platform = jest.replaceProperty(Platform, 'OS', 'android');
+    try {
+      const renderer = await mount(
+        <>
+          <Kit.Glass strength="strong">
+            <Text>材质内容</Text>
+          </Kit.Glass>
+          <Kit.AppBar title="标题" variant="root" scrollY={80} />
+        </>,
+        { skinId: 'glass', scheme, blurEnabled: true, reduceMotion: true },
+      );
+      for (const testID of ['glass-blur', 'glass-appbar-blur']) {
+        expect(renderer.root.findAllByProps({ testID })).toHaveLength(0);
+      }
+      const surface = renderer.root.findAll(
+        node =>
+          node.props.accessibilityLabel === '材质容器' &&
+          node.props.style !== undefined,
+      )[0];
+      expect(flattened(surface).backgroundColor).toBe(
+        skins.glass.tokens[scheme].color.glassStrong,
+      );
+      const header = renderer.root.findAllByProps({
+        testID: 'glass-appbar-material',
+      })[0];
+      expect(flattened(header).overflow).toBe('hidden');
+    } finally {
+      platform.restore();
+    }
+  },
+);
 
 it.each(['paper', 'glass'] as const)(
   '%s 的 reduceMotion=true 禁用浮层进出与初始移动动画',

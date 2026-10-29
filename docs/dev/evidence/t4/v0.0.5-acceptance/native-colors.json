@@ -1,0 +1,178 @@
+{
+  "final-apple-dark-context.png": {
+    "size": [
+      1280,
+      2856
+    ],
+    "backgroundPoint": [
+      20,
+      1300
+    ],
+    "backgroundRGB": [
+      0,
+      0,
+      0
+    ]
+  },
+  "final-apple-dark-listen.png": {
+    "size": [
+      1280,
+      2856
+    ],
+    "backgroundPoint": [
+      20,
+      1300
+    ],
+    "backgroundRGB": [
+      0,
+      0,
+      0
+    ]
+  },
+  "final-apple-dark-map.png": {
+    "size": [
+      1280,
+      2856
+    ],
+    "backgroundPoint": [
+      20,
+      1300
+    ],
+    "backgroundRGB": [
+      0,
+      0,
+      0
+    ]
+  },
+  "final-apple-dark-reader.png": {
+    "size": [
+      1280,
+      2856
+    ],
+    "backgroundPoint": [
+      20,
+      1300
+    ],
+    "backgroundRGB": [
+      0,
+      0,
+      0
+    ]
+  },
+  "final-apple-dark-shelf.png": {
+    "size": [
+      1280,
+      2856
+    ],
+    "backgroundPoint": [
+      20,
+      1300
+    ],
+    "backgroundRGB": [
+      0,
+      0,
+      0
+    ]
+  },
+  "final-apple-light-context.png": {
+    "size": [
+      1280,
+      2856
+    ],
+    "backgroundPoint": [
+      20,
+      1300
+    ],
+    "backgroundRGB": [
+      189,
+      189,
+      193
+    ]
+  },
+  "final-apple-light-listen-after-modal.png": {
+    "size": [
+      1280,
+      2856
+    ],
+    "backgroundPoint": [
+      20,
+      1300
+    ],
+    "backgroundRGB": [
+      242,
+      242,
+      247
+    ]
+  },
+  "final-apple-light-listen.png": {
+    "size": [
+      1280,
+      2856
+    ],
+    "backgroundPoint": [
+      20,
+      1300
+    ],
+    "backgroundRGB": [
+      242,
+      242,
+      247
+    ]
+  },
+  "final-apple-light-map.png": {
+    "size": [
+      1280,
+      2856
+    ],
+    "backgroundPoint": [
+      20,
+      1300
+    ],
+    "backgroundRGB": [
+      242,
+      242,
+      247
+    ]
+  },
+  "final-apple-light-reader.png": {
+    "size": [
+      1280,
+      2856
+    ],
+    "backgroundPoint": [
+      20,
+      1300
+    ],
+    "backgroundRGB": [
+      242,
+      242,
+      247
+    ]
+  },
+  "final-apple-light-shelf.png": {
+    "size": [
+      1280,
+      2856
+    ],
+    "backgroundPoint": [
+      20,
+      1300
+    ],
+    "backgroundRGB": [
+      242,
+      242,
+      247
+    ]
+  },
+  "apple-dark-grey-before.png": {
+    "backgroundPoint": [
+      20,
+      1300
+    ],
+    "backgroundRGB": [
+      100,
+      100,
+      100
+    ]
+  }
+}

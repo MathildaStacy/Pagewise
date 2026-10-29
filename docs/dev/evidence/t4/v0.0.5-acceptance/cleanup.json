@@ -1,0 +1,30 @@
+{
+  "device": "emulator-5556 / Pagewise_brand_ui_20261029",
+  "settingsBefore": {
+    "enabled_accessibility_services": "null",
+    "accessibility_enabled": "0",
+    "tts_default_locale": "null",
+    "tts_default_synth": "null",
+    "font_scale": "1.0"
+  },
+  "settingsAfter": {
+    "enabled_accessibility_services": "null",
+    "accessibility_enabled": "0",
+    "tts_default_locale": "null",
+    "tts_default_synth": "null",
+    "font_scale": "1.0"
+  },
+  "settingsRestored": true,
+  "temporaryPackagesRemoved": [
+    "com.pagewise.acceptance",
+    "io.pagewise.acceptance5"
+  ],
+  "temporaryReverseRemoved": 8089,
+  "downloadedChineseVoicePackRemoved": true,
+  "existingComPagewiseNotInstalledOrCleared": true,
+  "acceptanceAvdDeleted": "Pagewise_v005_acceptance",
+  "ownMetroStopped": 8089,
+  "formalIndexRestored": true,
+  "debugApplicationIdSuffixRemoved": true,
+  "originalPixelAvd": "emulator-5554 exited externally before cleanup; installed test-only packages on that offline AVD were not re-opened or edited"
+}

@@ -32,3 +32,7 @@
 - 云端：[原始 CI](ci.json)、[Jest 计数](ci-quality-summary.txt)。对应 c9ea930；79 suites passed / 1 skipped，1197 tests passed / 2 skipped，15 snapshots passed。
 - 本地补丁：[验证结果](validation.json)、[学习回归 18 tests](focus-fix-test.txt)、[其余相关回归 24 tests](focus-fix-related-tests.txt)、[ESLint](focus-fix-lint.txt)、[TypeScript](focus-fix-typecheck.txt)、[arm64 release 构建](focus-fix-release-build.txt)。ESLint 成功无输出，日志为空文件。
 - [环境恢复回执](cleanup.json)、[观察到的外部设计修改](design-observed-external-changes.json)。后者用于保留并行设计工作，不是本轮改动清单。
+
+清理回执记录当时的 `2424c7f`；收尾另观察到并行工作推进至 `635c0cb` 并包含其他源码。证据仍只覆盖 c9ea930 应用基线加本轮 N1 补丁，后续源码不在本轮验证范围。
+
+2026-10-30 补验结论与新证据见 [v0.0.5 报告](../acceptance-v0.0.5.md)，不修改本目录的历史原始结果。

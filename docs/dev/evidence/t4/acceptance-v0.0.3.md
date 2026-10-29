@@ -10,7 +10,7 @@
 
 - Jest：79 suites passed、1 skipped，80 total；1197 tests passed、2 skipped，1199 total。
 - 15 snapshots passed；lint、TypeScript 和 Android debug APK 构建均通过。
-- [CI 原始结果](v0.0.3-acceptance/ci.json)、[测试计数](v0.0.3-acceptance/ci-quality-summary.txt)。此 CI 不覆盖本轮尚未提交的笔记页修复；补丁本地验证列于下文。
+- [CI 原始结果](v0.0.3-acceptance/ci.json)、[测试计数](v0.0.3-acceptance/ci-quality-summary.txt)。此 CI 不覆盖本轮笔记页修复；补丁本地验证列于下文。
 
 ## Apple 图片与菜单：指定检查通过
 
@@ -72,4 +72,8 @@ TalkBack 期间使用保留无障碍服务的独立原生探针，未用会抑�
 
 临时 Demo 入口已恢复，独立探针包和设备临时文件已移除，本轮启动的 Metro 已停止；字号恢复 1.0，无障碍服务恢复为原始空值 / 关闭。设备已安装包含 N1 修复的正式入口 release 0.0.3（versionCode 3、非 debuggable），没有清空 App 数据。见 [清理回执](v0.0.3-acceptance/cleanup.json)。
 
-本轮没有写入设计文件。期间另一项设计工作将 HEAD 推进至 `2424c7f`，与基线的提交差异仅为 Win11 设计文档；该提交及现有未提交设计内容均保留。本轮产品改动仅为 N1 的源码和相应测试；未创建提交、PR 或新 tag。
+本轮没有写入设计文件。原生及构建验证时 HEAD 为 `2424c7f`，该提交相对基线只增加 Win11 设计文档；设计工作均保留。本轮自行修改的产品代码仅为 N1 的源码和相应测试。
+
+环境清理后，收尾观察到并行工作已将 HEAD 推进至 `635c0cb`，并纳入其他源码及本报告。本轮没有执行提交、合并、推送或创建 tag；**上述验收不覆盖这些后续并行源码改动**。设备 release 与本轮验证记录对应清理前的基线加 N1 补丁，不代表后来 HEAD 的构建已验收。
+
+2026-10-30 后续补验见 [v0.0.5 三项补验](acceptance-v0.0.5.md)：Apple 灰蒙已修复，新增闪卡原生回读通过，TalkBack 已完成录音转写内容核对；人工音质听感仍待核对。本报告保留 v0.0.3 当时的失败与覆盖范围。

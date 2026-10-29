@@ -1,0 +1,15 @@
+{
+  "id": 1,
+  "result": {
+    "result": {
+      "className": "Object",
+      "description": "Object",
+      "type": "object",
+      "value": {
+        "clockToday": "2026-10-31",
+        "dueOn": "2026-10-31",
+        "mode": "demo"
+      }
+    }
+  }
+}

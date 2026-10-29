@@ -1,0 +1,2790 @@
+[
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.widget.FrameLayout",
+    "bounds": [
+      0,
+      0,
+      1280,
+      2856
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.widget.LinearLayout",
+    "bounds": [
+      0,
+      0,
+      1280,
+      2856
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.widget.FrameLayout",
+    "bounds": [
+      0,
+      0,
+      1280,
+      2856
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.widget.LinearLayout",
+    "bounds": [
+      0,
+      0,
+      1280,
+      2856
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.widget.FrameLayout",
+    "bounds": [
+      0,
+      0,
+      1280,
+      2856
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.widget.FrameLayout",
+    "bounds": [
+      0,
+      0,
+      1280,
+      2856
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.view.ViewGroup",
+    "bounds": [
+      0,
+      0,
+      1280,
+      2856
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.view.View",
+    "bounds": [
+      0,
+      0,
+      1280,
+      2856
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.view.ViewGroup",
+    "bounds": [
+      0,
+      0,
+      1280,
+      2856
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.view.ViewGroup",
+    "bounds": [
+      0,
+      0,
+      1280,
+      2856
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.view.ViewGroup",
+    "bounds": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": false,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.view.ViewGroup",
+    "bounds": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": false,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.widget.FrameLayout",
+    "bounds": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": false,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.webkit.WebView",
+    "bounds": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": false,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.view.ViewGroup",
+    "bounds": [
+      0,
+      0,
+      1280,
+      2856
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.view.ViewGroup",
+    "bounds": [
+      0,
+      0,
+      1280,
+      2856
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.widget.ScrollView",
+    "bounds": [
+      0,
+      0,
+      1280,
+      2856
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.widget.LinearLayout",
+    "bounds": [
+      0,
+      0,
+      1280,
+      0
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": false,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.view.ViewGroup",
+    "bounds": [
+      0,
+      0,
+      1280,
+      2856
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.view.ViewGroup",
+    "bounds": [
+      0,
+      0,
+      1280,
+      0
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": false,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.view.ViewGroup",
+    "bounds": [
+      0,
+      0,
+      1280,
+      2856
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "页面",
+    "class": "android.view.View",
+    "bounds": [
+      0,
+      0,
+      1280,
+      2856
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.widget.ScrollView",
+    "bounds": [
+      0,
+      156,
+      1280,
+      2784
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": true
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.view.ViewGroup",
+    "bounds": [
+      0,
+      156,
+      1280,
+      2784
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.view.ViewGroup",
+    "bounds": [
+      48,
+      288,
+      1232,
+      483
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "已学",
+    "class": "android.widget.ImageView",
+    "bounds": [
+      96,
+      356,
+      156,
+      416
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.SvgView",
+    "bounds": [
+      108,
+      368,
+      144,
+      404
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.GroupView",
+    "bounds": [
+      115,
+      379,
+      136,
+      394
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.PathView",
+    "bounds": [
+      115,
+      379,
+      136,
+      394
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "已建立书的地图 · 3 章",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      192,
+      324,
+      1184,
+      390
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "没有需要确认的地方",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      192,
+      390,
+      1184,
+      447
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.view.ViewGroup",
+    "bounds": [
+      48,
+      531,
+      1232,
+      730
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "1 绪论",
+    "class": "android.widget.Button",
+    "bounds": [
+      48,
+      531,
+      1232,
+      730
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": true,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.view.ViewGroup",
+    "bounds": [
+      90,
+      580,
+      192,
+      682
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "1",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      128,
+      598,
+      154,
+      664
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "绪论",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      228,
+      567,
+      1106,
+      637
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "p.1–34 · 5 节 · 已学完",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      228,
+      637,
+      1106,
+      694
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.SvgView",
+    "bounds": [
+      1142,
+      607,
+      1190,
+      655
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.GroupView",
+    "bounds": [
+      1160,
+      617,
+      1174,
+      645
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.PathView",
+    "bounds": [
+      1160,
+      617,
+      1174,
+      645
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.view.ViewGroup",
+    "bounds": [
+      48,
+      760,
+      1232,
+      959
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "2 智能体",
+    "class": "android.widget.Button",
+    "bounds": [
+      48,
+      760,
+      1232,
+      959
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": true,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.view.ViewGroup",
+    "bounds": [
+      90,
+      809,
+      192,
+      911
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "2",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      128,
+      827,
+      154,
+      893
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "智能体",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      228,
+      796,
+      1106,
+      866
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "p.35–65 · 4 节 · 已学完",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      228,
+      866,
+      1106,
+      923
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.SvgView",
+    "bounds": [
+      1142,
+      836,
+      1190,
+      884
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.GroupView",
+    "bounds": [
+      1160,
+      846,
+      1174,
+      874
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.PathView",
+    "bounds": [
+      1160,
+      846,
+      1174,
+      874
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.view.ViewGroup",
+    "bounds": [
+      48,
+      989,
+      1232,
+      2784
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "3 通过搜索进行问题求解",
+    "class": "android.widget.Button",
+    "bounds": [
+      48,
+      989,
+      1232,
+      1188
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": true,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.view.ViewGroup",
+    "bounds": [
+      90,
+      1038,
+      192,
+      1140
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "3",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      128,
+      1056,
+      154,
+      1122
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "通过搜索进行问题求解",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      228,
+      1025,
+      1106,
+      1095
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "p.66–127 · 6 节 · 在学 3.5.3",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      228,
+      1095,
+      1106,
+      1152
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.view.ViewGroup",
+    "bounds": [
+      1142,
+      1065,
+      1190,
+      1113
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.SvgView",
+    "bounds": [
+      1142,
+      1065,
+      1190,
+      1113
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.GroupView",
+    "bounds": [
+      1208,
+      1075,
+      1222,
+      1103
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": false,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.PathView",
+    "bounds": [
+      1208,
+      1075,
+      1222,
+      1103
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": false,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.view.ViewGroup",
+    "bounds": [
+      48,
+      1188,
+      1232,
+      2784
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "3.1 问题求解智能体，展开",
+    "class": "android.widget.Button",
+    "bounds": [
+      48,
+      1202,
+      1232,
+      1334
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": true,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "已学",
+    "class": "android.widget.ImageView",
+    "bounds": [
+      102,
+      1238,
+      162,
+      1298
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.SvgView",
+    "bounds": [
+      114,
+      1250,
+      150,
+      1286
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.GroupView",
+    "bounds": [
+      121,
+      1261,
+      142,
+      1276
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.PathView",
+    "bounds": [
+      121,
+      1261,
+      142,
+      1276
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "3.1 问题求解智能体",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      195,
+      1238,
+      584,
+      1299
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "2/2",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      1082,
+      1240,
+      1142,
+      1297
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.SvgView",
+    "bounds": [
+      1151,
+      1249,
+      1190,
+      1288
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.GroupView",
+    "bounds": [
+      1165,
+      1257,
+      1177,
+      1280
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.PathView",
+    "bounds": [
+      1165,
+      1257,
+      1177,
+      1280
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "3.2 问题示例，展开",
+    "class": "android.widget.Button",
+    "bounds": [
+      48,
+      1334,
+      1232,
+      1466
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": true,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "已学",
+    "class": "android.widget.ImageView",
+    "bounds": [
+      102,
+      1370,
+      162,
+      1430
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.SvgView",
+    "bounds": [
+      114,
+      1382,
+      150,
+      1418
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.GroupView",
+    "bounds": [
+      121,
+      1393,
+      142,
+      1408
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.PathView",
+    "bounds": [
+      121,
+      1393,
+      142,
+      1408
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "3.2 问题示例",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      195,
+      1370,
+      449,
+      1431
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "2/2",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      1082,
+      1372,
+      1142,
+      1429
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.SvgView",
+    "bounds": [
+      1151,
+      1381,
+      1190,
+      1420
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.GroupView",
+    "bounds": [
+      1165,
+      1389,
+      1177,
+      1412
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.PathView",
+    "bounds": [
+      1165,
+      1389,
+      1177,
+      1412
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "3.3 搜索算法，展开",
+    "class": "android.widget.Button",
+    "bounds": [
+      48,
+      1466,
+      1232,
+      1598
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": true,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "已学",
+    "class": "android.widget.ImageView",
+    "bounds": [
+      102,
+      1502,
+      162,
+      1562
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.SvgView",
+    "bounds": [
+      114,
+      1514,
+      150,
+      1550
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.GroupView",
+    "bounds": [
+      121,
+      1525,
+      142,
+      1540
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.PathView",
+    "bounds": [
+      121,
+      1525,
+      142,
+      1540
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "3.3 搜索算法",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      195,
+      1502,
+      449,
+      1563
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "4/4",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      1082,
+      1504,
+      1142,
+      1561
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.SvgView",
+    "bounds": [
+      1151,
+      1513,
+      1190,
+      1552
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.GroupView",
+    "bounds": [
+      1165,
+      1521,
+      1177,
+      1544
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.PathView",
+    "bounds": [
+      1165,
+      1521,
+      1177,
+      1544
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "3.4 无信息搜索策略，展开",
+    "class": "android.widget.Button",
+    "bounds": [
+      48,
+      1598,
+      1232,
+      1730
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": true,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "已学",
+    "class": "android.widget.ImageView",
+    "bounds": [
+      102,
+      1634,
+      162,
+      1694
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.SvgView",
+    "bounds": [
+      114,
+      1646,
+      150,
+      1682
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.GroupView",
+    "bounds": [
+      121,
+      1657,
+      142,
+      1672
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.PathView",
+    "bounds": [
+      121,
+      1657,
+      142,
+      1672
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "3.4 无信息搜索策略",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      195,
+      1634,
+      584,
+      1695
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "6/6",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      1082,
+      1636,
+      1142,
+      1693
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.SvgView",
+    "bounds": [
+      1151,
+      1645,
+      1190,
+      1684
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.GroupView",
+    "bounds": [
+      1165,
+      1653,
+      1177,
+      1676
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.PathView",
+    "bounds": [
+      1165,
+      1653,
+      1177,
+      1676
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "3.5 有信息（启发式）搜索策略，收起",
+    "class": "android.widget.Button",
+    "bounds": [
+      48,
+      1730,
+      1232,
+      1862
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": true,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "学习中",
+    "class": "android.widget.ImageView",
+    "bounds": [
+      102,
+      1766,
+      162,
+      1826
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.view.ViewGroup",
+    "bounds": [
+      132,
+      1771,
+      157,
+      1822
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "3.5 有信息（启发式）搜索策略",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      195,
+      1766,
+      809,
+      1827
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "2/6",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      1082,
+      1768,
+      1142,
+      1825
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.view.ViewGroup",
+    "bounds": [
+      1151,
+      1777,
+      1190,
+      1816
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.SvgView",
+    "bounds": [
+      1151,
+      1777,
+      1190,
+      1816
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.GroupView",
+    "bounds": [
+      1204,
+      1785,
+      1216,
+      1808
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": false,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.PathView",
+    "bounds": [
+      1204,
+      1785,
+      1216,
+      1808
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": false,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "3.5.1 贪心最佳优先搜索",
+    "class": "android.widget.Button",
+    "bounds": [
+      48,
+      1862,
+      1232,
+      1994
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": true,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "已学",
+    "class": "android.widget.ImageView",
+    "bounds": [
+      198,
+      1898,
+      258,
+      1958
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.SvgView",
+    "bounds": [
+      210,
+      1910,
+      246,
+      1946
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.GroupView",
+    "bounds": [
+      217,
+      1921,
+      238,
+      1936
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.PathView",
+    "bounds": [
+      217,
+      1921,
+      238,
+      1936
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "3.5.1 贪心最佳优先搜索",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      291,
+      1898,
+      762,
+      1959
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "p.100",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      1092,
+      1900,
+      1190,
+      1957
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "3.5.2 A*搜索",
+    "class": "android.widget.Button",
+    "bounds": [
+      48,
+      1994,
+      1232,
+      2126
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": true,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "已学",
+    "class": "android.widget.ImageView",
+    "bounds": [
+      198,
+      2030,
+      258,
+      2090
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.SvgView",
+    "bounds": [
+      210,
+      2042,
+      246,
+      2078
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.GroupView",
+    "bounds": [
+      217,
+      2053,
+      238,
+      2068
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.PathView",
+    "bounds": [
+      217,
+      2053,
+      238,
+      2068
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "3.5.2 A*搜索",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      291,
+      2029,
+      541,
+      2090
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "卡点",
+    "class": "android.widget.TextView",
+    "bounds": [
+      553,
+      2027,
+      655,
+      2093
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "卡点",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      568,
+      2033,
+      640,
+      2087
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "p.102",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      1092,
+      2032,
+      1190,
+      2089
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "3.5.3 搜索等值线",
+    "class": "android.widget.Button",
+    "bounds": [
+      48,
+      2126,
+      1232,
+      2258
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": true,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "学习中",
+    "class": "android.widget.ImageView",
+    "bounds": [
+      198,
+      2162,
+      258,
+      2222
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.view.ViewGroup",
+    "bounds": [
+      228,
+      2167,
+      253,
+      2218
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "3.5.3 搜索等值线",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      291,
+      2162,
+      627,
+      2223
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "p.106",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      1092,
+      2164,
+      1190,
+      2221
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "3.5.4 满意搜索：不可容许的启发式函数与加权A*搜索",
+    "class": "android.widget.Button",
+    "bounds": [
+      48,
+      2258,
+      1232,
+      2428
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": true,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "未学",
+    "class": "android.widget.ImageView",
+    "bounds": [
+      198,
+      2313,
+      258,
+      2373
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "3.5.4 满意搜索：不可容许的启发式函数与加权A*搜索",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      291,
+      2282,
+      1058,
+      2404
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "p.108",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      1092,
+      2315,
+      1190,
+      2372
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "3.5.5 内存受限搜索",
+    "class": "android.widget.Button",
+    "bounds": [
+      48,
+      2428,
+      1232,
+      2560
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": true,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "未学",
+    "class": "android.widget.ImageView",
+    "bounds": [
+      198,
+      2464,
+      258,
+      2524
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "3.5.5 内存受限搜索",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      291,
+      2464,
+      672,
+      2525
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "p.110",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      1092,
+      2466,
+      1190,
+      2523
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "3.5.6 双向启发式搜索",
+    "class": "android.widget.Button",
+    "bounds": [
+      48,
+      2560,
+      1232,
+      2692
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": true,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "未学",
+    "class": "android.widget.ImageView",
+    "bounds": [
+      198,
+      2596,
+      258,
+      2656
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "3.5.6 双向启发式搜索",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      291,
+      2596,
+      717,
+      2657
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "p.113",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      1092,
+      2598,
+      1190,
+      2655
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "3.6 启发式函数，展开",
+    "class": "android.widget.Button",
+    "bounds": [
+      48,
+      2692,
+      1232,
+      2784
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": true,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "未学",
+    "class": "android.widget.ImageView",
+    "bounds": [
+      102,
+      2728,
+      162,
+      2784
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "3.6 启发式函数",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      195,
+      2728,
+      494,
+      2784
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "0/6",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      1082,
+      2730,
+      1142,
+      2784
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.SvgView",
+    "bounds": [
+      1151,
+      2739,
+      1190,
+      2778
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.GroupView",
+    "bounds": [
+      1165,
+      2747,
+      1177,
+      2770
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.PathView",
+    "bounds": [
+      1165,
+      2747,
+      1177,
+      2770
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.view.ViewGroup",
+    "bounds": [
+      0,
+      156,
+      1280,
+      288
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.view.ViewGroup",
+    "bounds": [
+      0,
+      156,
+      1280,
+      288
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "书架",
+    "class": "android.widget.Button",
+    "bounds": [
+      24,
+      156,
+      288,
+      288
+    ],
+    "focused": false,
+    "a11yFocused": true,
+    "visible": true,
+    "clickable": true,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.SvgView",
+    "bounds": [
+      24,
+      182,
+      105,
+      263
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.GroupView",
+    "bounds": [
+      47,
+      195,
+      74,
+      249
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.PathView",
+    "bounds": [
+      47,
+      195,
+      74,
+      249
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "书架",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      105,
+      184,
+      207,
+      259
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "android.view.ViewGroup",
+    "bounds": [
+      294,
+      169,
+      986,
+      275
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "人工智能：现代方法",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      410,
+      169,
+      869,
+      235
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "书的地图",
+    "desc": "",
+    "class": "android.widget.TextView",
+    "bounds": [
+      574,
+      235,
+      706,
+      275
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "全书搜索",
+    "class": "android.widget.Button",
+    "bounds": [
+      1124,
+      156,
+      1256,
+      288
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": true,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.SvgView",
+    "bounds": [
+      1154,
+      186,
+      1226,
+      258
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.GroupView",
+    "bounds": [
+      1167,
+      199,
+      1214,
+      246
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.CircleView",
+    "bounds": [
+      1167,
+      199,
+      1206,
+      238
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "desc": "",
+    "class": "com.horcrux.svg.PathView",
+    "bounds": [
+      1201,
+      233,
+      1214,
+      246
+    ],
+    "focused": false,
+    "a11yFocused": false,
+    "visible": true,
+    "clickable": false,
+    "editable": false,
+    "scrollable": false
+  }
+]

@@ -1,0 +1,15 @@
+{
+  "audio": "talkback-controls-zh.wav",
+  "model": "Systran/faster-whisper-small",
+  "method": "local ASR, Chinese, int8 CPU, beam_size=5, VAD",
+  "duration": 21.8968125,
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 19.0,
+      "text": "半读彩丹,button,double tap to activate,懂了,下一步,button,double tap to activate,不懂就问,edit box,double tap to edit text,double tap发送,button disabled.",
+      "avg_logprob": -0.3236572371154535,
+      "no_speech_prob": 0.3174004852771759
+    }
+  ]
+}

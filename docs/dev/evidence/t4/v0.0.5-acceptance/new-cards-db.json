@@ -1,0 +1,37 @@
+{
+  "id": 1,
+  "result": {
+    "result": {
+      "className": "Array",
+      "description": "Array(3)",
+      "subtype": "array",
+      "type": "object",
+      "value": [
+        {
+          "back": "f(n)=g(n)+h(n)：已花代价加剩余代价的估计。_native_v005_back",
+          "box": 1,
+          "due_on": "2026-10-31",
+          "front": "A* 的评价函数是什么？_native_v005_front",
+          "id": 13,
+          "origin": "section_end"
+        },
+        {
+          "back": "h(n) 从不高估到目标的真实最小代价。",
+          "box": 1,
+          "due_on": "2026-10-31",
+          "front": "什么叫可容许？",
+          "id": 14,
+          "origin": "section_end"
+        },
+        {
+          "back": "当 h(n) 恒为 0 时，A* 就是一致代价搜索。",
+          "box": 1,
+          "due_on": "2026-10-31",
+          "front": "A* 和一致代价搜索有什么关系？",
+          "id": 15,
+          "origin": "detour"
+        }
+      ]
+    }
+  }
+}
