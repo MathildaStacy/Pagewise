@@ -177,12 +177,14 @@
     "apple-dark-listen-final",
     "apple-dark-reader-final",
     "apple-dark-listen-reopen-final",
-    "apple-dark-reader-reopen-final"
+    "apple-dark-reader-reopen-final",
+    "apple-light-map-final (tinted initial capture; layout only)",
+    "apple-dark-map-final (tinted initial capture; dark map re-open recovered)"
   ],
   "fixedNoteEvidence": [
     "apple-light-current-note-focus-fix-1 (debug warning banner present)",
     "apple-light-note-reopened-after-fix",
     "apple-dark-note-focus-fix-final"
   ],
-  "remainingVisualIssue": "Apple active study/listen and reflow sometimes remain tinted over the entire screen; re-opened at rest and still observed. Map re-open was normal. No unproven broad blur change was applied."
+  "remainingVisualIssue": "Apple native pages sometimes remain tinted over the entire screen. Initial map captures were tinted; the dark map re-open recovered. Dark study/listen and reflow were re-opened at rest and still tinted. No unproven broad blur change was applied."
 }
