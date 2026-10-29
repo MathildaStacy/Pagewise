@@ -1,9 +1,16 @@
 import { createElement } from 'react';
-import { AccessibilityInfo, TextInput } from 'react-native';
+import {
+  AccessibilityInfo,
+  Image,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+} from 'react-native';
 import ReactTestRenderer, {
   act,
   type ReactTestInstance,
 } from 'react-test-renderer';
+import Svg from 'react-native-svg';
 import { SkinProvider } from '../../src/ui/kit/SkinProvider';
 import type { ComponentMap, KitProps } from '../../src/ui/kit/contracts';
 import * as Kit from '../../src/ui/kit/proxy';
@@ -194,9 +201,63 @@ for (const skin of ['paper', 'glass'] as const) {
         action(renderer.root, '关闭选择菜单').props.onPress(),
       );
       expect(props.onDismiss).toHaveBeenCalledTimes(1);
+      const scroll = renderer.root.findByType(ScrollView);
+      expect(scroll.props.horizontal).toBe(true);
+      expect(
+        StyleSheet.flatten(scroll.props.contentContainerStyle).flexWrap,
+      ).toBe('nowrap');
     });
   });
 }
+
+it('图片按原始比例排版，切换图片后忽略过期加载事件', async () => {
+  const renderer = await mount(
+    <Kit.FigureView uri="file:///wide.png" caption="横图" />,
+    'glass',
+  );
+  const imageStyle = () =>
+    StyleSheet.flatten(renderer.root.findByType(Image).props.style);
+  const oldLoad = renderer.root.findByType(Image).props.onLoad;
+  await act(async () =>
+    oldLoad({ nativeEvent: { source: { width: 800, height: 200 } } }),
+  );
+  expect(imageStyle().aspectRatio).toBe(4);
+  expect(imageStyle().height).toBeUndefined();
+  await act(async () =>
+    renderer.update(
+      <SkinProvider skinId="glass" scheme="light" reduceMotion>
+        <Kit.FigureView uri="file:///tall.png" caption="竖图" />
+      </SkinProvider>,
+    ),
+  );
+  await act(async () =>
+    renderer.root
+      .findByType(Image)
+      .props.onLoad({ nativeEvent: { source: { width: 200, height: 800 } } }),
+  );
+  await act(async () =>
+    oldLoad({ nativeEvent: { source: { width: 800, height: 200 } } }),
+  );
+  expect(imageStyle().aspectRatio).toBe(0.25);
+});
+
+it.each(['sm', 'md', 'lg'] as const)(
+  'Apple %s 封面光泽覆盖包含内边距的整面',
+  async size => {
+    const renderer = await mount(
+      <Kit.Cover title="书名" color="#345" size={size} />,
+      'glass',
+    );
+    const cover = renderer.root.findAll(
+      node => node.props.accessibilityLabel === '书名，书封面',
+    )[0];
+    const bounds = StyleSheet.flatten(cover.props.style);
+    const sheen = renderer.root.findByType(Svg);
+    expect(sheen.props.width).toBe(bounds.width);
+    expect(sheen.props.height).toBe(bounds.height);
+    if (size === 'lg') expect(bounds).toMatchObject({ width: 62, height: 84 });
+  },
+);
 
 it('Note wraps adjacent text expressions and numbers in one native Text', async () => {
   const renderer = await mount(

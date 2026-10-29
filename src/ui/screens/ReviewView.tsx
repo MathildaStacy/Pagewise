@@ -68,9 +68,7 @@ export function ReviewView({
               />
               <Text style={s.boxNumber}>{box.count}</Text>
             </View>
-            <Text style={s.boxLabel} numberOfLines={1}>
-              {box.label}
-            </Text>
+            <Text style={s.boxLabel}>{box.label}</Text>
           </View>
         ))}
       </View>

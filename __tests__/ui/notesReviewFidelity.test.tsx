@@ -69,7 +69,7 @@ const style = (node: Renderer.ReactTestInstance) =>
 function text(root: Renderer.ReactTestInstance, value: string) {
   return root.findAllByType(Text).find(node => node.props.children === value)!;
 }
-it('matches the paper flashcard CSS: 300 minimum height, 19px prompt, expanded answer and 54px ratings', async () => {
+it('matches the paper flashcard CSS with expanding content and rating targets', async () => {
   const root = await render(
     'paper',
     <ReviewSessionView
@@ -105,10 +105,13 @@ it('matches the paper flashcard CSS: 300 minimum height, 19px prompt, expanded a
   });
   expect(
     style(root.findByProps({ accessibilityLabel: '忘了，1 天后' })),
-  ).toMatchObject({ height: 54, borderRadius: 12, borderWidth: 1 });
+  ).toMatchObject({ minHeight: 54, borderRadius: 12, borderWidth: 1 });
+  expect(
+    style(root.findByProps({ accessibilityLabel: '忘了，1 天后' })).height,
+  ).toBeUndefined();
   expect(root.findAllByProps({ testID: 'flashcard-back' })).toHaveLength(0);
 });
-it('uses the Apple 380px two-face card, hides the inaccessible back until flipped and reveals 66px tinted ratings', async () => {
+it('lets the visible Apple face size the scrolling card and hides the other face from accessibility', async () => {
   let root = await render(
     'glass',
     <ReviewSessionView
@@ -135,7 +138,12 @@ it('uses the Apple 380px two-face card, hides the inaccessible back until flippe
     lineHeight: 31.9,
     textAlign: 'center',
   });
-  expect(style(root.findByProps({ testID: 'flashcard-front' })).bottom).toBe(0);
+  expect(
+    style(root.findByProps({ testID: 'flashcard-front' })).position,
+  ).toBeUndefined();
+  expect(style(root.findByProps({ testID: 'flashcard-front' })).minHeight).toBe(
+    380,
+  );
   await act(async () =>
     renderer.update(
       <SkinProvider skinId="glass" scheme="light" reduceMotion>
@@ -157,10 +165,19 @@ it('uses the Apple 380px two-face card, hides the inaccessible back until flippe
   ).toBe(false);
   expect(
     style(root.findByProps({ accessibilityLabel: '忘了，1 天后' })),
-  ).toMatchObject({ height: 66, borderRadius: 20, borderWidth: 0 });
+  ).toMatchObject({ minHeight: 66, borderRadius: 20, borderWidth: 0 });
+  expect(
+    style(root.findByProps({ testID: 'flashcard-back' })).position,
+  ).toBeUndefined();
+  expect(style(root.findByProps({ testID: 'flashcard-front' })).position).toBe(
+    'absolute',
+  );
   expect(
     style(text(root, reviewSessionSamples.answer.card!.back!)),
   ).toMatchObject({ fontSize: 18, lineHeight: 30.6, borderTopWidth: 0 });
+  expect(
+    style(text(root, reviewSessionSamples.answer.card!.back!)).flex,
+  ).toBeUndefined();
 });
 it.each(['paper', 'glass'] as const)(
   '%s matches the prototype metric and notebook typography',
@@ -175,6 +192,9 @@ it.each(['paper', 'glass'] as const)(
     const number = root
       .findAllByType(Text)
       .find(node => node.props.children === 12)!;
+    for (const box of reviewSamples.normal.boxes) {
+      expect(text(root, box.label).props.numberOfLines).toBeUndefined();
+    }
     expect(style(number).fontSize).toBe(skin === 'paper' ? 26 : 30);
     expect(style(text(root, '卡点清单')).fontSize).toBe(
       skin === 'paper' ? 15 : 20,
