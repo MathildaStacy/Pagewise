@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import type { KitProps, Tone } from '../contracts';
 import { useSkin, useTokens } from '../context';
 import { Icon } from '../Icon';
@@ -1057,7 +1058,10 @@ export function StageStrip({ stages }: KitProps['StageStrip']) {
 export function Cover({ title, color, size = 'md' }: KitProps['Cover']) {
   const s = useStyles();
   const t = useTokens();
-  const width = size === 'sm' ? 42 : size === 'lg' ? 84 : 54;
+  const width =
+    size === 'sm' ? 42 : size === 'lg' ? (t.layout.groupedLists ? 62 : 84) : 54;
+  const height =
+    size === 'lg' && t.layout.groupedLists ? 84 : (width * 74) / 54;
   return (
     <View
       accessibilityRole="image"
@@ -1068,30 +1072,30 @@ export function Cover({ title, color, size = 'md' }: KitProps['Cover']) {
         StyleSheet.create({
           root: {
             width,
-            height: (width * 74) / 54,
+            height,
             backgroundColor: color,
           },
         }).root,
       ]}
     >
       {t.layout.groupedLists ? (
-        <View
+        <Svg
           pointerEvents="none"
-          style={
-            StyleSheet.create({
-              root: {
-                position: 'absolute',
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: 5,
-                backgroundColor: 'rgba(0,0,0,0.22)',
-                borderRightWidth: 1,
-                borderRightColor: 'rgba(255,255,255,0.18)',
-              },
-            }).root
-          }
-        />
+          style={StyleSheet.absoluteFill}
+          width={width}
+          height={height}
+        >
+          <Defs>
+            <LinearGradient id="cover-sheen" x1="0" y1="0.4" x2="1" y2="0.6">
+              <Stop offset="0" stopColor="#000" stopOpacity={0.22} />
+              <Stop offset="0.05" stopColor="#000" stopOpacity={0.22} />
+              <Stop offset="0.07" stopColor="#fff" stopOpacity={0.18} />
+              <Stop offset="0.3" stopColor="#fff" stopOpacity={0} />
+              <Stop offset="1" stopColor="#fff" stopOpacity={0.08} />
+            </LinearGradient>
+          </Defs>
+          <Rect width="100%" height="100%" fill="url(#cover-sheen)" />
+        </Svg>
       ) : null}
       <Text
         style={
@@ -1101,10 +1105,13 @@ export function Cover({ title, color, size = 'md' }: KitProps['Cover']) {
               fontSize: 10,
               lineHeight: 12.5,
               fontWeight: t.layout.groupedLists ? '700' : '600',
+              flexShrink: 1,
             },
           }).root
         }
         numberOfLines={3}
+        adjustsFontSizeToFit
+        minimumFontScale={0.5}
       >
         {Array.from(title).slice(0, 12).join('')}
       </Text>
@@ -1608,7 +1615,8 @@ const useStyles = makeStyles(t => ({
   },
   cover: {
     borderRadius: t.layout.groupedLists ? 7 : 4,
-    padding: 5,
+    padding: t.layout.groupedLists ? 6 : 5,
+    overflow: 'hidden',
     justifyContent: 'flex-end',
     ...t.elevation.card,
   },

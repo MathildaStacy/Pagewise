@@ -131,6 +131,7 @@ export function ReviewSessionView({
                   }
                   style={[
                     s.face,
+                    flipped ? s.hiddenFace : undefined,
                     {
                       transform: [
                         { perspective: 1400 },
@@ -157,6 +158,7 @@ export function ReviewSessionView({
                   }
                   style={[
                     s.face,
+                    !flipped ? s.hiddenFace : undefined,
                     {
                       transform: [
                         { perspective: 1400 },
@@ -314,13 +316,9 @@ const useStyles = makeStyles(t => {
       ...t.elevation.flashcard,
     },
     flipWrap: { paddingHorizontal: 16, paddingTop: 4 },
-    flipCard: { height: 380 },
+    flipCard: { minHeight: 380 },
     face: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      top: 0,
-      bottom: 0,
+      minHeight: 380,
       backfaceVisibility: 'hidden',
       backgroundColor: t.color.surface,
       borderWidth: t.scheme === 'dark' ? 0.5 : 0,
@@ -331,6 +329,7 @@ const useStyles = makeStyles(t => {
       paddingBottom: 18,
       ...t.elevation.flashcard,
     },
+    hiddenFace: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
     sourceRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -367,7 +366,7 @@ const useStyles = makeStyles(t => {
       fontSize: (flip ? 18 : 15) * scale,
       lineHeight: (flip ? 30.6 : 27) * scale,
       color: flip ? t.color.ink : t.color.ink2,
-      flex: flip ? 1 : undefined,
+      flexGrow: flip ? 1 : undefined,
       borderTopWidth: flip ? 0 : 1,
       borderStyle: 'dashed',
       borderTopColor: t.color.line,
@@ -384,7 +383,7 @@ const useStyles = makeStyles(t => {
     cardActions: {
       flexDirection: 'row',
       gap: 8,
-      marginTop: flip ? 0 : 14,
+      marginTop: 14,
       flexWrap: 'wrap',
     },
     ratings: {
@@ -396,7 +395,8 @@ const useStyles = makeStyles(t => {
     ratingSpace: { height: 84 },
     rating: {
       flex: 1,
-      height: flip ? 66 : 54,
+      minHeight: flip ? 66 : 54,
+      paddingVertical: 8,
       borderWidth: flip ? 0 : 1,
       borderColor: t.color.line,
       borderRadius: t.shape.md,

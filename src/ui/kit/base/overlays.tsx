@@ -650,7 +650,16 @@ export function SelectionMenuSurface({
       left,
       top,
       width,
-      borderRadius: material ? tokens.shape.pill : tokens.shape.sm,
+    },
+  }).root;
+  const menuSurfaceStyle = StyleSheet.create({
+    root: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: material ? 4 : 0,
+      bottom: material ? 4 : 0,
+      borderRadius: material ? 14 : tokens.shape.sm,
       backgroundColor: material ? tokens.color.glassStrong : tokens.color.ink,
       ...tokens.elevation.pop,
     },
@@ -658,7 +667,7 @@ export function SelectionMenuSurface({
   const menuItemsStyle = StyleSheet.create({
     root: {
       flexDirection: 'row',
-      flexWrap: material ? 'nowrap' : 'wrap',
+      flexWrap: 'nowrap',
       padding: material ? 0 : 3,
     },
   }).root;
@@ -666,9 +675,18 @@ export function SelectionMenuSurface({
     root: { color: foreground, textAlign: 'center' },
   }).root;
   const menuContentStyle = StyleSheet.create({
-    root: { flexDirection: 'row', flexWrap: material ? 'nowrap' : 'wrap' },
+    root: { flexDirection: 'row', flexWrap: 'nowrap' },
   }).root;
   const materialTextStyle = StyleSheet.create({ root: { fontSize: 14 } }).root;
+  const menuTargetStyle = StyleSheet.create({
+    root: {
+      minHeight: 48,
+      minWidth: 48,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: material ? 4 : 0,
+    },
+  }).root;
   return (
     <Modal
       transparent
@@ -683,7 +701,14 @@ export function SelectionMenuSurface({
         accessibilityState={{ disabled: false }}
         onPress={onDismiss}
       />
-      <GlassSurface material={material} strength="strong" style={menuStyle}>
+      <View style={menuStyle}>
+        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+          <GlassSurface
+            material={material}
+            strength="strong"
+            style={menuSurfaceStyle}
+          />
+        </View>
         <View
           accessibilityRole="menu"
           accessibilityLabel="段落操作"
@@ -692,8 +717,7 @@ export function SelectionMenuSurface({
           style={menuItemsStyle}
         >
           <ScrollView
-            horizontal={material}
-            scrollEnabled={material}
+            horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={menuContentStyle}
           >
@@ -704,35 +728,46 @@ export function SelectionMenuSurface({
                 accessibilityLabel={item.label}
                 accessibilityState={{ disabled: false }}
                 onPress={() => onSelect(item.key)}
-                style={({ pressed }) => ({
-                  flexGrow: material ? 0 : 1,
-                  minHeight: 48,
-                  minWidth: material ? undefined : 72,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  paddingHorizontal: material ? 11 : tokens.space.gap,
-                  paddingVertical: material ? 0 : tokens.space.gap,
-                  borderLeftWidth:
-                    material && index > 0 ? StyleSheet.hairlineWidth : 0,
-                  borderColor: tokens.color.line,
-                  backgroundColor: pressed ? tokens.color.pressed : undefined,
-                })}
+                style={menuTargetStyle}
               >
-                <Text
-                  style={[
-                    tokens.type.label,
-                    menuTextStyle,
-                    material && materialTextStyle,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {item.label}
-                </Text>
+                {({ pressed }) => (
+                  <View
+                    style={
+                      StyleSheet.create({
+                        root: {
+                          minHeight: 40,
+                          justifyContent: 'center',
+                          paddingHorizontal: material ? 11 : tokens.space.gap,
+                          paddingVertical: material ? 0 : tokens.space.gap,
+                          borderLeftWidth:
+                            material && index > 0
+                              ? StyleSheet.hairlineWidth
+                              : 0,
+                          borderColor: tokens.color.line,
+                          backgroundColor: pressed
+                            ? tokens.color.pressed
+                            : undefined,
+                        },
+                      }).root
+                    }
+                  >
+                    <Text
+                      style={[
+                        tokens.type.label,
+                        menuTextStyle,
+                        material && materialTextStyle,
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {item.label}
+                    </Text>
+                  </View>
+                )}
               </Pressable>
             ))}
           </ScrollView>
         </View>
-      </GlassSurface>
+      </View>
     </Modal>
   );
 }

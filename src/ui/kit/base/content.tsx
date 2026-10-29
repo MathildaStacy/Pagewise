@@ -333,16 +333,28 @@ export function CiteChip({
   );
 }
 
+function FigureImage({ uri, caption }: KitProps['FigureView']) {
+  const s = useStyles();
+  const [aspectRatio, setAspectRatio] = useState(1);
+  return (
+    <Image
+      source={{ uri }}
+      resizeMode="contain"
+      onLoad={event => {
+        const { width, height } = event.nativeEvent.source;
+        if (width > 0 && height > 0) setAspectRatio(width / height);
+      }}
+      style={[s.figureImage, StyleSheet.create({ root: { aspectRatio } }).root]}
+      accessibilityLabel={caption}
+    />
+  );
+}
+
 export function FigureView({ uri, caption, onPress }: KitProps['FigureView']) {
   const s = useStyles();
   const content = (
     <>
-      <Image
-        source={{ uri }}
-        resizeMode="contain"
-        style={s.figureImage}
-        accessibilityLabel={caption}
-      />
+      <FigureImage key={uri} uri={uri} caption={caption} />
       <Text style={s.bookCaption}>{caption}</Text>
     </>
   );
@@ -1501,14 +1513,15 @@ const useStyles = makeStyles(t => ({
     paddingVertical: 1,
   },
   figure: {
-    padding: 8,
-    borderWidth: 1,
+    paddingHorizontal: t.layout.groupedLists ? 0 : 8,
+    paddingVertical: t.layout.groupedLists ? 4 : 8,
+    borderWidth: t.layout.groupedLists ? 0 : 1,
     borderColor: t.color.line,
     borderRadius: t.shape.md,
-    backgroundColor: t.color.paper,
+    backgroundColor: t.layout.groupedLists ? 'transparent' : t.color.paper,
     gap: 6,
   },
-  figureImage: { width: '100%', height: 180 },
+  figureImage: { width: '100%' },
   user: {
     alignSelf: 'flex-end',
     maxWidth: t.layout.groupedLists ? '80%' : '84%',
