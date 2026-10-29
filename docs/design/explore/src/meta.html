@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pagewise · Meta 风探索</title>
+<style>
+/*CSS*/
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="phone" id="phone">
+    <div class="sbar"><span>21:40</span><span class="cam"></span><span class="r"><svg viewBox="0 0 24 24"><path d="M12 21L1 8.5C3.9 5.7 7.8 4 12 4s8.1 1.7 11 4.5z"/></svg><svg viewBox="0 0 24 24"><path d="M2 22h20V2z"/></svg><svg viewBox="0 0 24 24"><path d="M15.7 4H14V2h-4v2H8.3C7.6 4 7 4.6 7 5.3v15.3c0 .8.6 1.4 1.3 1.4h7.3c.8 0 1.4-.6 1.4-1.3V5.3C17 4.6 16.4 4 15.7 4z"/></svg></span></div>
+    <header id="appbar"></header>
+    <div id="modebar"></div>
+    <div id="top"></div>
+    <main id="view"></main>
+    <div id="dock"></div>
+    <div id="overlay"></div>
+    <div id="toast" role="status"></div>
+    <div class="homebar"></div>
+  </div>
+  <aside class="side">
+    <h1>Meta 风</h1>
+    <p class="lead">Facebook / Messenger / Meta AI：灰色圆按钮和胶囊标签、快拍式路线图、Meta AI 渐变圆环、Messenger 式输入框；读书页是通栏卡片，问答便签像评论气泡。只做了「听讲」和「读书」两个页面。</p>
+    <div class="tg"><button data-t="light" onclick="setTheme('light')">浅色</button><button data-t="dark" onclick="setTheme('dark')">深色</button></div>
+    <h2>可以试试</h2>
+    <ol>
+      <li>点讲解里的 <b>p.103</b>：从底部弹出原书预览，再点「在读书模式打开」</li>
+      <li>点「懂了，下一步」「这步熟，跳过」，看顶部快拍式路线图</li>
+      <li>输入"这跟前面的 3.4.2 有什么关系"，进入岔路，再点「回到主线」看折叠</li>
+      <li>切到「读书」：点段落 → 「从这里开始讲」；点评论气泡样的便签</li>
+      <li>讲完第 4 步 → 「懂了，下一节」看闪卡草稿</li>
+    </ol>
+    <h2>对比</h2>
+    <p><a href="apple.html">苹果风</a> · <a href="google.html">谷歌风</a> · <a href="microsoft.html">微软风</a> · <a href="play.html">新谷歌风</a> · <a href="windows11.html">Windows 11 风</a> · <a href="../prototype.html">原来的原型</a></p>
+  </aside>
+</div>
+<script>
+const THEME = 'meta';
+const ICONS = (() => {
+  const s = d => '<svg class="i" viewBox="0 0 24 24">' + d + '</svg>';
+  const f = d => '<svg class="i f" viewBox="0 0 24 24"><path d="' + d + '"/></svg>';
+  return {
+    back: s('<path d="M19.5 12h-15M11 5l-7 7 7 7"/>'),
+    more: f('M6 10a2 2 0 110 4 2 2 0 010-4zm6 0a2 2 0 110 4 2 2 0 010-4zm6 0a2 2 0 110 4 2 2 0 010-4z'),
+    check: s('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
+    skip: f('M5 6.2v11.6c0 .8.9 1.3 1.6.8l8.2-5.8c.6-.4.6-1.2 0-1.6L6.6 5.4C5.9 4.9 5 5.4 5 6.2zM16.5 5h2.5v14h-2.5z'),
+    next: s('<path d="M4.5 12h15M13 5l7 7-7 7"/>'),
+    mic: f('M12 15a3.5 3.5 0 003.5-3.5v-5a3.5 3.5 0 00-7 0v5A3.5 3.5 0 0012 15zm6.5-4a.9.9 0 00-1.8 0 4.7 4.7 0 01-9.4 0 .9.9 0 00-1.8 0 6.5 6.5 0 005.6 6.4V20H9a.9.9 0 000 1.8h6a.9.9 0 000-1.8h-2.1v-2.6a6.5 6.5 0 005.6-6.4z'),
+    send: f('M3.3 3.6a.8.8 0 011.1-.9l16.4 8.5a.9.9 0 010 1.6L4.4 21.3a.8.8 0 01-1.1-.9L5 13l8-1-8-1z'),
+    book: f('M3.5 4.6c2.7-1 5.8-.8 7.7.8v14.4c-2.1-1.3-5-1.5-7.7-.7zm9.3.8c1.9-1.6 5-1.8 7.7-.8v14.5c-2.7-.8-5.6-.6-7.7.7z'),
+    bookopen: '', teach: '',
+    derive: s('<path d="M17.5 5H6.5l6 7-6 7h11"/>'),
+    spark: f('M12 2.5l2.1 5.4 5.4 2.1-5.4 2.1L12 17.5l-2.1-5.4L4.5 10l5.4-2.1zM19 15.5l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z'),
+    clock: s('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>'),
+    chev: s('<path d="M9 5.5l6.5 6.5L9 18.5"/>'),
+    branch: s('<path d="M6 3v10a5 5 0 005 5h7M14 14l4 4-4 4"/>'),
+    pin: f('M12 3C6.5 3 2 6.9 2 11.7c0 2.6 1.3 4.9 3.4 6.5V22l3.7-2.1c.9.2 1.9.4 2.9.4 5.5 0 10-3.9 10-8.6S17.5 3 12 3z'),
+    flag: f('M5 3.5c.6 0 1 .4 1 1V5h11.6c.8 0 1.2.9.8 1.5L16 10l2.4 3.5c.4.6 0 1.5-.8 1.5H6v6a1 1 0 01-2 0V4.5c0-.6.4-1 1-1z')
+  };
+})();
+/*JS*/
+</script>
+</body>
+</html>

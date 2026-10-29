@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pagewise · 新谷歌风探索</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@8..144,400..700&family=Roboto+Flex:opsz,wght@8..144,400..700&display=swap" rel="stylesheet">
+<style>
+/*CSS*/
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="phone" id="phone" data-screen="home">
+    <div class="sbar"><span>21:40</span><span class="cam"></span><span class="r"><svg viewBox="0 0 24 24"><path d="M12 21L1 8.5C3.9 5.7 7.8 4 12 4s8.1 1.7 11 4.5z"/></svg><svg viewBox="0 0 24 24"><path d="M2 22h20V2z"/></svg><svg viewBox="0 0 24 24"><path d="M15.7 4H14V2h-4v2H8.3C7.6 4 7 4.6 7 5.3v15.3c0 .8.6 1.4 1.3 1.4h7.3c.8 0 1.4-.6 1.4-1.3V5.3C17 4.6 16.4 4 15.7 4z"/></svg></span></div>
+    <header id="appbar"></header>
+    <div id="modebar"></div>
+    <div id="top"></div>
+    <main id="view"></main>
+    <div id="dock"></div>
+    <section id="home" aria-label="书架">
+      <div class="h-top" id="htop"></div>
+      <div class="h-tabs" id="htabs" role="tablist"></div>
+      <div class="h-body" id="hbody"></div>
+      <nav class="h-nav" id="hnav"></nav>
+    </section>
+    <div id="overlay"></div>
+    <div id="toast" role="status"></div>
+    <div class="homebar"></div>
+  </div>
+  <aside class="side">
+    <h1>新谷歌风</h1>
+    <p class="lead">照现在 Google Play 的样子：白底、Google 蓝、下划线标签页、圆角方图标列表、灰色小标签、底部胶囊导航。比其他几版多做了一个书架首页。</p>
+    <div class="tg"><button data-t="light" onclick="setTheme('light')">浅色</button><button data-t="dark" onclick="setTheme('dark')">深色</button></div>
+    <h2>可以试试</h2>
+    <ol>
+      <li>书架首页点「继续」或 3.5.2 那一行，进入听讲</li>
+      <li>顶部标签切到「我的书」「卡点」「闪卡」</li>
+      <li>点讲解里的 <b>p.103</b>：从底部弹出原书预览，再点「在读书模式打开」</li>
+      <li>输入"这跟前面的 3.4.2 有什么关系"，进入岔路（绿色），再点「回到主线」看折叠</li>
+      <li>点「懂了，下一步」几次，再点左上角返回，书架上的进度会跟着变</li>
+    </ol>
+    <h2>对比</h2>
+    <p><a href="google.html">谷歌风（Expressive）</a> · <a href="apple.html">苹果风</a> · <a href="microsoft.html">微软风</a> · <a href="meta.html">Meta 风</a> · <a href="../prototype.html">原来的原型</a></p>
+  </aside>
+</div>
+<script>
+const THEME = 'play';
+const ICONS = (() => {
+  const s = d => '<svg class="i" viewBox="0 0 24 24"><path d="' + d + '"/></svg>';
+  return {
+    back: s('M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z'),
+    more: s('M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z'),
+    check: s('M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z'),
+    skip: s('M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z'),
+    next: s('M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z'),
+    mic: s('M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z'),
+    send: s('M3.4 20.4l17.45-7.48c.81-.35.81-1.49 0-1.84L3.4 3.6c-.66-.29-1.39.2-1.39.91L2 9.12c0 .5.37.93.87.99L17 12 2.87 13.88c-.5.07-.87.5-.87 1l.01 4.61c0 .71.73 1.2 1.39.91z'),
+    book: s('M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.05C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zm0 13.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z'),
+    bookopen: '', teach: '',
+    derive: s('M18 4H6v2l6.5 6L6 18v2h12v-3h-7l5-5-5-5h7z'),
+    spark: s('M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z'),
+    clock: s('M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z'),
+    chev: s('M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z'),
+    branch: s('M14 4l2.29 2.29-2.88 2.88 1.42 1.42 2.88-2.88L20 10V4zm-4 0H4v6l2.29-2.29 4.71 4.7V20h2v-8.41l-5.29-5.3z'),
+    pin: s('M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z'),
+    flag: s('M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z'),
+    search: s('M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'),
+    bell: s('M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z'),
+    person: s('M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'),
+    shelf: s('M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z'),
+    cards: s('M2.53 19.65l1.34.56v-9.03l-2.43 5.86c-.41 1.02.08 2.19 1.09 2.61zm19.5-3.7L17.07 3.98c-.31-.75-1.04-1.21-1.81-1.23-.26 0-.53.04-.79.15L7.1 5.95c-.75.31-1.21 1.03-1.23 1.8-.01.27.04.54.15.8l4.96 11.97c.31.76 1.05 1.22 1.83 1.23.26 0 .52-.05.77-.15l7.36-3.05c1.02-.42 1.51-1.59 1.09-2.6zM7.88 8.75c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-2 11c0 1.1.9 2 2 2h1.45l-3.45-8.34v6.34z'),
+    note: s('M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z'),
+    add: s('M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z'),
+    play: s('M8 5v14l11-7z'),
+    sync: s('M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z')
+  };
+})();
+/*JS*/
+</script>
+<script>
+// ---------- 书架首页（只在新谷歌风里有） ----------
+const BOOKS_H = [
+  { id: 'aima', t: '人工智能：现代方法（第4版）', c: '#3B4F7A', g: '人工\n智能', m: 'PDF • 1136 页' },
+  { id: 'slm', t: '统计学习方法（第2版）', c: '#7A3B3B', g: '统计\n学习', m: 'PDF • 470 页' },
+  { id: 'ddia', t: 'Designing Data-Intensive Applications', c: '#3B7A5C', g: 'DDIA', m: 'EPUB • 12 章' }
+];
+const SECS_H = [['3.5.1', '贪心最佳优先搜索', 'p.100–102'], ['3.5.2', 'A* 搜索', 'p.102–106'], ['3.5.3', '搜索等值线', 'p.106–108']];
+const DUE_H = [['3.4.2', '一致代价搜索为什么在扩展时才做目标测试？'], ['3.3.2', '边界（frontier）是什么？'], ['3.3.3', '为什么要记录已达状态（reached）？'], ['3.4.4', '迭代加深搜索的优点是什么？'], ['3.4.1', '广度优先搜索什么时候是代价最优的？'], ['3.1.2', '一个搜索问题由哪几部分形式化？'], ['2.2', 'PEAS 指什么？'], ['2.1', '智能体函数和智能体程序有什么区别？']];
+const HTABS = [['now', '在读'], ['books', '我的书'], ['stuck', '卡点'], ['cards', '闪卡']];
+const HS = { tab: 'now', nav: 'shelf' };
+
+const ART = '<svg viewBox="0 0 358 208" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs>' +
+  '<linearGradient id="ag" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0B1440"/><stop offset=".55" stop-color="#1F2F86"/><stop offset="1" stop-color="#3C5BD8"/></linearGradient>' +
+  '<radialGradient id="ar" cx=".72" cy=".3" r=".6"><stop offset="0" stop-color="#8AB4F8" stop-opacity=".45"/><stop offset="1" stop-color="#8AB4F8" stop-opacity="0"/></radialGradient>' +
+  '<filter id="gl" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4"/></filter></defs>' +
+  '<rect width="358" height="208" fill="url(#ag)"/><rect width="358" height="208" fill="url(#ar)"/>' +
+  '<text x="342" y="52" text-anchor="end" font-family="Times New Roman,serif" font-style="italic" font-size="30" fill="#fff" fill-opacity=".13">f(n) = g(n) + h(n)</text>' +
+  '<g stroke="#fff" stroke-opacity=".3" stroke-width="1.5" fill="none"><path d="M60 98L168 50M60 98L168 140M168 140L280 92"/></g>' +
+  '<path d="M60 98L168 50L280 92" stroke="#FBBC04" stroke-width="6" fill="none" filter="url(#gl)" opacity=".8"/>' +
+  '<path d="M60 98L168 50L280 92" stroke="#FDE293" stroke-width="2.5" fill="none" stroke-linecap="round"/>' +
+  '<g font-family="Google Sans,Roboto,sans-serif" font-size="13" font-weight="700" text-anchor="middle">' +
+  '<circle cx="60" cy="98" r="15" fill="#fff" fill-opacity=".14" stroke="#fff" stroke-opacity=".7"/><text x="60" y="103" fill="#fff">S</text>' +
+  '<circle cx="168" cy="50" r="15" fill="#FBBC04"/><text x="168" y="55" fill="#3D2E00">A</text>' +
+  '<circle cx="168" cy="140" r="15" fill="#fff" fill-opacity=".14" stroke="#fff" stroke-opacity=".5"/><text x="168" y="145" fill="#fff" fill-opacity=".8">B</text>' +
+  '<circle cx="280" cy="92" r="15" fill="#34A853"/><text x="280" y="97" fill="#fff">G</text></g>' +
+  '<g font-family="Google Sans,Roboto,sans-serif" font-size="11" fill="#fff" fill-opacity=".75" text-anchor="middle"><text x="210" y="40">h=4 · f=5</text><text x="214" y="150">h=2 · f=7</text></g></svg>';
+
+const cover = b => '<span class="cover" style="background:' + b.c + '">' + esc(b.g) + '</span>';
+const rate = (ic, t, cls) => '<span class="rate ' + (cls || '') + '">' + I(ic) + esc(t) + '</span>';
+const secH = (pre, t) => '<div class="secH"><div class="grow"><small>' + esc(pre) + ' · </small>' + esc(t) + '</div><button class="ib" aria-label="更多" onclick="' + on(() => toast('更多（原型没做）')) + '">' + I('more') + '</button></div>';
+const row = (ico, t, meta, chip, fn) => '<button class="li" onclick="' + on(fn) + '">' + ico + '<span class="grow"><div class="tt">' + esc(t) + '</div><div class="meta">' + esc(meta) + '</div>' + (chip || '') + '</span></button>';
+const stuckList = () => [['一致代价搜索为什么在扩展时才做目标测试？', '3.4.2 一致代价搜索 • 第 4 步会用到']].concat(S.finished ? [['为什么图搜索需要一致性而不只是可容许', '3.5.2 A* 搜索 • 刚刚标记']] : []);
+const progress = () => S.st.filter(s => s === 'done' || s === 'skipped').length;
+
+function hNow() {
+  const n = progress();
+  const cap = S.finished ? '3.5.2 学完了。下一节：3.5.3 搜索等值线' : '3.5.2 A* 搜索：接着讲第 ' + (S.cur + 1) + ' 步「' + STEPS[S.cur].t + '」';
+  let h = '<div class="hero"><button class="art" onclick="' + on(() => openStudy('listen')) + '">' + ART + '<span class="eb">' + I('clock') + (S.finished ? '刚刚' : '接着上次 · 3 天前') + '</span><span class="cap2">' + esc(cap) + '</span></button>' +
+    '<div class="row">' + cover(BOOKS_H[0]) + '<div class="grow"><div class="tt">' + esc(BOOKS_H[0].t) + '</div>' + rate(S.finished ? 'check' : 'play', S.finished ? '本节已学完' : '第 ' + Math.min(n + 1, 4) + '/4 步 · 听讲', S.finished ? 'ok' : '') + '</div>' +
+    '<button class="pill" onclick="' + on(() => S.finished ? toast('3.5.3 原型没做') : openStudy('listen')) + '">' + (S.finished ? '开始' : '继续') + '</button></div></div>';
+  h += secH('第 3 章', '有信息搜索');
+  h += SECS_H.map(([no, t, pg], i) => {
+    const st = i === 0 || (i === 1 && S.finished) ? 'done' : i === 1 ? 'now' : 'new';
+    const chip = st === 'done' ? rate('check', '已学', 'ok') : st === 'now' ? rate('play', n + '/4 步') : rate('book', '未开始');
+    return row('<span class="ico ' + st + '">' + no + '</span>', t, pg + (st === 'done' ? ' • 2 张闪卡' : st === 'now' ? ' • 在学' : ''), chip, () => i === 1 ? openStudy('listen') : toast('原型只做了 3.5.2'));
+  }).join('');
+  h += secH('还没弄懂', '卡点');
+  h += stuckList().map(([q, m]) => row('<span class="ico bad">' + I('flag') + '</span>', q, m, rate('flag', '卡点', 'bad'), () => toast('打开卡点（原型没做）'))).join('');
+  h += secH('今天到期', '复习');
+  h += row('<span class="ico card">' + I('cards') + '</span>', DUE_H.length + ' 张闪卡', '第 2–3 章 • 都是今天到期', rate('clock', '今天'), () => toast('复习（原型没做）'));
+  h += secH('书架', '我的书') + '<div class="carousel">' + BOOKS_H.map(b => '<button class="bk" onclick="' + on(() => b.id === 'aima' ? openStudy('listen') : toast('原型只做了这一本')) + '">' + cover(b) + '<div class="t">' + esc(b.t) + '</div><div class="m">' + bookState(b) + '</div></button>').join('') +
+    '<button class="bk add" onclick="' + on(() => toast('导入 PDF / EPUB（原型没做）')) + '"><span class="cover">' + I('add') + '</span><div class="t">导入一本书</div></button></div>';
+  return h;
+}
+const bookState = b => b.id === 'aima' ? (S.finished ? '在学 3.5.3' : '在学 3.5.2') : b.id === 'slm' ? '解析中 61%' : '已就绪';
+function hBooks() {
+  return '<div style="height:8px"></div>' + BOOKS_H.map(b => row(cover(b), b.t, b.m, b.id === 'aima' ? rate('play', bookState(b)) : b.id === 'slm' ? rate('sync', '解析中 61%') : rate('check', '已就绪', 'ok'), () => b.id === 'aima' ? openStudy('listen') : toast('原型只做了这一本'))).join('') +
+    row('<span class="ico new">' + I('add') + '</span>', '导入一本书', 'PDF 或 EPUB • 用你自己的 MinerU Token 解析', '', () => toast('导入 PDF / EPUB（原型没做）'));
+}
+function hStuck() {
+  return '<div style="height:8px"></div>' + stuckList().map(([q, m]) => row('<span class="ico bad">' + I('flag') + '</span>', q, m, rate('flag', '卡点', 'bad'), () => toast('打开卡点（原型没做）'))).join('') +
+    '<p class="empty">学的时候说"没懂"或者自己标记的地方会留在这里，讲到相关内容时 AI 会提起。</p>';
+}
+function hCards() {
+  return secH('今天到期', DUE_H.length + ' 张') + DUE_H.map(([sec, q]) => row('<span class="ico card">' + esc(sec) + '</span>', q, sec + ' • 今天到期', '', () => toast('复习（原型没做）'))).join('');
+}
+function renderHome() {
+  $('#htop').innerHTML = '<div class="logo"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M8 3h11l7 7v17a2 2 0 01-2 2H8a2 2 0 01-2-2V5a2 2 0 012-2z" fill="#4285F4"/><path d="M19 3l7 7h-5a2 2 0 01-2-2z" fill="#AECBFA"/><rect x="10" y="15.5" width="12" height="4" rx="1" fill="#FBBC04"/><path d="M11 13h10M11 17.5h10M11 22h7" stroke="#fff" stroke-width="2" stroke-linecap="round"/><path d="M9 3h4v8l-2-1.6L9 11z" fill="#EA4335"/><circle cx="23" cy="23" r="3" fill="#34A853"/></svg>Pagewise</div>' +
+    '<button class="ib" aria-label="搜索书架" onclick="' + on(() => toast('按书名、章节、原文搜索（原型没做）')) + '">' + I('search') + '</button>' +
+    '<button class="ib" aria-label="通知" onclick="' + on(() => toast('统计学习方法：解析到 61%')) + '">' + I('bell') + '<span class="dot">1</span></button>' +
+    '<button class="avatar" aria-label="我的" onclick="' + on(() => toast('我的（原型没做）')) + '">' + I('person') + '</button>';
+  if (!$('#htabs .ind')) $('#htabs').innerHTML = HTABS.map(([k, l]) => '<button role="tab" data-k="' + k + '" onclick="' + on(() => { HS.tab = k; renderHome(); $('#hbody').scrollTop = 0; }) + '"><span>' + l + '</span></button>').join('') + '<span class="ind"></span>';
+  $$('#htabs button').forEach(b => { b.classList.toggle('on', b.dataset.k === HS.tab); b.setAttribute('aria-selected', b.dataset.k === HS.tab); });
+  $('#hbody').innerHTML = { now: hNow, books: hBooks, stuck: hStuck, cards: hCards }[HS.tab]();
+  const NAV = [['shelf', '书架', 'shelf'], ['review', '复习', 'cards'], ['notes', '笔记', 'note'], ['me', '我的', 'person']];
+  $('#hnav').innerHTML = NAV.map(([k, l, ic]) => '<button class="' + (HS.nav === k ? 'on' : '') + '" onclick="' + on(() => k === 'shelf' ? (HS.tab = 'now', renderHome()) : toast('原型只做了书架和学习页')) + '"><span class="ind">' + I(ic) + (k === 'review' ? '<span class="bd">' + DUE_H.length + '</span>' : '') + '</span>' + l + '</button>').join('');
+  placeInd();
+}
+function placeInd() {
+  const box = $('#htabs'), t = $('#htabs .on span'), ind = $('#htabs .ind');
+  if (!t || !box.offsetWidth) return;
+  const a = box.getBoundingClientRect(), r = t.getBoundingClientRect();
+  ind.style.left = (r.left - a.left) + 'px'; ind.style.width = r.width + 'px';
+}
+function openStudy(mode) {
+  $('#phone').dataset.screen = 'study';
+  if (mode !== S.mode) setMode(mode); else render();
+}
+function goBack() { closeSheet(); renderHome(); $('#phone').dataset.screen = 'home'; }
+document.addEventListener('DOMContentLoaded', () => {
+  if (/^(listen|read)$/.test(location.hash.slice(1))) $('#phone').dataset.screen = 'study';
+  renderHome();
+  if (document.fonts) document.fonts.ready.then(placeInd);
+});
+</script>
+</body>
+</html>

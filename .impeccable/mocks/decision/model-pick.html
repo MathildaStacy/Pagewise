@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=390">
+<title>Pagewise · 双色理工教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--s:#00718F;--t:#D9EDF2;--k:#1A1A1A;--g:#5C5C5C;--y:#F2E15B}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:390px;height:844px;overflow:hidden;margin:0;background:#fff}
+body{position:relative;font-family:"Noto Sans SC",sans-serif;color:var(--k)}
+svg{display:block}
+.sb{height:24px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500}
+.sb .ic{display:flex;gap:6px;align-items:center}
+.bar{height:60px;padding:0 6px 0 2px;display:flex;align-items:center}
+.back{width:44px;height:44px;display:flex;align-items:center;justify-content:center}
+.ttl{flex:1;font-family:"Noto Serif SC",serif;font-weight:700;font-size:19px;white-space:nowrap;letter-spacing:.2px}
+.ttl b{color:var(--s);font-size:22px;font-weight:700;margin-right:6px}
+.seg{display:flex;height:36px;border:1.5px solid var(--s);border-radius:2px;overflow:hidden;font-size:14px;font-weight:500}
+.seg span{width:48px;display:flex;align-items:center;justify-content:center;color:var(--s)}
+.seg .on{background:var(--s);color:#fff;font-weight:700}
+.more{width:36px;height:44px;display:flex;align-items:center;justify-content:center}
+.rh{margin:0 20px;height:24px;display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--g);border-bottom:1.5px solid var(--s);position:relative;letter-spacing:.3px}
+.rh:after{content:"";position:absolute;left:0;right:0;bottom:-4px;border-bottom:.5px solid var(--s)}
+.rm{margin:16px 20px 0}
+.rm h3{font-size:12px;font-weight:700;color:var(--s);letter-spacing:2px;margin-bottom:4px}
+.rm li{list-style:none;height:26px;display:flex;align-items:center;font-size:14px;gap:6px;padding:0 4px}
+.rm .n{width:14px;font-family:"Noto Serif SC",serif;font-weight:600}
+.rm .d{flex:1;border-bottom:1.5px dotted #9a9a9a;height:10px;margin:0 2px}
+.rm .p{font-family:"Noto Serif SC",serif;font-size:12.5px;width:40px;text-align:right}
+.rm .cur{background:var(--t);color:var(--s);font-weight:700;border-left:3px solid var(--s);padding-left:1px}
+.rm .cur .d{border-color:var(--s)}
+.rm .ck{width:14px;display:flex}
+.body{margin:18px 20px 0;font-size:16px;line-height:1.75}
+mark{background:var(--y);color:var(--k);padding:0 1px}
+.cite{display:inline-block;margin-left:4px;padding:0 6px;border:1px solid var(--s);color:var(--s);font-size:12px;line-height:18px;border-radius:2px;font-weight:500;vertical-align:1px}
+.def{position:relative;margin-top:24px;border:1px solid var(--s);padding:18px 14px 12px;font-family:"Noto Serif SC",serif;font-size:16px;line-height:1.8}
+.def .tab{position:absolute;left:12px;top:-11px;background:var(--s);color:#fff;font-family:"Noto Sans SC",sans-serif;font-size:12px;font-weight:500;line-height:22px;padding:0 9px;letter-spacing:.5px;border-radius:1px}
+.note{margin-top:16px;background:var(--t);border-left:3px solid var(--s);padding:10px 14px 12px;font-size:15px;line-height:1.75}
+.note .lb{display:block;font-size:12px;font-weight:700;color:var(--s);letter-spacing:2px;margin-bottom:2px}
+.note i{font-family:"Noto Serif SC",serif;font-style:italic;font-size:15.5px;white-space:nowrap}
+.next{margin-top:16px;color:var(--k)}
+.bot{position:absolute;left:0;right:0;bottom:0;height:150px;background:#fff;border-top:1.5px solid var(--s);padding:12px 16px 0}
+.chips{display:flex;gap:6px}
+.chip{height:44px;padding:0 11px;display:flex;align-items:center;font-size:14px;font-weight:500;color:var(--s);border:1.5px solid var(--s);border-radius:2px;white-space:nowrap}
+.chip.pri{background:var(--s);color:#fff;font-weight:700}
+.in{margin-top:12px;height:50px;border:1px solid var(--k);border-radius:2px;display:flex;align-items:center;padding:0 0 0 14px;font-size:14px;color:var(--g)}
+.in span{flex:1;white-space:nowrap;overflow:hidden}
+.mic{width:44px;height:48px;display:flex;align-items:center;justify-content:center}
+.send{width:48px;height:48px;background:var(--s);display:flex;align-items:center;justify-content:center}
+.gest{position:absolute;left:128px;bottom:8px;width:134px;height:4px;border-radius:2px;background:var(--k)}
+</style>
+</head>
+<body>
+<div class="sb"><span>21:40</span><span class="ic">
+<svg width="16" height="12" viewBox="0 0 16 12"><path d="M0 12 16 0v12z" fill="#1A1A1A"/></svg>
+<svg width="22" height="12" viewBox="0 0 22 12"><rect x=".5" y=".5" width="18" height="11" rx="2" fill="none" stroke="#1A1A1A"/><rect x="2" y="2" width="12" height="8" fill="#1A1A1A"/><rect x="19.5" y="4" width="2" height="4" fill="#1A1A1A"/></svg></span></div>
+
+<div class="bar">
+<div class="back"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" stroke-width="2" stroke-linecap="square"><path d="M15 5 8 12l7 7"/></svg></div>
+<div class="ttl"><b>3.5.2</b>A*搜索</div>
+<div class="seg"><span>读书</span><span class="on">听讲</span></div>
+<div class="more"><svg width="24" height="24" viewBox="0 0 24 24" fill="#1A1A1A"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg></div>
+</div>
+<div class="rh"><span>人工智能：现代方法</span><span>p.102–106</span></div>
+
+<div class="rm"><h3>本节路线图</h3><ul>
+<li><span class="ck"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#00718F" stroke-width="2"><path d="M2 7.5 5.5 11 12 3"/></svg></span>1&nbsp;A* 的直觉<span class="d"></span><span class="p">p.102</span></li>
+<li class="cur"><span class="n">2</span>可容许的启发式<span class="d"></span><span class="p">p.103</span></li>
+<li><span class="n">3</span>一致性<span class="d"></span><span class="p">p.104</span></li>
+<li><span class="n">4</span>最优性证明<span class="d"></span><span class="p">p.105</span></li>
+</ul></div>
+
+<div class="body">
+<p>答案取决于 h。书里给的条件叫<mark>可容许的（admissible）</mark>：h 从不高估到终点的真实代价。<span class="cite">p.103</span></p>
+<div class="def"><span class="tab">原文 · p.103</span>如果启发式函数 h(n) 从不高估到达目标的代价，则称 h(n) 是可容许的。</div>
+<div class="note"><span class="lb">补充推导</span>设 C* 为最优解代价。h 可容许时，最优路径上任一结点 n 都满足 <i>f(n) = g(n) + h(n) ≤ C*</i>。</div>
+<p class="next">所以 A* 不会在还有更便宜的路时停下……</p>
+</div>
+
+<div class="bot">
+<div class="chips"><div class="chip pri">懂了，下一步</div><div class="chip">换个说法</div><div class="chip">展开推导</div><div class="chip">考考我</div></div>
+<div class="in"><span>问点什么，或说"回到 3.4.2"…</span>
+<div class="mic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00718F" stroke-width="1.8"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg></div>
+<div class="send"><svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M3 20.5 21 12 3 3.5v6.5l11 2-11 2z"/></svg></div></div>
+<div class="gest"></div>
+</div>
+</body>
+</html>

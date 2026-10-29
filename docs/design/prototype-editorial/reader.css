@@ -1,0 +1,116 @@
+/* Pagewise 书页排版风原型 · 学习（续）：听讲底部的快捷动作和输入框、读书页、原文预览、AI 看到的内容、路线图 */
+
+/* ---------- 听讲底部：快捷动作 + 输入框。纸底实色，上方一条发丝线，不渐隐、不发光 ---------- */
+#dock{position:absolute;left:0;right:0;bottom:0;padding:10px 0 28px;z-index:6;background:var(--bg);box-shadow:0 -1px 0 var(--rule)}
+#dock:empty{display:none}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:0 22px 10px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+/* Chip：细线框小按钮；第一个（主操作）墨色实底；岔路的主操作紫底 */
+.chip{flex:none;height:32px;padding:0 12px;border-radius:var(--r-sm);font-size:13px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;box-shadow:inset 0 0 0 1px var(--rule2);transition:background .15s}
+.chip:hover{background:var(--surface-alt)}
+.chip:active{transform:translateY(1px)}
+.chip svg.i{width:15px;height:15px}
+.chip.pri{background:var(--btn);color:var(--on-btn);box-shadow:none;font-weight:500}
+.chip.dt{background:var(--detour);color:var(--on-detour);box-shadow:none;font-weight:500}
+.chip.on{background:var(--btn);color:var(--on-btn);box-shadow:none;font-weight:500}
+.chip .n{opacity:.65;margin-left:2px}
+/* 引用条：要问的那段原文，宋体一行，左边墨蓝细线 */
+.qbar{display:flex;align-items:center;gap:8px;margin:0 22px 8px;min-height:38px;padding:3px 3px 3px 12px;font-size:12.5px;color:var(--ink2);background:var(--paper);box-shadow:inset 2px 0 0 var(--accent)}
+.qbar b{display:flex;align-items:center;gap:4px;color:var(--accent-ink);font-weight:500;flex:none}
+.qbar b svg.i{width:14px;height:14px}
+.qbar .grow{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--serif)}
+.qbar button{width:30px;height:30px;display:grid;place-items:center;flex:none;border-radius:50%}
+.qbar button:hover{background:var(--surface-alt)}
+.qbar button svg.i{width:14px;height:14px}
+/* 输入框：细线框长条，右边墨色方形发送键；聚焦时框线变墨蓝。.glow 在这套皮肤里不画 */
+.askbox .glow,.composer .glow{display:none}
+.composer{margin:0 22px;position:relative;display:block}
+.askbox{margin:2px 22px 10px;position:relative}
+.askbox .box,.composer .box{position:relative;display:flex;align-items:center;gap:2px;height:48px;padding:0 4px 0 6px;border-radius:var(--r-md);background:var(--card-hi);box-shadow:inset 0 0 0 1px var(--rule2);transition:box-shadow .15s}
+.askbox:focus-within .box,.composer:focus-within .box{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.askbox .box{padding-left:12px}
+.askbox input,.composer input{flex:1;min-width:0;height:100%;font-size:15px;padding:0 6px}
+.askbox input:focus-visible,.composer input:focus-visible{outline:0}  /* 聚焦靠外框变色表示 */
+.composer .ib{width:38px;height:38px;color:var(--ink2)}
+.send{width:38px;height:38px;border-radius:var(--r-sm);display:grid;place-items:center;background:var(--btn);color:var(--on-btn);flex:none;transition:transform .1s}
+.send:active{transform:translateY(1px)}
+.send svg.i{width:18px;height:18px;stroke-width:1.8}
+.send.stop{background:var(--ai);color:var(--on-accent)}
+.composer.off{opacity:.55}
+.ask svg.sp,.askbox svg.sp{width:18px;height:18px;fill:var(--ai);flex:none}
+
+/* ---------- 读书 ---------- */
+.rdtool{display:flex;align-items:center;gap:12px;padding:0 22px 10px}
+.rdtool .seg{width:132px;flex:none}
+.rdtool .pgi{flex:1;min-width:0;text-align:right;font-size:11.5px;color:var(--ink2);line-height:1.4}
+.rdtool .pgi b{color:var(--ai-ink);font-weight:500}
+/* 本节导读：朱色小字标签 + 一行摘要；展开后是一段黑体（AI 写的），上下发丝线 */
+.guide{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;width:calc(100% - 44px);margin:4px 22px 14px;text-align:left;padding:10px 0;box-shadow:inset 0 1px 0 var(--rule),inset 0 -1px 0 var(--rule)}
+.guide .lbl{display:flex;align-items:center;gap:5px;font-size:11px;letter-spacing:.14em;font-weight:500;color:var(--ai-ink)}
+.guide .lbl svg.i{width:13px;height:13px;fill:var(--ai)}
+.guide .gt{flex:1;min-width:0;font-size:13px;color:var(--ink2)}
+.guide .gt.one{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.guide.open .gt{flex-basis:100%;order:3;color:var(--ink);font-size:14.5px;line-height:1.75;margin-top:4px;padding-left:12px;box-shadow:inset 1px 0 0 color-mix(in srgb,var(--ai) 55%,transparent)}
+.guide>svg.i:last-child{color:var(--ink2);width:15px;height:15px;align-self:center;transition:transform .25s var(--ease)}
+.guide.open>svg.i:last-child{transform:rotate(180deg)}
+/* 书页：比纸底亮一档的「页」，没有圆角，右下有两层很淡的纸边（像一叠书页），宋体正文 */
+.pages{display:flex;flex-direction:column;gap:18px;padding:2px 16px 0}
+.page{background:var(--paper);padding:26px 24px 12px;font:var(--fz-book)/1.9 var(--serif);color:var(--paper-ink);position:relative;text-align:justify;
+  box-shadow:0 0 0 1px var(--rule),2px 2px 0 -1px var(--paper),2px 2px 0 0 var(--rule),4px 4px 0 -1px var(--paper),4px 4px 0 0 var(--line)}
+.page.orig{font-size:12.5px;line-height:1.85;aspect-ratio:.72;padding:22px 24px 32px;overflow:hidden}
+/* 书眉：左章名、右节名，小号字距拉开，下面发丝线 */
+.page .run{font:10px var(--font);letter-spacing:.12em;color:var(--ink3);display:flex;justify-content:space-between;margin-bottom:12px;padding-bottom:6px;box-shadow:inset 0 -1px 0 var(--line)}
+.page.orig .pno{position:absolute;bottom:12px;left:0;right:0;margin:0}
+.pno{text-align:center;font:italic 12px var(--serif);color:var(--ink3);margin:6px 0 16px}
+.pph{font:13px var(--font);color:var(--ink2);text-align:center;padding:48px 0}
+.blk{position:relative;margin:0 -10px 8px;padding:2px 10px;cursor:pointer;transition:background .2s}
+.blk:hover{background:var(--surface-alt)}
+.page.orig .blk{margin:0 -8px 4px;padding:1px 8px}
+/* 讲过的段落：页边一条墨蓝细线；正在讲：朱色粗一点的线 */
+.blk::before{content:"";position:absolute;left:-4px;top:7px;bottom:7px;width:1.5px;background:transparent}
+.page.orig .blk::before{left:-4px;top:4px;bottom:4px}
+.blk.heard::before{background:color-mix(in srgb,var(--accent) 55%,transparent)}
+.blk.now::before{background:var(--ai);width:2.5px;left:-5px}
+.blk.hl{background:linear-gradient(transparent 12%,var(--highlight) 12%,var(--highlight) 92%,transparent 92%)}
+.blk.sel{background:var(--accent-bg)}
+.blk.flash{animation:flash 2s var(--ease)}
+@keyframes flash{0%,35%{background:var(--accent-bg2)}100%{background:transparent}}
+.b-title{font:500 1.3em/1.4 var(--display);margin-bottom:14px;text-align:left}
+.b-eq{text-align:center}
+.blk .fig{box-shadow:none;padding:4px 0}
+/* 问答便签：一条旁注。小号黑体斜体，左边金色细线，前面一个「注」字 */
+.pin{display:flex;align-items:baseline;gap:8px;width:100%;margin:-2px 0 14px;padding:4px 0 4px 10px;box-shadow:inset 1.5px 0 0 var(--pin);color:var(--pin);font:13px/1.5 var(--font);text-align:left}
+.pin::before{content:"注";font:600 11px var(--serif);color:var(--bg);background:var(--pin);width:16px;height:16px;display:grid;place-items:center;flex:none;align-self:center;border-radius:1px}
+.pin>svg.i:first-child{display:none}
+.pin>svg.i:last-child{width:13px;height:13px;align-self:center;flex:none}
+.pin span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;font-style:italic}
+.readend{display:flex;align-items:center;gap:12px;margin:22px 22px 4px;padding:14px 0;box-shadow:inset 0 1px 0 var(--ink),inset 0 -1px 0 var(--rule)!important;border-radius:0}
+.readend .grow{flex:1;min-width:0}
+.readend b{display:block;font:500 16px var(--display)}
+.readend small{font-size:12px;color:var(--ink2)}
+.rfoot{text-align:center;font-size:11px;color:var(--ink3);padding:18px 0 30px;line-height:2.1}
+.rfoot span{display:inline-flex;align-items:center;gap:5px;margin:0 6px;color:var(--ink2)}
+.rfoot .lg{display:inline-block;width:12px;height:10px}
+.rfoot .lg.heard{width:1.5px;background:color-mix(in srgb,var(--accent) 55%,transparent)}
+.rfoot .lg.now{width:2.5px;background:var(--ai)}
+.rfoot .lg.hl{background:var(--highlight)}
+/* 原文预览（点引用弹出）：一小块书页 */
+.peek{background:var(--paper);padding:18px 18px 8px;font:15px/1.85 var(--serif);color:var(--paper-ink);max-height:340px;overflow-y:auto;box-shadow:0 0 0 1px var(--rule)}
+.pblk{padding:2px 8px;margin:0 -8px 6px}
+.pblk.tgt{background:var(--highlight);box-shadow:inset 2px 0 0 var(--accent)}
+.pblk.b-title{font:500 1.1em var(--display)}
+.pblk.b-eq{text-align:center}
+
+/* ---------- AI 看到的内容 / 路线图 ---------- */
+.ctxtot{display:flex;align-items:baseline;gap:12px;margin:2px 0 12px}
+.ctxtot b{font:400 40px/1 var(--display);color:var(--ink)}
+.ctxtot span{font-size:12px;color:var(--ink2);line-height:1.5}
+.stack{display:flex;height:6px;overflow:hidden;margin:0 0 14px;gap:2px}
+.stack i{display:block}
+.sq{width:10px;height:10px;flex:none}
+.tk{color:var(--ink2);font:italic 14px var(--serif)}
+.rs{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font:italic 13px var(--serif);flex:none;box-shadow:inset 0 0 0 1px var(--rule2);color:var(--ink2)}
+.rs svg.i{width:13px;height:13px;stroke-width:2}
+.rs.done{background:var(--accent);color:var(--on-accent);box-shadow:none}
+.rs.now{background:var(--ai);color:var(--on-accent);box-shadow:none}
+.rs.skipped{box-shadow:none;border:1px dashed var(--ink3)}

@@ -1,0 +1,17 @@
+{
+  "entryRestored": true,
+  "fontScale": "1.0",
+  "enabledAccessibilityServices": "null",
+  "accessibilityEnabled": "0",
+  "temporaryProbeInstalled": false,
+  "releaseInstalled": true,
+  "packageVersion": [
+    "versionCode=3 minSdk=24 targetSdk=36",
+    "versionName=0.0.3"
+  ],
+  "debuggable": false,
+  "dataCleared": false,
+  "apkSha256": "81f58ebf0326cb60dd0e02486658750d17769ebe15dced0faedd8c031912a4ff",
+  "headAfterExternalDesignCommit": "2424c7f07fe60b6a7f8042fe14dd656c9e98c040",
+  "temporaryMetroStopped": true
+}
