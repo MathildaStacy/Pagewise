@@ -4,6 +4,8 @@
 
 顺序的考虑：**先把皮肤和页面用演示数据做出来**（T2–T6），负责人能尽早在手机上看 UI、比较两套皮肤；再接真 AI（T7）和真书（T8–T10）。
 
+UI 验收基准（用户 2026-10-29 补充）：几乎完整按照 `docs/design/prototype.html` 与其源文件 `docs/design/prototype/*` 实现，保留布局、文案、层次、间距、控件与交互；Paper 不另行重新设计。双皮肤和引擎文档用于补全原型没有覆盖的状态。
+
 ## 任务总览
 
 | 任务 | 内容 | 对应里程碑 |
@@ -115,12 +117,16 @@
 | T4c 我的与设置 | `src/features/settings/useSettingsVM.ts` | `src/features/settings/{types,presenters,samples}.ts`、`src/features/settings/SettingsScreens.tsx`、`src/ui/screens/{Me,MeMineru,MeAI,MeAIEdit,MePrefs,MeStorage,About}View.tsx`、`src/app/usecases/settings.ts`、`__tests__/features/settings.test.tsx` |
 | T4d 导航与集成 | `src/ui/navigation/RootNavigator.tsx` | `src/features/nav.tsx`、`src/App.tsx`、`src/features/gallery/*`、`src/ui/screens/SkinGalleryView.tsx`、导航/应用测试、导航依赖与配置 |
 
+T4f 原型对照收敛：主目标 `src/ui/screens/ReviewSessionView.tsx`，辅助 `src/ui/screens/{Review,Notes,NotesBook,NoteDetail,BookMap,ParseProgress,ImportSettings}View.tsx`，逐项对照 prototype CSS/HTML，沿用现有 VM 与 kit，不扩业务。
+
 T4a–c 在 T3 通过后同批实现，T4d 负责集成。VM 通过 `app/usecases` 访问容器，页面只用 kit 与 VM 类型；复用已有 tokens。验证运行 `npm run check`、Android 构建和模拟器走查。T8 的文件选择和 T11 的导出/备份保持本节所述界面范围。
 
 验收：
 - [ ] Demo 模式下，原型控制台里的这些场景都能在 App 里走通：书架 → 地图 → 小节浮层；复习闪卡（翻面、三种评分、做完页）；卡点「已掌握」；笔记按节 → 详情 → 写自己的笔记（重进还在）；我的各子页开关和分段能改并持久化。
 - [ ] 两套皮肤下逐页截图对照原型（paper）/ 02 §7（glass），放 PR 描述。
 - [ ] VM 测试：每个 VM 至少测 presenter 文案（如书架状态行的 4 种情况、我的页 Token 将过期变色）和一个意图（调用了正确的用例 / 导航）。
+
+实施检查（2026-10-29）：T4/T6/T7a 集成后 `npm run check` 全通过，56 suites / 917 tests / 15 snapshots；含真实 SQLite 会话、全部演示页面双皮肤样例、数学缓存/桥接/失败兜底、AI 设置请求与取消。WebView 原生依赖加入后 Android arm64 debug 构建成功（58s）。外围页与学习页的原生走查、逐页原型对照仍在进行，以下视觉/交互验收不提前勾选。
 
 ### T5 引擎纯函数
 
@@ -184,6 +190,8 @@ T4a–c 在 T3 通过后同批实现，T4d 负责集成。VM 通过 `app/usecase
 - 原生 `FileTools`、`Intake`、`PdfPages`（本任务先做 info / outline / pageLabels / textLayer / split）。
 - 导入流程、解析设置页、解析队列、结果包适配器、地图构建、书签核对、页码偏移、全文搜索（地图页搜索 + `search_book` 工具）。
 - 先做 06 §2.5 的「T8 第一件事」：抓真实样本。
+
+实施文件分工：T8a 根代理负责原生 PDF/FileTools/Intake、平台 IO、依赖与导入集成；T8b 主目标 `src/services/mineru/client.ts`，辅助 `src/services/mineru/{types,adapter,split}.ts`、`__tests__/services/mineru/**`、`fixtures/mineru-synthetic/**`；T8c 主目标 `src/core/map/index.ts`，辅助 `src/core/map/{types,migration}.ts`、`src/core/ids.ts`（页码标签）、`__tests__/core/{map,migration}.test.ts`。T8c 可在学习页原生验收时并行执行纯函数，不依赖原生模块或新包。T8d 导入/队列的文件集合在平台接口确定后补充。
 
 验收：
 - [ ] 合成夹具测试：适配器、地图构建、偏移、分片顺序、阶段推进（假 MinerU 客户端按脚本返回各种 state 和错误码）。

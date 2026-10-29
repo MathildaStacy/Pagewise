@@ -101,6 +101,17 @@ export function SkinGalleryView({
         contentContainerStyle={{ paddingBottom: t.space.sectionGap }}
       >
         {section(
+          '页面',
+          s.pages.map(page => (
+            <K.Row
+              key={page.key}
+              title={page.label}
+              chevron
+              onPress={() => i.previewPage(page.key)}
+            />
+          )),
+        )}
+        {section(
           '按钮与快捷操作',
           wrap(
             <>

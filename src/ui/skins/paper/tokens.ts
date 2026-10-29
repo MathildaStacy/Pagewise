@@ -51,7 +51,7 @@ export const paperLight: Tokens = {
     glassLine: '#ECEAE6',
   },
   type: {
-    largeTitle: text(17, 20.4, '600'),
+    largeTitle: text(20, 30, '600'),
     title: text(17, 20.4, '600'),
     headline: text(15, 22.5, '600'),
     body: text(14, 21),

@@ -3,6 +3,7 @@ import { SkinGalleryView } from '@ui/screens/SkinGalleryView';
 import { useAppearanceVM } from '@features/appearance/useAppearanceVM';
 import type { GalleryState, GalleryIntents } from './types';
 import { previewPageUri } from './preview';
+import { PagePreviews, pagePreviewItems } from './PagePreviews';
 
 export function GalleryScreen({
   appearance,
@@ -14,8 +15,12 @@ export function GalleryScreen({
   onScale(value: number): void;
 }) {
   const vm = useAppearanceVM(() => {});
+  const [preview, setPreview] = useState<string | null>(null);
   const [local, setLocal] = useState<
-    Omit<GalleryState, keyof typeof vm.state | 'fontScale' | 'previewPageUri'>
+    Omit<
+      GalleryState,
+      keyof typeof vm.state | 'fontScale' | 'previewPageUri' | 'pages'
+    >
   >({
     mode: 'listen',
     overlay: null,
@@ -35,6 +40,7 @@ export function GalleryScreen({
     setLocal(state => ({ ...state, ...value }));
   const intents: GalleryIntents = {
     ...vm.intents,
+    previewPage: setPreview,
     appearance,
     setScale: value => onScale(Number(value)),
     setMode: mode => patch({ mode }),
@@ -53,9 +59,17 @@ export function GalleryScreen({
       patch({ proposal: key === 'accept' ? 'accepted' : 'dismissed' }),
     notify: toast => patch({ toast }),
   };
+  if (preview)
+    return <PagePreviews pageKey={preview} back={() => setPreview(null)} />;
   return (
     <SkinGalleryView
-      state={{ ...vm.state, ...local, fontScale, previewPageUri }}
+      state={{
+        ...vm.state,
+        ...local,
+        fontScale,
+        previewPageUri,
+        pages: pagePreviewItems,
+      }}
       intents={intents}
     />
   );

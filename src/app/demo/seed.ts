@@ -448,7 +448,9 @@ export async function seedDemo(db: Db, clock: Clock): Promise<void> {
       mode: 'listen',
       reader_view: 'flow',
       read_anchor: steps[1].block_from,
-      last_active_at: now,
+      last_active_at: new Date(
+        clock.now().getTime() - 3 * 86400000,
+      ).toISOString(),
     });
     for (let part = 0; part < 3; part++) {
       const from = part * 200 + 1;
@@ -573,6 +575,38 @@ export async function seedDemo(db: Db, clock: Clock): Promise<void> {
         created_at: now,
       });
     }
+    await repos.settings.set('ai.providers', [
+      {
+        id: 'demo-claude',
+        kind: 'anthropic',
+        name: 'Claude 官方（示意）',
+        protocol: 'anthropic',
+        baseUrl: 'https://api.anthropic.com',
+        auth: 'x-api-key',
+        cache: 'auto',
+        keyTail: '示意',
+        models: [
+          { id: 'claude-sonnet-5-5', enabled: true, price: null },
+          { id: 'claude-haiku-5-5', enabled: true, price: null },
+          { id: 'claude-opus-5-5', enabled: true, price: null },
+        ],
+      },
+      {
+        id: 'demo-openai',
+        kind: 'custom',
+        name: 'OpenAI 兼容（示意）',
+        protocol: 'openai',
+        baseUrl: 'https://api.example-relay.com/v1',
+        auth: 'bearer',
+        cache: 'auto',
+        keyTail: '示意',
+        models: [{ id: 'gpt-5-mini', enabled: true, price: null }],
+      },
+    ]);
+    await repos.settings.set('ai.assign', {
+      teach: { providerId: 'demo-claude', model: 'claude-sonnet-5-5' },
+      tidy: { providerId: 'demo-claude', model: 'claude-haiku-5-5' },
+    });
     await repos.settings.set(DEMO_KEY, DEMO_VERSION);
   });
 }

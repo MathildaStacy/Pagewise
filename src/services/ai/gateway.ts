@@ -51,7 +51,11 @@ export interface AiGateway {
     req: GatewayRequest,
     opts?: { signal?: AbortSignal },
   ): Promise<ParsedResponse>;
-  test(providerId: string, model: string): Promise<ConnectionResult>;
+  test(
+    providerId: string,
+    model: string,
+    opts?: { signal?: AbortSignal },
+  ): Promise<ConnectionResult>;
 }
 
 type MaybePromise<T> = T | Promise<T>;
@@ -176,26 +180,31 @@ export function createAiGateway(deps: GatewayDependencies): AiGateway {
         await execute(connection, purpose, { ...req, stream: false }, opts)
       ).parsed;
     },
-    async test(providerId, model) {
+    async test(providerId, model, opts = {}) {
       const connection = await deps.resolveProvider(providerId, model);
-      const result = await execute(connection, 'test', {
-        system: '连接测试。请只回复「连接成功」。',
-        contextBlocks: [],
-        tools: [],
-        noTools: true,
-        history: [
-          {
-            id: 0,
-            threadId: 0,
-            role: 'user',
-            parts: [{ t: 'text', text: '连接测试' }],
-            raw: null,
-            ui: null,
-            compacted: false,
-            createdAt: now().toISOString(),
-          },
-        ],
-      });
+      const result = await execute(
+        connection,
+        'test',
+        {
+          system: '连接测试。请只回复「连接成功」。',
+          contextBlocks: [],
+          tools: [],
+          noTools: true,
+          history: [
+            {
+              id: 0,
+              threadId: 0,
+              role: 'user',
+              parts: [{ t: 'text', text: '连接测试' }],
+              raw: null,
+              ui: null,
+              compacted: false,
+              createdAt: now().toISOString(),
+            },
+          ],
+        },
+        opts,
+      );
       return {
         ok: true,
         model: result.parsed.model ?? connection.service.model,

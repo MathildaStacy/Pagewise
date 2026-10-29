@@ -274,6 +274,20 @@ test('连接测试使用指定provider/model并记录测试用量', async () => 
   );
 });
 
+test('连接测试支持取消，已取消时不发请求、不记录用量', async () => {
+  const fetchImpl = jest.fn<ReturnType<FetchLike>, Parameters<FetchLike>>(
+    async () => answer(),
+  );
+  const config = deps(fetchImpl);
+  const controller = new AbortController();
+  controller.abort();
+  await expect(
+    createAiGateway(config).test('p', 'm', { signal: controller.signal }),
+  ).rejects.toMatchObject({ code: 'cancelled' });
+  expect(fetchImpl).not.toHaveBeenCalled();
+  expect(config.recordUsage).not.toHaveBeenCalled();
+});
+
 test('录制响应不能超用或错配；错误HTTP不交付SSE正文', async () => {
   const replay = createRecordedFetch([
     { ...recorded, url: 'https://ai.example.com/v1/messages' },

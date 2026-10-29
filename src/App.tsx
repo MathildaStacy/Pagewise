@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Pressable,
   Share,
@@ -6,46 +6,124 @@ import {
   StyleSheet,
   Text,
   View,
+  DevSettings,
 } from 'react-native';
 import { useStore } from 'zustand';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { appearanceStore } from '@app/appearance';
 import { createDeviceContainer, type Container } from '@app/container';
+import { createDemoContainer } from '@app/demo';
+import { getMathRuntime } from '@app/math';
+import { MathWebViewHost } from '@services/math/WebViewHost';
 import { ContainerProvider } from '@app/ContainerProvider';
 import { toAppError, type AppError } from '@app/errors';
 import { createLogger } from '@app/log';
 import { useUiEnvironment } from '@app/useUiEnvironment';
-import { AppearanceScreen } from '@features/appearance/AppearanceScreen';
-import { GalleryScreen } from '@features/gallery/GalleryScreen';
-import { SkinProvider, useSkin } from '@ui/kit';
+import { SkinProvider, useSkin, Button, MathProvider } from '@ui/kit';
+import { RootNavigator } from '@ui/navigation/RootNavigator';
 
-function Content() {
-  const [page, setPage] = useState<'gallery' | 'appearance'>(
-    __DEV__ ? 'gallery' : 'appearance',
+function Content({
+  container,
+  demoBootstrap,
+}: {
+  container: Container;
+  demoBootstrap(): Promise<Container>;
+}) {
+  const [demo, setDemo] = useState<Container | null>(null);
+  const [demoError, setDemoError] = useState<string | null>(null);
+  const switching = useRef(false);
+  const mounted = useRef(true);
+  const active = demo ?? container;
+  const enterDemo = useCallback(() => {
+    if (switching.current || demo) return;
+    switching.current = true;
+    demoBootstrap()
+      .then(value => {
+        if (mounted.current) {
+          setDemo(value);
+          setDemoError(null);
+        } else
+          value.close().catch(() => container.log.warn('关闭演示书库失败'));
+      })
+      .catch(() => setDemoError('演示书库暂时无法打开，请重试'))
+      .finally(() => {
+        switching.current = false;
+      });
+  }, [demo, demoBootstrap, container]);
+  const exitDemo = useCallback(() => setDemo(null), []);
+  useEffect(
+    () => () => {
+      mounted.current = false;
+    },
+    [],
   );
+  useEffect(
+    () => () => {
+      if (demo)
+        demo.close().catch(() => container.log.warn('关闭演示书库失败'));
+    },
+    [demo, container],
+  );
+  useEffect(() => {
+    if (__DEV__) {
+      DevSettings.addMenuItem('体验演示书库', enterDemo);
+      DevSettings.addMenuItem('返回我的书库', exitDemo);
+    }
+  }, [enterDemo, exitDemo]);
   const [fontScale, setFontScale] = useState(1);
-  const appearance = useStore(appearanceStore);
+  const appearance = useStore(active.appearance.store);
   const environment = useUiEnvironment();
+  const math = useMemo(() => getMathRuntime(active), [active]);
+  useEffect(() => () => math.close(), [math]);
   return (
-    <SkinProvider
-      skinId={appearance.skin}
-      scheme={appearance.scheme}
-      readingSize={appearance.readingSize}
-      fontScale={fontScale}
-      blurEnabled={environment.blurAllowed}
-    >
-      <ThemedStatusBar />
-      {page === 'gallery' ? (
-        <GalleryScreen
-          appearance={() => setPage('appearance')}
-          fontScale={fontScale}
-          onScale={setFontScale}
-        />
-      ) : (
-        <AppearanceScreen back={() => setPage('gallery')} />
-      )}
-    </SkinProvider>
+    <ContainerProvider value={active}>
+      <SkinProvider
+        skinId={appearance.skin}
+        scheme={appearance.scheme}
+        readingSize={appearance.readingSize}
+        fontScale={fontScale}
+        blurEnabled={environment.blurAllowed}
+      >
+        <MathProvider renderer={math.renderer}>
+          <MathWebViewHost bridge={math.bridge} />
+          <ThemedStatusBar />
+          {demo ? <DemoBanner exit={exitDemo} /> : null}
+          {demoError ? (
+            <Text accessibilityRole="alert">{demoError}</Text>
+          ) : null}
+          <SafeAreaProvider key={demo ? 'demo' : 'device'} style={styles.root}>
+            <RootNavigator
+              key={demo ? 'demo' : 'device'}
+              enterDemo={enterDemo}
+              exitDemo={exitDemo}
+              fontScale={fontScale}
+              onScale={setFontScale}
+            />
+          </SafeAreaProvider>
+        </MathProvider>
+      </SkinProvider>
+    </ContainerProvider>
+  );
+}
+function DemoBanner({ exit }: { exit(): void }) {
+  const { tokens: t } = useSkin();
+  return (
+    <SafeAreaView edges={['top']} style={{ backgroundColor: t.color.accentBg }}>
+      <View
+        style={[
+          styles.demoBanner,
+          {
+            backgroundColor: t.color.accentBg,
+            paddingHorizontal: t.space.pageX,
+          },
+        ]}
+      >
+        <Text style={{ ...t.type.caption, color: t.color.accentInk }}>
+          演示书库 · 内容均为示意
+        </Text>
+        <Button size="sm" variant="text" label="退出演示" onPress={exit} />
+      </View>
+    </SafeAreaView>
   );
 }
 function ThemedStatusBar() {
@@ -64,8 +142,10 @@ async function shareStartupLogs() {
 
 export default function App({
   bootstrap = createDeviceContainer,
+  demoBootstrap = createDemoContainer,
 }: {
   bootstrap?: () => Promise<Container>;
+  demoBootstrap?: () => Promise<Container>;
 }) {
   const [container, setContainer] = useState<Container | null>(null);
   const [error, setError] = useState<AppError | null>(null);
@@ -92,9 +172,7 @@ export default function App({
       <SafeAreaProvider>
         <View style={styles.root} accessibilityLabel="Pagewise">
           {container ? (
-            <ContainerProvider value={container}>
-              <Content />
-            </ContainerProvider>
+            <Content container={container} demoBootstrap={demoBootstrap} />
           ) : error ? (
             <View style={styles.startup}>
               <Text accessibilityRole="alert">启动失败：{error.message}</Text>
@@ -132,6 +210,11 @@ export default function App({
   );
 }
 const styles = StyleSheet.create({
+  demoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   root: { flex: 1 },
   startup: { padding: 24, gap: 16 },
   action: { minHeight: 48, justifyContent: 'center' },

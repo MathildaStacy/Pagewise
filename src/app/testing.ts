@@ -3,6 +3,7 @@ import { openMemoryDb } from '@data/drivers/nodeSqlite';
 import { createRecordedFetch } from '@services/ai/fake';
 import { createTestClock } from './clock';
 import { seedDemo } from './demo/seed';
+import { createDemoGateway } from './demo/gateway';
 import {
   createContainer,
   type Container,
@@ -30,7 +31,7 @@ export async function createTestDemoContainer(
   options: ContainerOptions = {},
 ): Promise<Container> {
   const container = await createTestContainer(
-    { ...over, mode: 'demo' },
+    { ai: createDemoGateway({ delayMs: 0 }), ...over, mode: 'demo' },
     options,
   );
   try {

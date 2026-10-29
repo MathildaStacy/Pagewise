@@ -7,6 +7,7 @@ import {
   ScrollView,
   Text,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { SvgXml } from 'react-native-svg';
 import type { KitProps, RichInline, Tone } from '../contracts';
@@ -14,6 +15,7 @@ import { useSkin, useTokens } from '../context';
 import { Icon } from '../Icon';
 import { makeStyles } from '../makeStyles';
 import * as Kit from '../proxy';
+import { useMathRenderer, type FormulaRender } from '../MathProvider';
 
 const BookTypography = createContext(false);
 
@@ -164,17 +166,74 @@ export function MathView({
 }: KitProps['MathView']) {
   const s = useStyles();
   const t = useTokens();
-  const content = svg ? (
+  const renderer = useMathRenderer();
+  const book = useContext(BookTypography);
+  const { fontScale } = useWindowDimensions();
+  const [rendered, setRendered] = useState<{
+    tex: string;
+    display: boolean;
+    renderer: typeof renderer;
+    value: FormulaRender;
+  } | null>(null);
+  useEffect(() => {
+    if (svg || !renderer) return;
+    let active = true;
+    const deadline = setTimeout(() => {
+      active = false;
+      setRendered(null);
+    }, 3000);
+    renderer
+      .render(tex, !!display)
+      .then(value => {
+        if (active) {
+          clearTimeout(deadline);
+          setRendered({ tex, display: !!display, renderer, value });
+        }
+      })
+      .catch(() => {
+        if (active) {
+          clearTimeout(deadline);
+          setRendered(null);
+        }
+      });
+    return () => {
+      active = false;
+      clearTimeout(deadline);
+    };
+  }, [tex, display, svg, renderer]);
+  const result =
+    rendered?.tex === tex &&
+    rendered.display === !!display &&
+    rendered.renderer === renderer
+      ? rendered.value
+      : null;
+  const ex =
+    (book ? t.type.bookBody.fontSize : t.type.aiBody.fontSize) *
+    fontScale *
+    0.5;
+  const xml = svg ?? result?.svg;
+  const content = xml ? (
     <SvgXml
-      xml={svg}
-      width={width ?? '100%'}
-      height={height ?? t.type.aiBody.lineHeight * 2}
+      xml={xml}
+      width={width ?? (result ? result.width * ex : '100%')}
+      height={
+        height ?? (result ? result.height * ex : t.type.aiBody.lineHeight * 2)
+      }
+      style={
+        !display && result
+          ? {
+              transform: [
+                { translateY: (result.height - result.baseline) * ex },
+              ],
+            }
+          : undefined
+      }
       color={t.color.ink}
       accessibilityRole="image"
       accessibilityLabel={tex}
     />
   ) : (
-    <Text selectable style={s.mathText}>
+    <Text selectable style={s.mathFallback}>
       {tex}
     </Text>
   );
@@ -1140,6 +1199,11 @@ const useStyles = makeStyles(t => ({
     paddingLeft: 8,
   },
   mathText: { ...t.type.aiBody, ...t.type.num, color: t.color.ink },
+  mathFallback: {
+    ...t.type.aiBody,
+    fontFamily: 'monospace',
+    color: t.color.ink2,
+  },
   mathDisplay: {
     minWidth: '100%',
     justifyContent: 'center',

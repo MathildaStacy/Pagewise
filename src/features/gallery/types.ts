@@ -3,6 +3,7 @@ import type {
   AppearanceIntents,
 } from '@features/appearance/types';
 export interface GalleryState extends AppearanceState {
+  pages: { key: string; label: string }[];
   fontScale: number;
   previewPageUri: string;
   mode: 'read' | 'listen';
@@ -20,6 +21,7 @@ export interface GalleryState extends AppearanceState {
   toast: string | null;
 }
 export interface GalleryIntents extends AppearanceIntents {
+  previewPage(key: string): void;
   appearance(): void;
   setScale(value: string): void;
   setMode(value: 'read' | 'listen'): void;

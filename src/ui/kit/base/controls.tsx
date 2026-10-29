@@ -12,6 +12,7 @@ import { useTokens } from '../context';
 import { Icon } from '../Icon';
 import { makeStyles } from '../makeStyles';
 import * as Kit from '../proxy';
+import { Children } from 'react';
 
 function tonePair(t: ReturnType<typeof useTokens>, tone: Tone = 'neutral') {
   const c = t.color;
@@ -453,6 +454,7 @@ export function Composer({
 
 export function StepProgress({
   steps,
+  onPressStep,
   label,
   onPressBar,
   right,
@@ -483,7 +485,7 @@ export function StepProgress({
         {steps.map((step, index) => (
           <Pressable
             key={`${index}-${step.title}`}
-            onPress={onPressBar}
+            onPress={() => onPressStep(index)}
             accessibilityRole="button"
             accessibilityLabel={`${index + 1}. ${step.title}，${
               {
@@ -559,6 +561,7 @@ export function DetourBanner({
 
 export function ListSection({
   title,
+  subtitle,
   note,
   children,
 }: KitProps['ListSection']) {
@@ -571,9 +574,12 @@ export function ListSection({
       accessibilityState={{}}
     >
       {title ? (
-        <Text style={s.sectionTitle} accessibilityRole="header">
-          {title}
-        </Text>
+        <View style={s.sectionHeading}>
+          <Text style={[s.sectionTitle, s.grow]} accessibilityRole="header">
+            {title}
+          </Text>
+          {subtitle ? <Text style={s.sectionNote}>{subtitle}</Text> : null}
+        </View>
       ) : null}
       {children}
       {note ? <Text style={s.sectionNote}>{note}</Text> : null}
@@ -682,19 +688,35 @@ export function Note({ tone, children }: KitProps['Note']) {
   const s = useStyles();
   const t = useTokens();
   const [fg, bg] = tonePair(t, tone);
+  const parts = Children.toArray(children);
+  const plain = parts.every(
+    value => typeof value === 'string' || typeof value === 'number',
+  );
+  const text = plain ? parts.join('') : null;
   return (
     <View
       style={[s.note, { backgroundColor: bg }]}
       accessibilityRole={tone === 'bad' ? 'alert' : 'text'}
-      accessibilityLabel={typeof children === 'string' ? children : '提示'}
+      accessibilityLabel={text ?? '提示'}
       accessibilityState={{}}
     >
-      {typeof children === 'string' || typeof children === 'number' ? (
+      {plain ? (
         <Text style={[s.caption, { color: textTone(t, tone, fg) }]}>
-          {children}
+          {text}
         </Text>
       ) : (
-        children
+        parts.map((child, index) =>
+          typeof child === 'string' || typeof child === 'number' ? (
+            <Text
+              key={index}
+              style={[s.caption, { color: textTone(t, tone, fg) }]}
+            >
+              {child}
+            </Text>
+          ) : (
+            child
+          ),
+        )
       )}
     </View>
   );
@@ -1095,6 +1117,11 @@ const useStyles = makeStyles(t => ({
     backgroundColor: t.color.detourBg,
   },
   section: { backgroundColor: t.color.surface, marginBottom: 8 },
+  sectionHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   sectionTitle: {
     ...t.type.headline,
     color: t.color.ink,

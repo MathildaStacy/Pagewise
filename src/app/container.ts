@@ -20,6 +20,8 @@ import {
   type AppearanceSettings,
 } from './appearance';
 import { createEventBus, type EventBus } from './events';
+import { disposeContainerSessions } from './study/registry';
+import { disposeMathRuntime } from './math';
 import { createLogger, type Logger } from './log';
 
 /** 所有 IO 和应用设置通过容器注入，Demo 与正式书库使用独立数据库。 */
@@ -105,7 +107,7 @@ export async function createContainer(
     });
   log.info('基础服务已就绪');
   let closing: Promise<void> | undefined;
-  return {
+  const container: Container = {
     db,
     repos,
     appearance,
@@ -119,6 +121,8 @@ export async function createContainer(
       over.close ??
       (() => {
         closing ??= (async () => {
+          await disposeContainerSessions(container);
+          disposeMathRuntime(container);
           await appearance.flush();
           await log.flush();
           await db.close();
@@ -126,6 +130,7 @@ export async function createContainer(
         return closing;
       }),
   };
+  return container;
 }
 
 export async function createDeviceContainer(

@@ -153,7 +153,7 @@ for (const skin of ['paper', 'glass'] as const) {
         ).toBe(true);
       }
     });
-    it('步骤条保留路线图入口，glass 直接回传步骤索引', async () => {
+    it('步骤条保留路线图入口并回传步骤索引', async () => {
       const props = makeComponentSamples().StepProgress;
       const renderer = await mount(<Kit.StepProgress {...props} />, skin);
       await act(async () =>
@@ -161,8 +161,8 @@ for (const skin of ['paper', 'glass'] as const) {
       );
       expect(props.onPressBar).toHaveBeenCalledTimes(1);
       await act(async () => action(renderer.root, /先讲直觉/).props.onPress());
-      if (skin === 'glass') expect(props.onPressStep).toHaveBeenCalledWith(0);
-      else expect(props.onPressBar).toHaveBeenCalledTimes(2);
+      expect(props.onPressStep).toHaveBeenCalledWith(0);
+      expect(props.onPressBar).toHaveBeenCalledTimes(1);
     });
     it('开关与勾选行只转发新值/意图', async () => {
       const samples = makeComponentSamples();
@@ -197,3 +197,18 @@ for (const skin of ['paper', 'glass'] as const) {
     });
   });
 }
+
+it('Note wraps adjacent text expressions and numbers in one native Text', async () => {
+  const renderer = await mount(
+    <Kit.Note tone="neutral">
+      {'核对结果'}
+      {'\n演示内容'}
+      {3}
+    </Kit.Note>,
+  );
+  const note = renderer.root.findAll(
+    node => node.props.accessibilityLabel === '核对结果\n演示内容3',
+  )[0];
+  expect(note).toBeDefined();
+  expect(JSON.stringify(renderer.toJSON())).toContain('核对结果\\n演示内容3');
+});

@@ -1,5 +1,10 @@
 const { jest } = require('@jest/globals');
 
+jest.mock('react-native/Libraries/Utilities/DevSettings', () => ({
+  __esModule: true,
+  default: { addMenuItem: jest.fn(), reload: jest.fn() },
+}));
+
 jest.mock(
   'react-native-safe-area-context',
   () => require('react-native-safe-area-context/jest/mock').default,
@@ -36,3 +41,20 @@ jest.mock('@gorhom/bottom-sheet', () => {
 jest.mock('react-native-reanimated', () => ({
   ReduceMotion: { Always: 'always', System: 'system', Never: 'never' },
 }));
+
+jest.mock('react-native-webview', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const postMessage = jest.fn();
+  const WebView = React.forwardRef((props, ref) => {
+    React.useImperativeHandle(ref, () => ({ postMessage, reload: jest.fn() }));
+    return React.createElement(View, props);
+  });
+  WebView.displayName = 'MockWebView';
+  return {
+    __esModule: true,
+    default: WebView,
+    WebView,
+    __postMessage: postMessage,
+  };
+});

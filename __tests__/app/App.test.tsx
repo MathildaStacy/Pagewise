@@ -1,29 +1,59 @@
-import { View } from 'react-native';
-import ReactTestRenderer from 'react-test-renderer';
-import mockSafeAreaContext from 'react-native-safe-area-context/jest/mock';
+import ReactTestRenderer, { act } from 'react-test-renderer';
 import App from '../../src/App';
-import { createTestContainer } from '@app/testing';
+import { createTestContainer, createTestDemoContainer } from '@app/testing';
+import { TabBar, AppBar } from '@ui/kit';
 
-jest.mock('react-native-safe-area-context', () => mockSafeAreaContext);
+jest.mock('@data/drivers/opSqlite', () => ({
+  openDeviceDb: jest.fn(() =>
+    jest.requireActual('@data/drivers/nodeSqlite').openMemoryDb(),
+  ),
+}));
 
-it('bootstraps the foundation and renders the component gallery', async () => {
-  let renderer: ReactTestRenderer.ReactTestRenderer;
-  await ReactTestRenderer.act(async () => {
-    renderer = ReactTestRenderer.create(
-      <App bootstrap={createTestContainer} />,
-    );
-  });
-
-  expect(
-    renderer!.root
-      .findAllByType(View)
-      .some(view => view.props.accessibilityLabel === 'Pagewise'),
-  ).toBe(true);
-
-  expect(
-    renderer!.root.findAll(node => node.props.accessibilityLabel === '组件对照')
-      .length,
-  ).toBeGreaterThan(0);
-
-  await ReactTestRenderer.act(async () => renderer!.unmount());
+const settle = () => new Promise(resolve => setTimeout(resolve, 100));
+it('starts at an empty real shelf, opens settings, enters an isolated Demo library and returns', async () => {
+  let renderer!: ReactTestRenderer.ReactTestRenderer;
+  const device = await createTestContainer();
+  const bootstrap = () => Promise.resolve(device);
+  try {
+    await act(async () => {
+      renderer = ReactTestRenderer.create(
+        <App bootstrap={bootstrap} demoBootstrap={createTestDemoContainer} />,
+      );
+      await settle();
+    });
+    expect(JSON.stringify(renderer.toJSON())).toContain('导入第一本书');
+    await act(async () => {
+      renderer.root.findByType(TabBar).props.onSelect('Me');
+      await settle();
+    });
+    const press = async (label: string) => {
+      const node = renderer.root.findAll(
+        n =>
+          (n.props.accessibilityLabel === label ||
+            n.props.title === label ||
+            n.props.label === label) &&
+          typeof n.props.onPress === 'function',
+      )[0];
+      expect(node).toBeDefined();
+      await act(async () => {
+        node.props.onPress();
+        await settle();
+      });
+    };
+    await press('外观');
+    expect(JSON.stringify(renderer.toJSON())).toContain('界面风格');
+    await act(async () => {
+      renderer.root.findAllByType(AppBar).at(-1)!.props.onBack();
+      await settle();
+    });
+    await press('关于 Pagewise');
+    await press('体验演示书库');
+    expect(JSON.stringify(renderer.toJSON())).toContain('3.5.2 A*搜索');
+    expect(await device.repos.books.list()).toEqual([]);
+    await press('退出演示');
+    expect(JSON.stringify(renderer.toJSON())).toContain('导入第一本书');
+  } finally {
+    if (renderer) await act(async () => renderer.unmount());
+    await device.close();
+  }
 });

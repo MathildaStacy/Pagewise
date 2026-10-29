@@ -160,6 +160,7 @@ export interface DetourBannerProps {
 }
 export interface ListSectionProps {
   title?: string;
+  subtitle?: string;
   note?: string;
   children?: ReactNode;
 }

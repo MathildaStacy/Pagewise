@@ -6,3 +6,6 @@ export { Icon } from './Icon';
 export { ToastHost } from './ToastHost';
 export type * from './contracts';
 export type * from './tokens';
+
+export { MathProvider } from './MathProvider';
+export type { FormulaRender, FormulaRenderer } from './MathProvider';
