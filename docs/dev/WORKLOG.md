@@ -193,6 +193,14 @@ TalkBack服务已实际绑定，Tab绿色焦点、书架继续进入听讲已观
 
 用户要求使用stop-that-shit skill：按change责任仅修已确认原型差异与必要调用者/测试，不新增产品功能。用户选择先完成模拟器可验证项目；实体机与Anthropic专项继续独立列未验证。
 
+### 21. v0.0.1 发布准备
+
+用户要求最后commit、push并发布release版tag。发现Android模板versionName仍为1.0，与package.json和关于页0.0.1不一致，已统一为0.0.1，versionCode保留1；没有改动签名方案或增加发布框架。
+
+重新构建arm64 release成功（50s，616 tasks），apksigner验证通过，output-metadata确认为release/0.0.1，APK仅含arm64-v8a。发布文件为Pagewise-v0.0.1-android-arm64.apk，45,674,752bytes，SHA-256为6768613124d107f8c53ea8614b5e6ae7b7935f7783be95d6e4f143b757ca3d71；APK解包逐文件比对本次真实凭据，匹配0。JS源码未变，沿用§20完整check证据。
+
+发布说明见releases/v0.0.1.md；计划以v0.0.1 tag附APK与SHA256SUMS发布GitHub预览版，沿用当前开发签名，并如实列出未完成验收，不能将发布等同于整体验收通过。版本提交及远端发布结果以Git与GitHub实际状态为准。
+
 ## 待完成 / 不得提前宣称通过
 
 - 地图27/27正文章首页、章号与偏移已确认；全图1342节层级及845个黄色核对项仍需人工质量复核。长词全文搜索→Reader原版/重排已设备通过，短词路径仍待补验。
