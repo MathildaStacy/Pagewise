@@ -1,6 +1,6 @@
 {
   "name": "pagewise",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "check": "npm run lint && npm run typecheck && npm test -- --runInBand",
     "android:build": "cd android && ./gradlew :app:assembleDebug",
+    "android:icons": "node scripts/generate-app-icons.cjs",
     "math:assets": "node scripts/copy-mathjax.js",
     "postinstall": "npm run math:assets",
     "preandroid": "npm run math:assets",
@@ -51,6 +52,7 @@
     "@react-native/jest-preset": "0.87.1",
     "@react-native/metro-config": "0.87.1",
     "@react-native/typescript-config": "0.87.1",
+    "@resvg/resvg-js": "2.6.2",
     "@types/jest": "^29.5.13",
     "@types/react": "^19.2.0",
     "@types/react-test-renderer": "^19.1.0",
