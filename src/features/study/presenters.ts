@@ -1,5 +1,10 @@
 import type { Block, Book, Message, Section } from '@core/types';
-import { parse, type Inline, type RichDoc as CoreDoc } from '@core/markup';
+import {
+  parse,
+  stableStreamText,
+  type Inline,
+  type RichDoc as CoreDoc,
+} from '@core/markup';
 import { validateCitations } from '@core/citations';
 import {
   parseStudyCard,
@@ -181,6 +186,15 @@ export function quickActions(
   );
   return result;
 }
+interface Presented {
+  id: string;
+  blocks: ReadonlyMap<number, Block>;
+  book: Book | null;
+  main: string;
+  item: ThreadItem;
+}
+/** Messages are immutable in the session store; reuse their items so unchanged rows skip parsing and rendering. */
+const presentedMessages = new WeakMap<Message, Presented>();
 function presentMessage(
   message: Message,
   raw: SessionState,
@@ -190,33 +204,52 @@ function presentMessage(
 ): ThreadItem | null {
   const id = String(message.id),
     detour = message.detour_id !== null;
-  if (message.kind === 'user')
-    return {
-      kind: 'user',
-      id,
-      text: message.content,
-      detour,
-      quote:
-        message.quote_seq !== null
-          ? `${blockPage(blocks.get(message.quote_seq), raw.book)} · ${
-              blocks.get(message.quote_seq)?.text.slice(0, 60) ?? ''
-            }`
-          : undefined,
-    };
-  if (message.kind === 'assistant')
-    return {
-      kind: 'ai',
-      id,
-      doc: messageDoc(
-        message.content,
-        message.allowed_refs ?? [],
-        blocks,
-        raw.book,
-        raw.main.sectionId,
-      ),
-      streaming: false,
-      detour,
-    };
+  if (message.kind === 'user' || message.kind === 'assistant') {
+    const key = raw.streamKeys[message.id] ?? id,
+      hit = presentedMessages.get(message);
+    if (
+      hit?.id === key &&
+      hit.blocks === blocks &&
+      hit.book === raw.book &&
+      hit.main === raw.main.sectionId
+    )
+      return hit.item;
+    const item: ThreadItem =
+      message.kind === 'user'
+        ? {
+            kind: 'user',
+            id: key,
+            text: message.content,
+            detour,
+            quote:
+              message.quote_seq !== null
+                ? `${blockPage(blocks.get(message.quote_seq), raw.book)} · ${
+                    blocks.get(message.quote_seq)?.text.slice(0, 60) ?? ''
+                  }`
+                : undefined,
+          }
+        : {
+            kind: 'ai',
+            id: key,
+            doc: messageDoc(
+              message.content,
+              message.allowed_refs ?? [],
+              blocks,
+              raw.book,
+              raw.main.sectionId,
+            ),
+            streaming: false,
+            detour,
+          };
+    presentedMessages.set(message, {
+      id: key,
+      blocks,
+      book: raw.book,
+      main: raw.main.sectionId,
+      item,
+    });
+    return item;
+  }
   if (message.kind === 'tool') return null;
   const card = parseStudyCard(message.content);
   if (!card) return null;
@@ -380,7 +413,7 @@ export function presentThread(
       kind: 'ai',
       id: raw.streaming.entryId,
       doc: messageDoc(
-        raw.streaming.text,
+        stableStreamText(raw.streaming.text),
         raw.streaming.allowedRefs,
         blocks,
         raw.book,

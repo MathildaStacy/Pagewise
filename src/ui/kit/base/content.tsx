@@ -1,4 +1,11 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import {
+  createContext,
+  memo,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import {
   Animated,
   Image,
@@ -8,6 +15,8 @@ import {
   Text,
   View,
   useWindowDimensions,
+  type StyleProp,
+  type TextStyle,
 } from 'react-native';
 import { SvgXml } from 'react-native-svg';
 import type { KitProps, RichInline, Tone } from '../contracts';
@@ -16,11 +25,19 @@ import { Icon } from '../Icon';
 import { makeStyles } from '../makeStyles';
 import * as Kit from '../proxy';
 import { useMathRenderer, type FormulaRender } from '../MathProvider';
+import {
+  RevealContext,
+  RevealFadeIn,
+  revealTextStyle,
+  useReveal,
+} from '../reveal/useReveal';
 
 const BookTypography = createContext(false);
 const StudyTypography = createContext<
   'source' | 'aux' | 'check' | 'fold' | null
 >(null);
+/** The surrounding text colour, so fading spans start from the right ink. */
+const TextInk = createContext<string | undefined>(undefined);
 
 function studyType(
   t: ReturnType<typeof useTokens>,
@@ -45,12 +62,22 @@ function Inline({
   onCite?: KitProps['RichView']['onCite'];
 }) {
   const t = useTokens();
+  const ink = useContext(TextInk) ?? t.color.ink;
   return (
     <>
       {nodes.map((node, index) => {
         switch (node.t) {
           case 'text':
-            return <Text key={index}>{node.v}</Text>;
+            return node.fade === undefined ? (
+              <Text key={index}>{node.v}</Text>
+            ) : (
+              <Text
+                key={index}
+                style={revealTextStyle(node.fade, ink, t.motion.reveal.blur)}
+              >
+                {node.v}
+              </Text>
+            );
           case 'b':
             return (
               <Text
@@ -109,6 +136,7 @@ export function RichView({
       : book
       ? s.bookText
       : s.aiText;
+  const ink = StyleSheet.flatten(textStyle)?.color;
   return (
     <View
       style={[s.rich, study === 'aux' && s.auxRich]}
@@ -116,86 +144,112 @@ export function RichView({
       accessibilityLabel="讲解内容"
       accessibilityState={{}}
     >
-      {doc.map((block, index) => {
-        switch (block.t) {
-          case 'p':
-            return (
-              <Text key={index} style={textStyle}>
-                <Inline nodes={block.c} onCite={onCite} />
-              </Text>
-            );
-          case 'math':
-            return <Kit.MathView key={index} tex={block.tex} display />;
-          case 'code':
-            return (
-              <ScrollView key={index} horizontal style={s.code}>
-                <Text selectable style={s.codeText}>
-                  {block.text}
-                </Text>
-              </ScrollView>
-            );
-          case 'list':
-            return (
-              <View key={index} style={s.list}>
-                {block.items.map((items, itemIndex) => (
-                  <View key={itemIndex} style={s.listItem}>
-                    <Text style={textStyle}>
-                      {block.ordered ? `${itemIndex + 1}.` : '•'}
-                    </Text>
-                    <Text style={[textStyle, s.grow]}>
-                      <Inline nodes={items} onCite={onCite} />
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            );
-          case 'quote':
-            return (
-              <Kit.SourceCard
-                key={index}
-                label={block.label ?? `原文 · b${block.ref}`}
-                text={block.text ?? '该引用未核实'}
-                onPress={
-                  block.verified && onCite ? () => onCite(block.ref) : undefined
-                }
-              />
-            );
-          case 'figure':
-            return block.uri && block.verified ? (
-              <Kit.FigureView
-                key={index}
-                uri={block.uri}
-                caption={block.text ?? block.label ?? `图 b${block.ref}`}
-                onPress={onFigure ? () => onFigure(block.ref) : undefined}
-              />
-            ) : (
-              <Kit.Note key={index} tone="neutral">
-                该图片未核实
-              </Kit.Note>
-            );
-          case 'aux':
-            return (
-              <Kit.AuxBlock key={index} kind={block.kind} open={block.open}>
-                <Kit.RichView
-                  doc={block.body}
-                  onCite={onCite}
-                  onFigure={onFigure}
-                />
-              </Kit.AuxBlock>
-            );
-          case 'check':
-            return (
-              <Kit.CheckCard key={index}>
-                <Text style={s.studyBody}>
-                  <Inline nodes={block.c} onCite={onCite} />
-                </Text>
-              </Kit.CheckCard>
-            );
-        }
-      })}
+      <TextInk.Provider value={typeof ink === 'string' ? ink : undefined}>
+        {doc.map((block, index) => (
+          <RichBlockView
+            key={index}
+            block={block}
+            textStyle={textStyle}
+            onCite={onCite}
+            onFigure={onFigure}
+          />
+        ))}
+      </TextInk.Provider>
     </View>
   );
 }
+
+/** Blocks the reveal leaves untouched keep their identity, so memo skips them while text streams in. */
+const RichBlockView = memo(function RichBlock({
+  block,
+  textStyle,
+  onCite,
+  onFigure,
+}: {
+  block: KitProps['RichView']['doc'][number];
+  textStyle: StyleProp<TextStyle>;
+  onCite?: KitProps['RichView']['onCite'];
+  onFigure?: KitProps['RichView']['onFigure'];
+}) {
+  const s = useStyles();
+  switch (block.t) {
+    case 'p':
+      return (
+        <Text style={textStyle}>
+          <Inline nodes={block.c} onCite={onCite} />
+        </Text>
+      );
+    case 'math':
+      return (
+        <RevealFadeIn>
+          <Kit.MathView tex={block.tex} display />
+        </RevealFadeIn>
+      );
+    case 'code':
+      return (
+        <ScrollView horizontal style={s.code}>
+          <Text selectable style={s.codeText}>
+            {block.text}
+          </Text>
+        </ScrollView>
+      );
+    case 'list':
+      return (
+        <View style={s.list}>
+          {block.items.map((items, itemIndex) => (
+            <View key={itemIndex} style={s.listItem}>
+              <Text style={textStyle}>
+                {block.ordered ? `${itemIndex + 1}.` : '•'}
+              </Text>
+              <Text style={[textStyle, s.grow]}>
+                <Inline nodes={items} onCite={onCite} />
+              </Text>
+            </View>
+          ))}
+        </View>
+      );
+    case 'quote':
+      return (
+        <RevealFadeIn>
+          <Kit.SourceCard
+            label={block.label ?? `原文 · b${block.ref}`}
+            text={block.text ?? '该引用未核实'}
+            onPress={
+              block.verified && onCite ? () => onCite(block.ref) : undefined
+            }
+          />
+        </RevealFadeIn>
+      );
+    case 'figure':
+      return (
+        <RevealFadeIn>
+          {block.uri && block.verified ? (
+            <Kit.FigureView
+              uri={block.uri}
+              caption={block.text ?? block.label ?? `图 b${block.ref}`}
+              onPress={onFigure ? () => onFigure(block.ref) : undefined}
+            />
+          ) : (
+            <Kit.Note tone="neutral">该图片未核实</Kit.Note>
+          )}
+        </RevealFadeIn>
+      );
+    case 'aux':
+      return (
+        <Kit.AuxBlock kind={block.kind} open={block.open}>
+          <Kit.RichView doc={block.body} onCite={onCite} onFigure={onFigure} />
+        </Kit.AuxBlock>
+      );
+    case 'check':
+      return (
+        <Kit.CheckCard>
+          <Text style={s.studyBody}>
+            <Inline nodes={block.c} onCite={onCite} />
+          </Text>
+        </Kit.CheckCard>
+      );
+  }
+});
 
 export function MathView({
   tex,
@@ -399,16 +453,43 @@ export function AiMessage({
   ...rich
 }: KitProps['AiMessage']) {
   const s = useStyles();
+  const reveal = useReveal(rich.doc, !!streaming);
   return (
     <View
       style={[s.message, detour && s.detourMessage]}
       accessibilityRole="none"
       accessibilityLabel={detour ? '岔路讲解' : '讲解'}
-      accessibilityState={{ busy: !!streaming }}
+      accessibilityState={{ busy: !!streaming || reveal.revealing }}
     >
-      <Kit.RichView {...rich} />
-      {streaming ? <Kit.Typing label="正在生成讲解" /> : null}
+      <RevealContext.Provider value={reveal.revealing || !!streaming}>
+        <Kit.RichView {...rich} doc={reveal.doc} />
+      </RevealContext.Provider>
+      {streaming ? (
+        <Kit.Typing label="正在生成讲解" />
+      ) : reveal.canSkip ? (
+        <Kit.RevealSkip onPress={reveal.skip} />
+      ) : null}
     </View>
+  );
+}
+
+export function RevealSkip({
+  onPress,
+  label = '显示全部',
+}: KitProps['RevealSkip']) {
+  const s = useStyles();
+  const t = useTokens();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      hitSlop={8}
+      style={({ pressed }) => [s.revealSkip, pressed && { opacity: 0.7 }]}
+    >
+      <Icon name="skip" size={13} color={t.color.accentInk} />
+      <Text style={s.revealSkipText}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -1853,6 +1934,17 @@ const useStyles = makeStyles(t => ({
     ...t.type.num,
     color: t.color.ink2,
   },
+  revealSkip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: t.shape.pill,
+    backgroundColor: t.color.accentBg,
+  },
+  revealSkipText: { ...t.type.micro, color: t.color.accentInk },
   typing: {
     flexDirection: 'row',
     gap: 5,

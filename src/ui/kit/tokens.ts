@@ -126,6 +126,18 @@ export interface ElevationTokens {
   segment: ShadowStyle;
 }
 
+export interface RevealTokens {
+  /** 新字从模糊到清晰的时长（毫秒）。 */
+  fadeMs: number;
+  /** 新字初始的模糊半径（像素），0 表示只做透明度渐显。 */
+  blur: number;
+  /** 最低与最高吐字速度（可见字符/秒）；超过上限的积压可以用「显示全部」跳过。 */
+  minRate: number;
+  maxRate: number;
+  /** 目标落后网络的时长，越大越平滑、越不跟手。 */
+  lagMs: number;
+}
+
 export interface MotionTokens {
   fast: number;
   normal: number;
@@ -133,6 +145,7 @@ export interface MotionTokens {
   easing: [number, number, number, number];
   spring: { damping: number; stiffness: number; mass: number };
   pressScale: number;
+  reveal: RevealTokens;
 }
 
 export interface Tokens {

@@ -41,6 +41,12 @@ export function parseColor(value: string): RgbaColor {
   throw new Error(`不支持的颜色：${value}`);
 }
 
+/** Scale a token colour's alpha, e.g. for fading text in. */
+export function withAlpha(value: string, alpha: number): string {
+  const { r, g, b, a } = parseColor(value);
+  return `rgba(${r}, ${g}, ${b}, ${+(a * alpha).toFixed(3)})`;
+}
+
 /** Porter–Duff source-over in sRGB, before computing WCAG relative luminance. */
 export function compositeColor(
   foreground: RgbaColor,

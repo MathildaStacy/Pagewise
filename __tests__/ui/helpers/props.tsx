@@ -293,6 +293,7 @@ export function makeComponentSamples(): ComponentSamples {
     },
     SysDivider: { text: '跳过了第 3 步', tone: 'main' },
     Typing: { label: '正在讲解' },
+    RevealSkip: { onPress: jest.fn() },
     PageOrig: {
       uri: imageUri,
       width: 700,

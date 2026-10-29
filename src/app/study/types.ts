@@ -77,6 +77,8 @@ export interface StudyState {
   prefs: TeachPrefs;
   stuckCandidates: string[];
   draft: SectionDraft | null;
+  /** 由流式条目落库而来的消息沿用原列表 key，避免重新挂载。 */
+  streamKeys: Record<number, string>;
 }
 export interface QuizCard {
   kind: 'quiz';

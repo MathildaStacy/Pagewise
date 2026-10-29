@@ -145,6 +145,7 @@ export const paperLight: Tokens = {
     easing: [0.3, 0.7, 0, 1],
     spring: { damping: 22, stiffness: 240, mass: 1 },
     pressScale: 1,
+    reveal: { fadeMs: 420, blur: 3, minRate: 30, maxRate: 110, lagMs: 280 },
   },
   capabilities: { blur: false, haptics: false },
 };

@@ -59,6 +59,7 @@ export const ProposalCard = makeProxy('ProposalCard');
 export const DoneCard = makeProxy('DoneCard');
 export const SysDivider = makeProxy('SysDivider');
 export const Typing = makeProxy('Typing');
+export const RevealSkip = makeProxy('RevealSkip');
 export const PageOrig = makeProxy('PageOrig');
 export const BlockView = makeProxy('BlockView');
 export const PinChip = makeProxy('PinChip');

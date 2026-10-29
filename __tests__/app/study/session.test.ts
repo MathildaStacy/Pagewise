@@ -336,6 +336,26 @@ it('throttles streamed updates and saves the most recent partial text when stopp
   expect(state().busy).toBe(false);
   expect(state().error).toBeNull();
 });
+it('hands the live entry to the saved answer in one update, keeping its list key', async () => {
+  const ai = scripted([text('完整的讲解')]);
+  await setup(ai);
+  const overlaps: string[] = [];
+  let entryId: string | undefined;
+  const unsubscribe = session.store.subscribe(next => {
+    if (next.streaming) entryId = next.streaming.entryId;
+    const saved = next.messages.filter(m => m.kind === 'assistant').at(-1);
+    if (next.streaming && saved?.content === '完整的讲解')
+      overlaps.push(next.streaming.entryId);
+  });
+  await session.send('解释');
+  unsubscribe();
+  const saved = state()
+    .messages.filter(m => m.kind === 'assistant')
+    .at(-1)!;
+  expect(overlaps).toEqual([]);
+  expect(state().streaming).toBeNull();
+  expect(state().streamKeys[saved.id]).toBe(entryId);
+});
 it('marks invalid citations and supplies a reminder after three affected turns', async () => {
   const ai = scripted([
     text('说明。[[b:99999999]]'),

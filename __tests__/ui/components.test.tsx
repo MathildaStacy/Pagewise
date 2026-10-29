@@ -75,8 +75,8 @@ function action(root: ReactTestInstance, label: string | RegExp) {
   return nodes[0];
 }
 
-it('样本清单覆盖全部58个组件代理', () => {
-  expect(names).toHaveLength(58);
+it('样本清单覆盖全部59个组件代理', () => {
+  expect(names).toHaveLength(59);
   for (const name of names) expect(typeof Kit[name]).toBe('function');
 });
 

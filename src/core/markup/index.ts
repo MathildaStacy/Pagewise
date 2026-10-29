@@ -310,3 +310,74 @@ function blocks(
 export function parse(text: string, options: ParseOptions = {}): RichDoc {
   return blocks(text.replace(/\r\n?/g, '\n'), 0, options).doc;
 }
+const fenceLine = /^ {0,3}(`{3,}|~{3,})/;
+/** A lone list, heading or fence marker that the next characters will turn into structure. */
+const markerLine = /^\s*(?:-|\d+\.?|#{1,6}|`{1,2}|~{1,2})\s*$/;
+/** Text after a `$` that holds CJK is prose (e.g. a price), not a formula still arriving. */
+const proseAfterDollar = /[\p{Script=Han}\u3000-\u303f\uff00-\uffef]/u;
+/** Unclosed `$` openers further back than this are treated as literal dollars. */
+const MATH_HOLD = 160;
+/**
+ * While streaming, drop a trailing fragment that would otherwise flash as raw markup until its
+ * closing marker arrives: an unclosed `**`, `$`/`$$`, or a lone list/heading/fence marker line.
+ * Completed text is never changed, so the final render is unaffected.
+ */
+export function stableStreamText(source: string): string {
+  const text = source.replace(/\r\n?/g, '\n');
+  let fence: string | null = null,
+    afterFence = 0,
+    offset = 0;
+  for (const line of text.split('\n')) {
+    const marker = fenceLine.exec(line)?.[1];
+    offset += line.length + 1;
+    if (!marker) continue;
+    if (!fence) fence = marker;
+    else if (
+      marker[0] === fence[0] &&
+      marker.length >= fence.length &&
+      !line.trim().slice(marker.length)
+    ) {
+      fence = null;
+      afterFence = offset;
+    }
+  }
+  // Inside an open fence everything is code and already renders as such.
+  if (fence) return text;
+  const lineStart = text.lastIndexOf('\n') + 1;
+  const lastLine = text.slice(lineStart);
+  if (lastLine.trim() && markerLine.test(lastLine))
+    return text.slice(0, lineStart);
+  const blank = /\n[ \t]*\n/g;
+  let start = Math.min(afterFence, text.length);
+  for (let m = blank.exec(text); m; m = blank.exec(text))
+    start = Math.max(start, m.index + m[0].length);
+  // List items and headings close inline markup within their own line.
+  if (/^\s*(?:-|\d+\.|#{1,6})\s/.test(lastLine)) start = lineStart;
+  for (let i = start; i < text.length; ) {
+    if (text[i] === '\\' && /[\\*$[\]]/.test(text[i + 1] ?? '')) {
+      i += 2;
+      continue;
+    }
+    if (text.startsWith('**', i)) {
+      const end = endMarker(text, '**', i + 2);
+      if (end < 0) return text.slice(0, i);
+      i = end + 2;
+      continue;
+    }
+    if (text[i] === '$') {
+      const delimiter = text.startsWith('$$', i) ? '$$' : '$';
+      const end = endMarker(text, delimiter, i + delimiter.length);
+      if (end >= 0) {
+        i = end + delimiter.length;
+        continue;
+      }
+      const tail = text.slice(i + delimiter.length);
+      if (tail.length <= MATH_HOLD && !proseAfterDollar.test(tail))
+        return text.slice(0, i);
+      i += delimiter.length;
+      continue;
+    }
+    i++;
+  }
+  return text;
+}

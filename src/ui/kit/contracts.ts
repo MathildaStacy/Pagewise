@@ -284,7 +284,8 @@ export interface EmptyProps {
 
 // UI 的结构契约；VM 负责将领域引用解析成页码、文字和图片，kit 不读取仓库。
 export type RichInline =
-  | { t: 'text'; v: string }
+  /** fade: 0 刚吐出（模糊）→ 1 已清晰；缺省即清晰。仅由逐字呈现产生。 */
+  | { t: 'text'; v: string; fade?: number }
   | { t: 'b'; c: RichInline[] }
   | { t: 'math'; tex: string }
   | {
@@ -405,6 +406,11 @@ export interface DoneCardProps {
 export interface SysDividerProps {
   text: string;
   tone?: 'main' | 'detour';
+}
+export interface RevealSkipProps {
+  /** 立即显示全部尚未吐出的内容。 */
+  onPress(): void;
+  label?: string;
 }
 export interface TypingProps {
   label?: string;
@@ -529,6 +535,7 @@ export interface KitProps {
   DoneCard: DoneCardProps;
   SysDivider: SysDividerProps;
   Typing: TypingProps;
+  RevealSkip: RevealSkipProps;
   PageOrig: PageOrigProps;
   BlockView: BlockViewProps;
   PinChip: PinChipProps;

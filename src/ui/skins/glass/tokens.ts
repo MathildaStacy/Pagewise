@@ -145,6 +145,7 @@ export const glassLight: Tokens = {
     easing: [0.32, 0.72, 0, 1],
     spring: { damping: 26, stiffness: 240, mass: 1 },
     pressScale: 0.96,
+    reveal: { fadeMs: 520, blur: 5, minRate: 34, maxRate: 130, lagMs: 300 },
   },
   capabilities: { blur: true, haptics: false },
 };
