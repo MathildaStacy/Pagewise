@@ -3,7 +3,7 @@ import { mapSectionForReview } from '@core/map';
 import { createRepos } from '@data/repos';
 import type { Container } from '../container';
 import { withBookCover, type BookWithCover } from './bookCovers';
-async function withPageLabels(
+async function withBookPresentation(
   c: Container,
   book: Book,
 ): Promise<BookWithCover & { pageLabels?: string[] }> {
@@ -20,7 +20,7 @@ async function withPageLabels(
 
 export async function loadShelf(c: Container) {
   const books = await Promise.all(
-    (await c.repos.books.list()).map(book => withPageLabels(c, book)),
+    (await c.repos.books.list()).map(book => withBookPresentation(c, book)),
   );
   return Promise.all(
     books.map(async book => {
@@ -61,7 +61,7 @@ export async function loadBookMap(c: Container, id: string) {
   ]);
   if (!book) throw new Error('这本书已经不在书架上了');
   return {
-    book: await withPageLabels(c, book),
+    book: await withBookPresentation(c, book),
     sections: sections.map(mapSectionForReview),
     study,
     stuck,
