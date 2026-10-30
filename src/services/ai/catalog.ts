@@ -8,7 +8,102 @@ import {
   type FetchLike,
 } from './http';
 import { endpointOf, errorMessageOf, headersOf } from './protocol';
-import type { AiProvider, ModelEntry } from './types';
+import type { AiProvider, ModelCapabilities, ModelEntry } from './types';
+import { inferCapabilities } from './models';
+
+/** 只采用接口明确声明的能力；不通过付费生成请求逐个探测模型。 */
+export function modelMetadata(item: any): Partial<ModelCapabilities> {
+  const result: Partial<ModelCapabilities> = {};
+  const caps = item.capabilities;
+  const declared = Array.isArray(caps) ? caps : null;
+  const read = (...keys: string[]): boolean | undefined => {
+    for (const key of keys) {
+      if (typeof caps?.[key] === 'boolean') return caps[key];
+      if (typeof caps?.[key]?.supported === 'boolean')
+        return caps[key].supported;
+      if (typeof item[key] === 'boolean') return item[key];
+      if (declared?.includes(key)) return true;
+    }
+    return undefined;
+  };
+  const context =
+    item.context_length ?? item.context_window ?? item.max_input_tokens;
+  if (typeof context === 'number' && Number.isFinite(context) && context > 0)
+    result.context = context;
+  for (const [field, keys] of [
+    ['chat', ['chat', 'text_generation']],
+    [
+      'tools',
+      [
+        'tools',
+        'tool_calling',
+        'function_calling',
+        'supports_tools',
+        'supports_function_calling',
+      ],
+    ],
+    [
+      'search',
+      ['search', 'web_search', 'supports_web_search', 'supports_search'],
+    ],
+    ['vision', ['vision', 'image', 'supports_vision', 'supports_image_input']],
+    ['audio', ['audio', 'supports_audio']],
+    ['video', ['video', 'supports_video']],
+  ] as const) {
+    const value = read(...keys);
+    if (value !== undefined) result[field] = value;
+  }
+  const modalities =
+    item.architecture?.input_modalities ??
+    item.input_modalities ??
+    (typeof item.architecture?.modality === 'string'
+      ? item.architecture.modality.split('->')[0].split('+')
+      : undefined);
+  if (Array.isArray(modalities)) {
+    result.vision ??= modalities.includes('image');
+    result.audio ??= modalities.includes('audio');
+    result.video ??= modalities.includes('video');
+  }
+  const params = item.supported_parameters;
+  if (Array.isArray(params))
+    result.tools ??= params.includes('tools') || params.includes('tool_choice');
+  // 一些 /models 接口提供完整的推理档位，直接用于选择器。
+  const efforts =
+    caps?.thinking?.efforts ?? caps?.thinking ?? item.reasoning_efforts;
+  if (Array.isArray(efforts)) {
+    const allowed = new Set([
+      'off',
+      'on',
+      'minimal',
+      'low',
+      'medium',
+      'high',
+      'xhigh',
+      'max',
+    ]);
+    const levels = [
+      ...new Set(
+        efforts
+          .map((v: any) => (v === 'none' ? 'off' : v))
+          .filter((v: any) => allowed.has(v)),
+      ),
+    ];
+    if (levels.length || !efforts.length) {
+      result.thinking = levels as ModelCapabilities['thinking'];
+      const known = inferCapabilities(item.id ?? '');
+      result.thinkingStyle = levels.length
+        ? known.thinkingStyle === 'none'
+          ? 'reasoning'
+          : known.thinkingStyle
+        : 'none';
+    }
+  }
+  if (read('reasoning', 'thinking', 'supports_reasoning') === false) {
+    result.thinking = [];
+    result.thinkingStyle = 'none';
+  }
+  return result;
+}
 
 export async function listModels(
   provider: AiProvider,
@@ -62,17 +157,13 @@ export async function listModels(
           continue;
         }
         const old = provider.models.find(m => m.id === id);
-        const context =
-          item.context_length ?? item.context_window ?? item.max_input_tokens;
         entries.set(id, {
           id,
           name: typeof item.name === 'string' ? item.name : undefined,
           enabled: old?.enabled ?? false,
           price: old?.price ?? null,
-          overrides: {
-            ...(typeof context === 'number' && context > 0 ? { context } : {}),
-            ...old?.overrides,
-          },
+          detected: modelMetadata(item),
+          overrides: old?.overrides,
         });
       }
       if (!json.has_more) {

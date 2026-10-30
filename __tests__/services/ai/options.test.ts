@@ -1,5 +1,5 @@
 // 来源：AShareSim/__tests__/ai/options.test.ts 协议/模型部分，GPL-3.0-only。
-import { listModels } from '../../../src/services/ai/catalog';
+import { listModels, modelMetadata } from '../../../src/services/ai/catalog';
 import {
   combineSearch,
   citedText,
@@ -7,6 +7,7 @@ import {
 } from '../../../src/services/ai/evidence';
 import {
   capabilitiesOf,
+  detectProviderKind,
   inferCapabilities,
   normaliseConfig,
   resolvedService,
@@ -128,6 +129,78 @@ test('未知模型保持未知，可手动标注；非对话模型不可选，De
   );
 });
 
+test('自动识别接口声明的多模态、工具、搜索及推理，明确否定优先于推断', () => {
+  const p = provider('openrouter', 'vendor/multimodal');
+  const m = p.models[0];
+  m.detected = modelMetadata({
+    id: m.id,
+    context_length: 128000,
+    architecture: { input_modalities: ['text', 'image', 'audio'] },
+    supported_parameters: ['tools', 'reasoning'],
+    capabilities: { web_search: { supported: true } },
+    reasoning_efforts: ['none', 'low', 'high'],
+  });
+  expect(capabilitiesOf(p, m)).toMatchObject({
+    context: 128000,
+    tools: true,
+    search: true,
+    vision: true,
+    audio: true,
+    video: false,
+    thinking: ['off', 'low', 'high'],
+    thinkingStyle: 'reasoning',
+  });
+  m.overrides = { tools: false, search: false, vision: false };
+  expect(capabilitiesOf(p, m)).toMatchObject({
+    tools: false,
+    search: false,
+    vision: false,
+  });
+  m.id = 'gpt-5.5';
+  m.overrides = undefined;
+  m.detected = modelMetadata({
+    id: m.id,
+    capabilities: {
+      tools: false,
+      vision: false,
+      web_search: false,
+      thinking: { supported: false },
+    },
+    supported_parameters: ['tools'],
+    input_modalities: ['image'],
+  });
+  expect(capabilitiesOf(p, m)).toMatchObject({
+    tools: false,
+    vision: false,
+    search: false,
+    thinking: [],
+    thinkingStyle: 'none',
+  });
+});
+
+test('未知元数据不捏造能力，已知模型声明档位后仍保留原协议的推理方式', () => {
+  expect(
+    modelMetadata({ id: 'new-model', reasoning_efforts: ['not-a-level'] }),
+  ).toEqual({});
+  expect(modelMetadata({ id: 'new-model' })).toEqual({});
+  expect(
+    modelMetadata({
+      id: 'claude-sonnet-4-6',
+      reasoning_efforts: ['low', 'high'],
+    }),
+  ).toMatchObject({ thinking: ['low', 'high'], thinkingStyle: 'adaptive' });
+});
+
+test.each([
+  ['chat', 'https://dashscope.aliyuncs.com/compatible-mode/v1', 'dashscope'],
+  ['chat', 'https://api.deepseek.com/v1', 'deepseek'],
+  ['chat', 'https://openrouter.ai/api/v1', 'openrouter'],
+  ['chat', 'https://api.deepseek.com.evil.test/v1', 'custom'],
+  ['anthropic', 'https://api.anthropic.com', 'anthropic'],
+] as const)('识别官方 %s 服务 %s 的扩展协议', (protocol, url, kind) => {
+  expect(detectProviderKind(protocol, url)).toBe(kind);
+});
+
 test('模型列表真实 GET、鉴权与分页；刷新保留启用、价格、标注及手动模型', async () => {
   const p = provider('anthropic', 'manual', 'anthropic');
   p.auth = 'x-api-key';
@@ -163,10 +236,13 @@ test('模型列表真实 GET、鉴权与分页；刷新保留启用、价格、�
   expect(sent[1].url).toBe(
     'https://relay.example.com/v1/models?after_id=a%2Fb',
   );
-  expect(models.find(m => m.id === 'claude-opus-5-5')).toEqual(p.models[1]);
+  expect(models.find(m => m.id === 'claude-opus-5-5')).toMatchObject({
+    ...p.models[1],
+    detected: { context: 200000 },
+  });
   expect(models.find(m => m.id === 'unknown')).toMatchObject({
     enabled: false,
-    overrides: { context: 10000 },
+    detected: { context: 10000 },
   });
   expect(models.find(m => m.id === 'manual')).toEqual(p.models[0]);
 });

@@ -618,10 +618,12 @@ it('reads models, selects one and tests the unsaved editor before saving', async
     vm().intents.field('key', 'fixture-vm-key-8765');
   });
   await act(async () => vm().intents.readModels());
-  expect(vm().state.models).toEqual([
+  expect(vm().state.models).toMatchObject([
     { id: 'first-model', label: 'first-model', selected: false },
     { id: 'second-model', label: 'second-model', selected: false },
   ]);
+  expect(vm().state.models?.[0].capabilities).toContain('内置搜索未知');
+  expect(vm().state.models?.[0].capabilities).toContain('图像未知');
   expect(vm().state.notice).toContain('已读取 2 个模型');
   expect(await readProviders(c)).toEqual([]);
   await act(async () => vm().intents.toggleModel('second-model'));

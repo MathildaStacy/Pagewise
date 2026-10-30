@@ -154,7 +154,7 @@ it('fetches every page without changing saved models, then saves only selected m
       expect.objectContaining({
         id: 'remote-a',
         enabled: false,
-        overrides: { context: 32768 },
+        detected: { context: 32768 },
       }),
     ]),
   );
@@ -169,7 +169,7 @@ it('fetches every page without changing saved models, then saves only selected m
   expect(reopened.catalog.models.find(m => m.id === 'remote-a')).toMatchObject({
     enabled: false,
     name: '远程 A',
-    overrides: { context: 32768 },
+    detected: { context: 32768 },
   });
   expect(
     reopened.catalog.models.find(m => m.id === 'manual-model')?.price,

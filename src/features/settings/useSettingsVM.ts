@@ -67,6 +67,7 @@ import {
   tokens,
 } from './presenters';
 import { version } from '../../../package.json';
+import { capabilityLabel, detectProviderKind } from '@app/usecases/settings';
 
 function useStatus() {
   const [status, setStatus] = useState<SettingStatus>({
@@ -574,6 +575,20 @@ export function useAIEditVM(providerId?: string): {
         id: m.id,
         label: m.name && m.name !== m.id ? m.name + ' · ' + m.id : m.id,
         selected: serviceModelIds(form.model).includes(m.id),
+        capabilities: capabilityLabel(
+          {
+            id: providerId ?? 'draft',
+            kind: detectProviderKind(form.protocol, form.baseUrl),
+            name: form.name,
+            protocol: form.protocol,
+            baseUrl: form.baseUrl,
+            auth: form.auth,
+            cache: form.cache,
+            keyTail,
+            models: catalog.models,
+          },
+          m,
+        ),
       })),
     },
     intents: {

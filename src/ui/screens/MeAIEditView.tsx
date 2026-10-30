@@ -161,13 +161,14 @@ export function MeAIEditView({
       <Sheet
         visible={modelsOpen}
         title="选择模型"
-        subtitle="勾选的模型保存后可用于讲解或整理，也可以直接填写模型名。"
+        subtitle="自动读取接口声明的能力，并结合已知模型目录。接口未声明的能力会显示未知。"
         onClose={() => setModelsOpen(false)}
       >
         {state.models?.map(model => (
           <CheckRow
             key={model.id}
             title={model.label}
+            subtitle={model.capabilities}
             checked={model.selected}
             onToggle={() => intents.toggleModel(model.id)}
           />

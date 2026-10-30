@@ -3,7 +3,11 @@ import type { AiProvider, ModelEntry } from '@services/ai/types';
 import { listModels } from '@services/ai/catalog';
 import { createAiGateway } from '@services/ai/gateway';
 import type { FetchLike } from '@services/ai/http';
-import { normaliseConfig, resolvedService } from '@services/ai/models';
+import {
+  detectProviderKind,
+  normaliseConfig,
+  resolvedService,
+} from '@services/ai/models';
 import {
   emptyForm,
   keyTailOf,
@@ -19,6 +23,7 @@ import {
 } from '../aiConfiguration';
 export type { ServiceForm } from '@services/ai/services';
 export type { AiProvider } from '@services/ai/types';
+export { capabilityLabel, detectProviderKind } from '@services/ai/models';
 export interface ServiceCatalog {
   models: ModelEntry[];
   fetchedAt?: string;
@@ -271,7 +276,7 @@ async function serviceDraft(
   }
   const provider: AiProvider = {
     id: id ?? 'unsaved',
-    kind: previous?.kind ?? 'custom',
+    kind: detectProviderKind(parsed.service.protocol, parsed.service.baseUrl),
     name: parsed.service.name,
     protocol: parsed.service.protocol,
     baseUrl: parsed.service.baseUrl,

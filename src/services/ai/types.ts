@@ -40,6 +40,9 @@ export interface ModelCapabilities {
   /** null 未知，[] 不支持；没有 off 的列表表示不能关闭思考。 */
   thinking: Effort[] | null;
   search: boolean | null;
+  vision: boolean | null;
+  audio: boolean | null;
+  video: boolean | null;
   context: number | null;
   thinkingStyle:
     | 'adaptive'
@@ -55,6 +58,8 @@ export interface ModelEntry {
   id: string;
   name?: string;
   enabled: boolean;
+  /** 从模型列表自动读取的能力；用户标注 overrides 的优先级更高。 */
+  detected?: Partial<ModelCapabilities>;
   overrides?: Partial<ModelCapabilities>;
   price: Price | null;
 }
@@ -124,6 +129,7 @@ export interface RawOutput {
   model: string;
   items: unknown[];
   providerId?: string;
+  search?: SearchTrace;
 }
 
 export interface Usage {

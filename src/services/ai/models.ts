@@ -101,11 +101,51 @@ export const PROVIDER_PRESETS: Record<
   },
 };
 
+/** 官方地址决定协议的扩展参数，中转地址仍按自定义接口处理。 */
+export function detectProviderKind(
+  protocol: AiProvider['protocol'],
+  baseUrl: string,
+): ProviderKind {
+  let host: string;
+  try {
+    host = new URL(baseUrl).hostname.toLowerCase();
+  } catch {
+    return 'custom';
+  }
+  if (protocol === 'anthropic' && host === 'api.anthropic.com')
+    return 'anthropic';
+  if (
+    host === 'api.openai.com' &&
+    (protocol === 'openai' || protocol === 'chat')
+  )
+    return 'openai';
+  if (protocol !== 'chat') return 'custom';
+  if (host === 'api.deepseek.com') return 'deepseek';
+  if (
+    [
+      'dashscope.aliyuncs.com',
+      'dashscope-intl.aliyuncs.com',
+      'dashscope-us.aliyuncs.com',
+    ].includes(host)
+  )
+    return 'dashscope';
+  if (['api.moonshot.cn', 'api.moonshot.ai'].includes(host)) return 'moonshot';
+  if (host === 'open.bigmodel.cn') return 'zhipu';
+  if (host === 'openrouter.ai') return 'openrouter';
+  return 'custom';
+}
+
+const providerKind = (p: AiProvider) =>
+  p.kind === 'custom' ? detectProviderKind(p.protocol, p.baseUrl) : p.kind;
+
 const baseCaps = (): ModelCapabilities => ({
   chat: true,
   tools: null,
   thinking: null,
   search: null,
+  vision: null,
+  audio: null,
+  video: null,
   context: null,
   thinkingStyle: 'none',
   known: false,
@@ -120,6 +160,13 @@ export const bareModel = (id: string) =>
 export function inferCapabilities(id: string): ModelCapabilities {
   const b = bareModel(id);
   const c = baseCaps();
+  if (
+    /^(claude-|gpt-4o|gpt-4\.1|gpt-[56]|o[134](?:-|$)|qwen.*(?:vl|vision)|kimi-k2[.-][56]|glm-.*v(?:-|$))/.test(
+      b,
+    )
+  )
+    c.vision = true;
+  if (/^deepseek-(?:chat|reasoner)/.test(b)) c.vision = false;
   const known = (extra: Partial<ModelCapabilities>) => ({
     ...c,
     known: true,
@@ -271,25 +318,58 @@ export function capabilitiesOf(
   provider: AiProvider,
   model: ModelEntry,
 ): ModelCapabilities {
-  const c = { ...inferCapabilities(model.id), ...model.overrides };
+  const c = {
+    ...inferCapabilities(model.id),
+    ...model.detected,
+    ...model.overrides,
+  };
+  const kind = providerKind(provider);
   // 中转的 Chat Completions 搜索并非通用能力，需显式标注接口支持。
   if (
-    provider.kind === 'custom' &&
+    kind === 'custom' &&
     provider.protocol === 'chat' &&
-    model.overrides?.search == null
+    model.overrides?.search == null &&
+    model.detected?.search == null
   ) {
     c.search = null;
   }
-  if (provider.kind === 'openrouter' && c.chat) {
+  if (
+    kind === 'openrouter' &&
+    c.chat &&
+    model.overrides?.search == null &&
+    model.detected?.search == null
+  ) {
     c.search = true;
   }
   if (
     provider.protocol === 'chat' &&
     /^gpt-6(?:-astra|\.1-sol)/.test(bareModel(model.id))
   ) {
-    c.tools = false;
+    if (model.overrides?.tools == null && model.detected?.tools == null)
+      c.tools = false;
   }
   return c;
+}
+
+export function capabilityLabel(
+  provider: AiProvider,
+  model: ModelEntry,
+): string {
+  const c = capabilitiesOf(provider, model);
+  const flag = (label: string, value: boolean | null) =>
+    label + (value == null ? '未知' : value ? '支持' : '不支持');
+  return [
+    flag(
+      '内置搜索',
+      c.search === true ? searchAvailability(provider, model).ok : c.search,
+    ),
+    flag('工具调用', c.tools),
+    flag('图像', c.vision),
+    flag('音频', c.audio),
+    flag('视频', c.video),
+    c.thinking?.length ? '推理可选' : c.thinking ? '无推理档位' : '推理未知',
+    ...(c.context ? [Math.round(c.context / 1024) + 'K 上下文'] : []),
+  ].join(' · ');
 }
 
 export type SearchMethod =
@@ -341,7 +421,7 @@ export function searchAvailability(
   m: ModelEntry,
 ): { ok: boolean; reason: string } {
   const c = capabilitiesOf(p, m);
-  if (!searchMethod(p)) {
+  if (!searchMethod({ ...p, kind: providerKind(p) })) {
     return { ok: false, reason: p.name + ' 的接口不支持联网搜索' };
   }
   if (c.search == null) {
@@ -423,7 +503,7 @@ export function resolvedService(
     effort: cfg.effort,
     search: cfg.search,
     capabilities,
-    providerKind: p.kind,
+    providerKind: providerKind(p),
   };
 }
 

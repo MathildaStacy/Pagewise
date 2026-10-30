@@ -74,7 +74,12 @@ export interface AIEditState extends SettingStatus {
   confirmDelete: boolean;
   demo?: boolean;
   busy?: 'models' | 'test';
-  models?: { id: string; label: string; selected: boolean }[];
+  models?: {
+    id: string;
+    label: string;
+    selected: boolean;
+    capabilities?: string;
+  }[];
 }
 export interface AIEditIntents {
   back(): void;
