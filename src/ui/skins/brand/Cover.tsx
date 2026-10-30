@@ -2,6 +2,7 @@ import { Text, View, StyleSheet } from 'react-native';
 import type { KitProps } from '../../kit/contracts';
 import { useTokens } from '../../kit/context';
 import { Gradient } from '../../kit/Gradient';
+import { CoverImage } from '../../kit/CoverImage';
 
 // The Win11 prototype's cv1–cv5 covers; user books retain their assigned color.
 const winCovers = [
@@ -12,6 +13,7 @@ const winCovers = [
 export function Cover({
   title,
   color,
+  uri,
   size = 'md',
   width: customWidth,
   subtitle,
@@ -151,6 +153,7 @@ export function Cover({
             {edition ?? subtitle?.split(/[,，]/)[0]}
           </Text>
         ) : null}
+        <CoverImage uri={uri} />
       </Gradient>
     </View>
   );

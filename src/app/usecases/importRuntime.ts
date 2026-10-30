@@ -58,6 +58,11 @@ export interface ImportRuntime {
   files: ImportFiles;
   chooseFile(): Promise<IntakeFile | null>;
   pdf: {
+    render(
+      path: string,
+      page: number,
+      widthPx: number,
+    ): Promise<{ uri: string; w: number; h: number }>;
     info(path: string): Promise<{
       pageCount: number;
       sizes: PageSize[];

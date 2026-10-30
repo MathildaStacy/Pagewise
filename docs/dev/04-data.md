@@ -10,6 +10,7 @@
 
 ```
 files/books/<bookId>/source.pdf|epub      原文件副本
+files/books/<bookId>/cover.png            PDF 首页封面（持久保存，独立于页面缓存）
 files/books/<bookId>/parts/<n>.pdf        拆分后的上传片（上传成功后删除）
 files/books/<bookId>/mineru/<n>/          每片的结果包解压目录（content_list、md、images/）
 files/books/<bookId>/images/              入库后统一的图片目录（块里的 image_path 指向这里）

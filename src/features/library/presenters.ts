@@ -178,6 +178,7 @@ export function presentShelf(
     cover: {
       title: record.book.title.replace(/[（(].*$/u, ''),
       color: record.book.cover_color,
+      uri: record.book.coverUri,
     },
     status: shelfStatus(record),
     category: ['parsing', 'importing', 'paused', 'failed'].includes(

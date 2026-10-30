@@ -23,7 +23,11 @@ export function presentNotes(data: BookNotesData[]): NotesState {
             {
               id: d.book.id,
               title: d.book.title,
-              cover: { title: d.book.title, color: d.book.cover_color },
+              cover: {
+                title: d.book.title,
+                color: d.book.cover_color,
+                uri: d.book.coverUri,
+              },
               meta: d.sections.some(s => sectionHasNotes(d, s))
                 ? `${
                     d.sections.filter(s => sectionHasNotes(d, s)).length

@@ -127,6 +127,7 @@ export function useHomeVM() {
                 title: r.book.title,
                 color: r.book.cover_color,
                 subtitle: r.book.author,
+                uri: r.book.coverUri,
               },
               progress: leaves.length ? done / leaves.length : 0,
               progressLabel: leaves.length ? `${done}/${leaves.length}` : '—',

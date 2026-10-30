@@ -583,7 +583,11 @@ export function useParseProgressVM(bookId: string) {
                   .filter(Boolean)
                   .join(' · ')
               : 'EPUB · 本机解析',
-          cover: { title: book.title, color: book.cover_color },
+          cover: {
+            title: book.title,
+            color: book.cover_color,
+            uri: book.coverUri,
+          },
           parts: parts.map(part => ({
             ...parsePart(part),
             needsToken: requiresMineruToken(part.error_code),

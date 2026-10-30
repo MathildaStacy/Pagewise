@@ -18,7 +18,7 @@ export interface NotesState {
   books: {
     id: string;
     title: string;
-    cover: { title: string; color: string };
+    cover: { title: string; color: string; uri?: string };
     meta: string;
     hasNotes: boolean;
   }[];

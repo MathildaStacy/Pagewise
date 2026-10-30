@@ -266,6 +266,49 @@ it.each(['sm', 'md', 'lg'] as const)(
   },
 );
 
+it.each(variants)(
+  '%s / %s displays a real cover and falls back when its image fails',
+  async (skin, scheme) => {
+    const renderer = await mount(
+      <Kit.Cover
+        title="书名"
+        color="#345"
+        uri="file:///books/book/cover.png"
+      />,
+      skin,
+      scheme,
+    );
+    const image = renderer.root.findByType(Image);
+    expect(image.props.source).toEqual({ uri: 'file:///books/book/cover.png' });
+    expect(image.props.resizeMode).toBe('cover');
+    expect(StyleSheet.flatten(image.props.style)).toMatchObject({
+      position: 'absolute',
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+    });
+    await act(async () => image.props.onError());
+    expect(renderer.root.findAllByType(Image)).toHaveLength(0);
+    expect(JSON.stringify(renderer.toJSON())).toContain('书名');
+
+    await act(async () =>
+      renderer.update(
+        <SkinProvider skinId={skin} scheme={scheme} reduceMotion>
+          <Kit.Cover
+            title="另一本书"
+            color="#345"
+            uri="file:///books/other/cover.png"
+          />
+        </SkinProvider>,
+      ),
+    );
+    expect(renderer.root.findByType(Image).props.source).toEqual({
+      uri: 'file:///books/other/cover.png',
+    });
+  },
+);
+
 it('Note wraps adjacent text expressions and numbers in one native Text', async () => {
   const renderer = await mount(
     <Kit.Note tone="neutral">

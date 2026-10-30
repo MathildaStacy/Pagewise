@@ -6,6 +6,7 @@ export interface PageState {
 export interface Cover {
   title: string;
   color: string;
+  uri?: string;
 }
 export interface ShelfBook {
   id: string;

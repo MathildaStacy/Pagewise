@@ -1,4 +1,5 @@
 import type { Container } from '../container';
+import { withBookCover } from './bookCovers';
 
 const pendingWrites = new WeakMap<Container, Promise<unknown>>();
 export async function saveUserNote(
@@ -43,7 +44,7 @@ export async function loadBookNotes(c: Container, bookId: string) {
     highlights.map(h => c.repos.blocks.get(bookId, h.block_seq)),
   );
   return {
-    book,
+    book: book ? await withBookCover(c, book) : undefined,
     sections,
     qa,
     stuck,

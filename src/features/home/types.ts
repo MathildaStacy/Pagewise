@@ -22,7 +22,7 @@ export interface HomeState {
   books: {
     id: string;
     title: string;
-    cover: { title: string; color: string; subtitle?: string };
+    cover: { title: string; color: string; subtitle?: string; uri?: string };
     status: string;
     progress: number;
     progressLabel: string;
@@ -63,7 +63,7 @@ export type ImportIntents = ShelfIntents;
 export interface AskHit {
   bookId: string;
   bookTitle: string;
-  cover: { title: string; color: string };
+  cover: { title: string; color: string; uri?: string };
   ref: string;
   sectionId: string;
   section: string;

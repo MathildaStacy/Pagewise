@@ -142,7 +142,11 @@ export async function searchShelf(c: Container, query: string, scope: string) {
         .map(block => ({
           bookId: book.id,
           bookTitle: book.title,
-          cover: { title: book.title, color: book.cover_color },
+          cover: {
+            title: book.title,
+            color: book.cover_color,
+            ...(book.coverUri ? { uri: book.coverUri } : {}),
+          },
           ref: `b${String(block.seq).padStart(4, '0')}`,
           sectionId: block.section_id ?? '',
           section:

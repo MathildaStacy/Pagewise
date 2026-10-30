@@ -179,6 +179,7 @@ beforeEach(async () => {
     },
     chooseFile: jest.fn(),
     pdf: {
+      render: jest.fn(),
       info: jest.fn(),
       textLayer: jest.fn(),
       outline: jest.fn(),

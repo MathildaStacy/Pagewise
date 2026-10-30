@@ -113,6 +113,17 @@ it('presents ready, studying, parsing and paused states using actual library rec
   expect(presented.continueCard?.recap).toContain('上次 3 天前');
 });
 
+it('passes the generated PDF cover through the shelf presenter to the cover component', async () => {
+  const record = (await loadShelf(c)).find(r => r.book.id === 'aima')!;
+  const uri = 'file:///books/aima/cover.png';
+  const presented = presentShelf(
+    [{ ...record, book: { ...record.book, coverUri: uri } }],
+    c.clock.now(),
+    false,
+  );
+  expect(presented.books[0].cover.uri).toBe(uri);
+});
+
 it('shows all conversations on the shelf home with book/chapter ownership and opens the selected conversation', async () => {
   const item = await c.repos.conversations.create(
     'aima',

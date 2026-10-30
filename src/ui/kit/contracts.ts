@@ -230,6 +230,7 @@ export interface StageStripProps {
 export interface CoverProps {
   title: string;
   color: string;
+  uri?: string;
   subtitle?: string;
   size?: 'sm' | 'md' | 'lg';
   width?: number;

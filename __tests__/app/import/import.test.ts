@@ -24,12 +24,16 @@ import {
   referenceMovesKey,
 } from '@app/usecases/importResults';
 import { getParseQueue } from '@app/usecases/parseQueue';
+import { loadParseProgress, loadShelf } from '@app/usecases/library';
+import { loadHome } from '@app/usecases/home';
+import { loadNotes } from '@app/usecases/notes';
 import { getStudySession } from '@app/study/registry';
 import { setReaderRuntime } from '@app/readerRuntime';
 import type { BookPartInsert } from '@core/types';
 import { MineruError } from '@services/mineru/types';
 
 let c: Container, clock: TestClock, runtime: ImportRuntime;
+let paths: Set<string>;
 const file = {
   uri: 'content://a.pdf',
   name: 'Book.pdf',
@@ -71,7 +75,7 @@ beforeEach(async () => {
   jest.useFakeTimers();
   clock = createTestClock();
   c = await createTestContainer({ clock });
-  const paths = new Set<string>();
+  paths = new Set<string>();
   runtime = {
     files: {
       documentDir: '/docs',
@@ -82,7 +86,9 @@ beforeEach(async () => {
         paths.delete(from);
         paths.add(to);
       }),
-      copy: jest.fn(async () => {}),
+      copy: jest.fn(async (_from, to) => {
+        paths.add(to);
+      }),
       remove: jest.fn(async path => {
         paths.delete(path);
       }),
@@ -94,6 +100,11 @@ beforeEach(async () => {
     },
     chooseFile: jest.fn(async () => file),
     pdf: {
+      render: jest.fn(async () => ({
+        uri: 'file:///cache/pages/front%20page.png',
+        w: 360,
+        h: 480,
+      })),
       info: jest.fn(async () => ({
         pageCount: 4,
         sizes: Array.from({ length: 4 }, () => ({ w: 600, h: 800 })),
@@ -294,6 +305,71 @@ test('confirm moves canonical source, creates prioritized parts and completes qu
   expect(await c.repos.blocks.get(id, 1001)).toMatchObject({
     section_id: expect.any(String),
   });
+  expect((await loadShelf(c))[0].book.coverUri).toBe(
+    `file:///docs/books/${id}/cover.png`,
+  );
+  expect(runtime.pdf.render).toHaveBeenCalledWith(
+    `/docs/books/${id}/source.pdf`,
+    1,
+    360,
+  );
+  expect(runtime.files.copy).toHaveBeenCalledWith(
+    '/cache/pages/front page.png',
+    `/docs/books/${id}/cover.png`,
+  );
+});
+
+test('existing parsed PDFs backfill one durable cover across shelf, home, progress and notes', async () => {
+  await book();
+  await c.repos.books.update('book', { status: 'ready', priority_from: 3 });
+  const source = '/docs/books/book/source.pdf';
+  const coverUri = 'file:///docs/books/book/cover.png';
+  paths.add(source);
+  const [shelf, home, progress, notes] = await Promise.all([
+    loadShelf(c),
+    loadHome(c),
+    loadParseProgress(c, 'book'),
+    loadNotes(c),
+  ]);
+  expect(shelf[0].book.coverUri).toBe(coverUri);
+  expect(home.shelf[0].book.coverUri).toBe(coverUri);
+  expect(progress.book.coverUri).toBe(coverUri);
+  expect(notes[0].book?.coverUri).toBe(coverUri);
+  expect(runtime.pdf.render).toHaveBeenCalledTimes(1);
+  expect(runtime.pdf.render).toHaveBeenCalledWith(source, 1, 360);
+  expect(runtime.pdf.close).toHaveBeenCalledWith(source);
+  expect(runtime.mineru.requestUpload).not.toHaveBeenCalled();
+
+  // Page-cache cleanup and even a missing original do not discard an existing cover.
+  paths.delete(source);
+  await runtime.files.remove('/cache/pages');
+  expect((await loadShelf(c))[0].book.coverUri).toBe(coverUri);
+  expect(runtime.pdf.render).toHaveBeenCalledTimes(1);
+  expect(await c.repos.books.get('book')).not.toHaveProperty('coverUri');
+});
+
+test('missing originals keep the book visible with its placeholder cover', async () => {
+  await book();
+  expect((await loadShelf(c))[0].book).toMatchObject({
+    id: 'book',
+    cover_color: '#3B4F7A',
+  });
+  expect((await loadParseProgress(c, 'book')).book.coverUri).toBeUndefined();
+  expect(runtime.pdf.render).not.toHaveBeenCalled();
+});
+
+test('a failed cover render closes the PDF and can retry without failing the shelf', async () => {
+  await book();
+  paths.add('/docs/books/book/source.pdf');
+  jest
+    .mocked(runtime.pdf.render)
+    .mockRejectedValueOnce(new Error('render failed'));
+  expect((await loadShelf(c))[0].book.coverUri).toBeUndefined();
+  expect(runtime.pdf.close).toHaveBeenCalledWith('/docs/books/book/source.pdf');
+  expect((await loadShelf(c))[0].book.coverUri).toBe(
+    'file:///docs/books/book/cover.png',
+  );
+  expect(runtime.pdf.render).toHaveBeenCalledTimes(2);
 });
 test('process restart re-requests uploading URL, while accepted batch network failure only polls', async () => {
   await book();

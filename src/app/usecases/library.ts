@@ -2,18 +2,20 @@ import type { Book, BookPart, Section } from '@core/types';
 import { mapSectionForReview } from '@core/map';
 import { createRepos } from '@data/repos';
 import type { Container } from '../container';
+import { withBookCover, type BookWithCover } from './bookCovers';
 async function withPageLabels(
   c: Container,
   book: Book,
-): Promise<Book & { pageLabels?: string[] }> {
+): Promise<BookWithCover & { pageLabels?: string[] }> {
+  const covered = await withBookCover(c, book);
   const metadata = await c.repos.settings.get<{ pageLabels?: unknown }>(
     `book.import.${book.id}`,
     {},
   );
   return Array.isArray(metadata.pageLabels) &&
     metadata.pageLabels.every(label => typeof label === 'string')
-    ? { ...book, pageLabels: metadata.pageLabels }
-    : book;
+    ? { ...covered, pageLabels: metadata.pageLabels }
+    : covered;
 }
 
 export async function loadShelf(c: Container) {
@@ -218,13 +220,13 @@ export const searchBook = (c: Container, bookId: string, query: string) =>
 export async function loadParseProgress(
   c: Container,
   bookId: string,
-): Promise<{ book: Book; parts: BookPart[] }> {
+): Promise<{ book: BookWithCover; parts: BookPart[] }> {
   const [book, parts] = await Promise.all([
     c.repos.books.get(bookId),
     c.repos.parts.list(bookId),
   ]);
   if (!book) throw new Error('这本书已经不在书架上了');
-  return { book, parts };
+  return { book: await withBookCover(c, book), parts };
 }
 export async function createDemoImportDraft(c: Container, key: string) {
   if (c.mode !== 'demo')

@@ -17,6 +17,7 @@ import { Icon } from '../Icon';
 import { makeStyles } from '../makeStyles';
 import * as Kit from '../proxy';
 import { Gradient } from '../Gradient';
+import { CoverImage } from '../CoverImage';
 import { KeyboardScrollView } from '../KeyboardScrollView';
 import {
   Children,
@@ -1082,7 +1083,7 @@ export function StageStrip({ stages }: KitProps['StageStrip']) {
   );
 }
 
-export function Cover({ title, color, size = 'md' }: KitProps['Cover']) {
+export function Cover({ title, color, uri, size = 'md' }: KitProps['Cover']) {
   const s = useStyles();
   const t = useTokens();
   const width =
@@ -1142,6 +1143,7 @@ export function Cover({ title, color, size = 'md' }: KitProps['Cover']) {
       >
         {Array.from(title).slice(0, 12).join('')}
       </Text>
+      <CoverImage uri={uri} />
     </View>
   );
 }
