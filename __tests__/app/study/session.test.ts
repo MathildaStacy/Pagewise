@@ -624,25 +624,98 @@ it('compresses old dialogue before teaching and keeps the current question exact
     state().context.reduce((sum, layer) => sum + layer.tokens, 0),
   ).toBeLessThan(24000);
 });
-it('keeps unresolved UI tool calls paired and blocks unrelated prompts until the user responds', async () => {
+it('allows help during a quiz, closes its pending tool call and lets the user answer later', async () => {
   const ai = scripted([
     call('show_quiz', {
       question: '选择',
       options: ['甲', '乙', '丙'],
       answer: 0,
     }),
-    text('反馈'),
+    text('先比较定义里的条件，暂时不选答案。'),
+    text('回答后的反馈'),
   ]);
   await setup(ai);
   await session.act('quiz');
-  await session.send('先讲别的');
   await session.act('next');
   expect(ai.stream).toHaveBeenCalledTimes(1);
   const quiz = cards()
     .filter(item => item.card?.kind === 'quiz')
     .at(-1)!;
-  await session.answerQuiz(quiz.message.id, 0);
+  const main = state().main;
+  await session.send('先给我一点提示，不要告诉我正确选项');
   expect(ai.stream).toHaveBeenCalledTimes(2);
+  expect(state().main).toEqual(main);
+  expect(
+    parseStudyCard(
+      state().messages.find(m => m.id === quiz.message.id)!.content,
+    ),
+  ).toMatchObject({ deferred: true, picked: null });
+  const result = state()
+    .messages.filter(m => m.kind === 'tool')
+    .at(-1)!;
+  expect(JSON.parse(result.content)).toMatchObject({ deferred: true });
+  expect(result.content).not.toContain('correct');
+  await session.answerQuiz(quiz.message.id, 0);
+  expect(ai.stream).toHaveBeenCalledTimes(3);
+  expect(state().messages.filter(m => m.kind === 'tool')).toHaveLength(1);
+});
+
+it('persists a skipped final quiz without grading or moving the main pointer', async () => {
+  const ai = scripted([
+    call('show_quiz', {
+      question: '选择',
+      options: ['甲', '乙', '丙'],
+      answer: 0,
+      explain: '比较前提条件',
+      final: true,
+    }),
+  ]);
+  await setup(ai);
+  await session.act('quiz');
+  const quiz = cards()
+    .filter(item => item.card?.kind === 'quiz')
+    .at(-1)!;
+  const main = state().main;
+  await session.deferQuiz(quiz.message.id);
+  expect(state().phase).toBe('ready');
+  expect(state().main).toEqual(main);
+  expect(ai.stream).toHaveBeenCalledTimes(1);
+  await session.dispose();
+  session = new StudySession(c, 'aima');
+  await session.open({ autoStart: false });
+  expect(
+    cards().find(item => item.message.id === quiz.message.id)?.card,
+  ).toMatchObject({ picked: null, deferred: true });
+  expect(state().messages.filter(m => m.kind === 'tool')).toHaveLength(1);
+});
+
+it('pairs an unanswered quiz before opening a review-card question in the same section', async () => {
+  const ai = scripted([
+    call('show_quiz', { question: '选择', options: ['甲', '乙', '丙'], answer: 0 }),
+    text('这张卡的解释'),
+  ]);
+  await setup(ai);
+  await session.act('quiz');
+  expect(cards().some(item => item.card?.kind === 'quiz')).toBe(true);
+  const main = state().main;
+  await session.open({
+    sectionId: main.sectionId!,
+    question: '关于这张卡：请解释定义',
+  });
+  expect(state().error).toBeNull();
+  expect(state().main).toEqual(main);
+  const request = jest.mocked(ai.stream).mock.calls[1][1];
+  const parts = request.history.flatMap(message => message.parts);
+  expect(
+    parts.filter(part => part.t === 'call' && part.id === 'call-1'),
+  ).toHaveLength(1);
+  expect(
+    parts.filter(part => part.t === 'result' && part.id === 'call-1'),
+  ).toHaveLength(1);
+  expect(cards().find(item => item.card?.kind === 'quiz')?.card).toMatchObject({
+    picked: null,
+    deferred: true,
+  });
 });
 
 it('loads a quoted block from another section before answering and keeps later detour refs verified', async () => {

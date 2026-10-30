@@ -34,6 +34,13 @@ import {
   BackupError,
 } from '@app/usecases/storage';
 import { getParseQueue } from '@app/usecases/parseQueue';
+import { testMineruConnection } from '@app/usecases/mineruConnection';
+import {
+  chooseBackupPreview,
+  discardBackupPreview,
+  readLastBackup,
+  type BackupPreview,
+} from '@app/usecases/backupOverview';
 import { ImportInputError, reparseBook } from '@app/usecases/importBooks';
 import type {
   MeState,
@@ -360,7 +367,13 @@ export function useMineruVM(): { state: MineruState; intents: MineruIntents } {
             .catch(() => c.log.warn('解析队列将在下次打开时继续'));
         }, true),
       testConnection: () =>
-        notice('连接测试将在解析服务接入后启用；当前设置已可保存'),
+        run(async () => {
+          if (token.trim()) {
+            notice('请先保存 Token，再测试连接');
+            return;
+          }
+          notice(await testMineruConnection(c));
+        }, true),
     },
   };
 }
@@ -649,10 +662,38 @@ export function useStorageVM(): {
     [includeOriginals, setIncludeOriginals] = useState(false),
     [confirmClean, setConfirmClean] = useState<string | null>(null),
     [confirmReparse, setConfirmReparse] = useState<string | null>(null),
-    [confirmRestore, setConfirmRestore] = useState(false);
+    [confirmRestore, setConfirmRestore] = useState(false),
+    [lastBackup, setLastBackup] = useState<string>(),
+    [restorePreview, setRestorePreview] =
+      useState<Awaited<ReturnType<typeof chooseBackupPreview>>>(null);
+  const restoreBusy = useRef(false),
+    restoreRevision = useRef(0),
+    selectedBackup = useRef<BackupPreview | null>(null);
+  useEffect(
+    () => () => {
+      ++restoreRevision.current;
+      const selected = selectedBackup.current;
+      selectedBackup.current = null;
+      if (selected) discardBackupPreview(c, selected);
+    },
+    [c],
+  );
+  const refreshBackup = useCallback(async () => {
+    const saved = await readLastBackup(c);
+    setLastBackup(
+      saved
+        ? `最近成功备份：${new Date(saved.createdAt).toLocaleString()} · ${
+            saved.books
+          } 本书 · ${
+            saved.originals ? `含 ${saved.originals} 本原文件` : '不含原文件'
+          }`
+        : '尚无本机成功导出的备份记录',
+    );
+  }, [c]);
   const refresh = useCallback(
     () =>
-      run(async () =>
+      run(async () => {
+        await refreshBackup();
         setBooks(
           (await loadStorage(c)).map(book => ({
             id: book.id,
@@ -662,9 +703,9 @@ export function useStorageVM(): {
               book.sizeBytes,
             )} · 解析结果 ${formatBytes(book.parsedBytes)}`,
           })),
-        ),
-      ),
-    [c, run],
+        );
+      }),
+    [c, run, refreshBackup],
   );
   useEffect(refresh, [refresh]);
   return {
@@ -675,6 +716,15 @@ export function useStorageVM(): {
       confirmClean,
       confirmReparse,
       confirmRestore,
+      lastBackup,
+      restorePreview: restorePreview
+        ? `${new Date(restorePreview.manifest.createdAt).toLocaleString()} · ${
+            restorePreview.manifest.books.length
+          } 本书 · 含 ${
+            restorePreview.manifest.books.filter(book => book.originalIncluded)
+              .length
+          } 本原文件`
+        : undefined,
     },
     intents: {
       back: nav.back,
@@ -685,9 +735,28 @@ export function useStorageVM(): {
       exportBackup: () =>
         run(async () => {
           await exportBackup(c, includeOriginals);
+          await refreshBackup();
           notice('备份已保存到下载 / Pagewise导出');
         }, true),
-      restoreBackup: () => setConfirmRestore(true),
+      restoreBackup: () => {
+        if (restoreBusy.current || selectedBackup.current) return;
+        restoreBusy.current = true;
+        const current = ++restoreRevision.current;
+        run(async () => {
+          try {
+            const selected = await chooseBackupPreview(c);
+            if (current !== restoreRevision.current) {
+              if (selected) await discardBackupPreview(c, selected);
+              return;
+            }
+            selectedBackup.current = selected;
+            setRestorePreview(selected);
+            setConfirmRestore(!!selected);
+          } finally {
+            restoreBusy.current = false;
+          }
+        }, true);
+      },
       confirmClean: () => {
         if (!confirmClean || status.saving) return;
         const id = confirmClean;
@@ -717,15 +786,30 @@ export function useStorageVM(): {
         }, true);
       },
       confirmRestore: () => {
+        const selected = selectedBackup.current;
+        if (!selected || restoreBusy.current || status.saving) return;
+        restoreBusy.current = true;
+        selectedBackup.current = null;
         setConfirmRestore(false);
+        setRestorePreview(null);
         run(async () => {
-          await restoreBackup(c);
+          try {
+            await restoreBackup(c, selected.path);
+          } finally {
+            await discardBackupPreview(c, selected);
+            restoreBusy.current = false;
+          }
         }, true);
       },
       closeOverlay: () => {
+        ++restoreRevision.current;
+        const selected = selectedBackup.current;
+        selectedBackup.current = null;
+        if (selected) discardBackupPreview(c, selected);
         setConfirmClean(null);
         setConfirmReparse(null);
         setConfirmRestore(false);
+        setRestorePreview(null);
       },
     },
   };

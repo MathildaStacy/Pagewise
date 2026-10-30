@@ -4,6 +4,6 @@ import { useReviewVM, useReviewSessionVM } from './useReviewVM';
 export function ReviewScreen() {
   return <ReviewView {...useReviewVM()} />;
 }
-export function ReviewSessionScreen() {
-  return <ReviewSessionView {...useReviewSessionVM()} />;
+export function ReviewSessionScreen({ limit }: { limit?: number } = {}) {
+  return <ReviewSessionView {...useReviewSessionVM(limit)} />;
 }

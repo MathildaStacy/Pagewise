@@ -26,6 +26,11 @@ import {
 } from '@app/usecases/storage';
 import { SCHEMA_VERSION } from '@data/migrations';
 import type { StorageIO } from '@services/backup';
+import {
+  chooseBackupPreview,
+  discardBackupPreview,
+  readLastBackup,
+} from '@app/usecases/backupOverview';
 const execute = promisify(execFile);
 let c: Container, folder: string, io: StorageIO, replaced: string;
 function openDb(file: string): Db {
@@ -300,4 +305,34 @@ it('treats file picker cancellation as a no-op and reports book storage through 
   expect(books.every(book => book.available && book.parsedBytes >= 0)).toBe(
     true,
   );
+});
+it('previews the selected backup before replacing data and records only successful exports', async () => {
+  expect(await readLastBackup(c)).toBeNull();
+  const archive = await exportBackup(c);
+  const exported = await readLastBackup(c);
+  expect(exported).toEqual({
+    createdAt: c.clock.now().toISOString(),
+    books: 3,
+    originals: 0,
+  });
+  jest.mocked(io.pickBackup).mockResolvedValueOnce(archive);
+  const preview = await chooseBackupPreview(c);
+  expect(preview?.path).not.toBe(archive);
+  expect(preview?.manifest.books).toHaveLength(3);
+  expect(io.replaceDatabase).not.toHaveBeenCalled();
+  expect((await c.repos.books.list()).length).toBe(3);
+  if (!preview) throw new Error('preview missing');
+  const originalBytes = await readFile(archive);
+  await writeFile(archive, 'later picker selection');
+  expect(await readFile(preview.path)).toEqual(originalBytes);
+  await discardBackupPreview(c, preview);
+  expect(
+    (await readdir(io.cacheDir)).filter(name =>
+      name.startsWith('backup-preview'),
+    ),
+  ).toEqual([]);
+  jest.mocked(io.saveDownloads).mockRejectedValueOnce(new Error('disk full'));
+  await expect(exportBackup(c, true)).rejects.toThrow('disk full');
+  expect(await readLastBackup(c)).toEqual(exported);
+  expect(await chooseBackupPreview(c)).toBeNull();
 });

@@ -1,4 +1,5 @@
 import type { Book, BookPart, Section } from '@core/types';
+import { mapSectionForReview } from '@core/map';
 import { createRepos } from '@data/repos';
 import type { Container } from '../container';
 async function withPageLabels(
@@ -27,10 +28,16 @@ export async function loadShelf(c: Container) {
         c.repos.parts.list(book.id),
         c.repos.notes.stuck.list(book.id, undefined, { resolved: false }),
       ]);
-      const plan = study?.main_section
-        ? await c.repos.plans.get(book.id, study.main_section, study.main_part)
-        : undefined;
-      return { book, sections, study, parts, stuck, plan };
+      const [plan, recentQuestion] = study?.main_section
+        ? await Promise.all([
+            c.repos.plans.get(book.id, study.main_section, study.main_part),
+            c.db.get<{ content: string }>(
+              "SELECT content FROM message WHERE book_id=? AND section_id=? AND kind='user' AND intent='ask' AND detour_id IS NULL ORDER BY id DESC LIMIT 1",
+              [book.id, study.main_section],
+            ),
+          ])
+        : [undefined, undefined];
+      return { book, sections, study, parts, stuck, plan, recentQuestion };
     }),
   );
 }
@@ -49,7 +56,12 @@ export async function loadBookMap(c: Container, id: string) {
     c.repos.notes.stuck.list(id, undefined, { resolved: false }),
   ]);
   if (!book) throw new Error('这本书已经不在书架上了');
-  return { book: await withPageLabels(c, book), sections, study, stuck };
+  return {
+    book: await withPageLabels(c, book),
+    sections: sections.map(mapSectionForReview),
+    study,
+    stuck,
+  };
 }
 export type MapRecord = Awaited<ReturnType<typeof loadBookMap>>;
 export async function loadSection(c: Container, bookId: string, id: string) {
@@ -72,7 +84,16 @@ export async function loadSection(c: Container, bookId: string, id: string) {
       study?.main_section === id ? study.main_part : 0,
     ),
   ]);
-  return { section, parent, study, qa, stuck, blocks, plan, userText };
+  return {
+    section: mapSectionForReview(section),
+    parent,
+    study,
+    qa,
+    stuck,
+    blocks,
+    plan,
+    userText,
+  };
 }
 export async function startSection(c: Container, bookId: string, id: string) {
   await c.db.transaction(async tx => {

@@ -332,6 +332,8 @@ export interface Card {
   box: CardBox;
   due_on: LocalDate;
   origin: 'section_end' | 'detour' | 'manual';
+  /** Missing on older cards and backups; treated as active. */
+  suspended?: boolean;
   created_at: ISODateTime;
 }
 export type CardInsert = InsertRecord<Card, 'id' | 'box'>;

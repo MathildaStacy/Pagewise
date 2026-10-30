@@ -1,5 +1,5 @@
 import type { Block, JsonValue, Section } from '@core/types';
-import { parseBlockRef } from '@core/ids';
+import { pageLabel, pageRangeLabel, parseBlockRef } from '@core/ids';
 import { formatBlocks } from '@core/context';
 import type { Container } from '../container';
 
@@ -83,9 +83,11 @@ export async function executeReadTool(
         formatBlocks(blocks, pageOffset),
         `读取 ${id} ${section.title}${
           section.page_from != null
-            ? `（p.${section.page_from - pageOffset}–${
-                (section.page_to ?? section.page_from) - pageOffset
-              }）`
+            ? `（${pageRangeLabel(
+                book ?? { page_offset: 0 },
+                section.page_from,
+                section.page_to,
+              )}）`
             : ''
         }`,
         blocks,
@@ -125,7 +127,11 @@ export async function executeReadTool(
       return result(JSON.stringify({ error: '图片不存在' }), '没有找到这张图');
     return result(
       formatBlocks([block], pageOffset),
-      `查看图片${block.page != null ? `（p.${block.page - pageOffset}）` : ''}`,
+      `查看图片${
+        block.page != null
+          ? `（${pageLabel(book ?? { page_offset: 0 }, block.page)}）`
+          : ''
+      }`,
       [block],
     );
   }

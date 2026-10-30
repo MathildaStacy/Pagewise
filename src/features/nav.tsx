@@ -20,9 +20,9 @@ export type AppRoute =
   | { name: 'ImportSettings'; draftId: string }
   | { name: 'SectionDone'; bookId: string; sectionId: string; draftId: string }
   | { name: 'MeAIEdit'; providerId?: string }
+  | { name: 'ReviewSession'; limit?: number }
   | {
       name:
-        | 'ReviewSession'
         | 'MeMineru'
         | 'MeAI'
         | 'MePrefs'

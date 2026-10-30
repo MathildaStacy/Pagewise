@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react';
+import { useIsFocused } from '@react-navigation/native';
 import { ShelfView } from '@ui/screens/ShelfView';
 import { BookMapView } from '@ui/screens/BookMapView';
 import { ParseProgressView } from '@ui/screens/ParseProgressView';
@@ -9,7 +11,15 @@ import {
   useShelfVM,
 } from './useLibraryVM';
 export function ShelfScreen() {
-  return <ShelfView {...useShelfVM()} />;
+  const vm = useShelfVM();
+  const focused = useIsFocused();
+  const wasFocused = useRef(focused);
+  const refresh = vm.intents.refresh;
+  useEffect(() => {
+    if (focused && !wasFocused.current) refresh();
+    wasFocused.current = focused;
+  }, [focused, refresh]);
+  return <ShelfView {...vm} />;
 }
 export function BookMapScreen({ bookId }: { bookId: string }) {
   return <BookMapView {...useBookMapVM(bookId)} />;

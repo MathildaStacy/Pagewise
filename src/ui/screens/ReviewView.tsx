@@ -12,6 +12,7 @@ import {
   useTokens,
 } from '@ui/kit';
 import type { ReviewIntents, ReviewState } from '@features/review/types';
+import { CardManagementSheet } from './CardManagementSheet';
 export function ReviewView({
   state,
   intents,
@@ -37,7 +38,7 @@ export function ReviewView({
         {[
           [state.hero.due, '今日待复习'],
           [state.hero.stuck, '卡点'],
-          [state.hero.total, '闪卡总数'],
+          [state.hero.total, '复习中闪卡'],
         ].map(([value, label], index) => (
           <View key={label} style={s.stat}>
             <Text
@@ -81,6 +82,21 @@ export function ReviewView({
         >
           {state.start.label}
         </Button>
+        {state.quickStart && intents.startQuick ? (
+          <Button
+            size="block"
+            variant="secondary"
+            disabled={!state.quickStart.enabled}
+            onPress={intents.startQuick}
+          >
+            {state.quickStart.label}
+          </Button>
+        ) : null}
+        {intents.management ? (
+          <Button variant="text" onPress={intents.management.open}>
+            管理闪卡
+          </Button>
+        ) : null}
       </View>
       <View style={s.sectionHeader}>
         <Text style={s.sectionTitle}>卡点清单</Text>
@@ -138,6 +154,12 @@ export function ReviewView({
           ))
         )}
       </ListSection>
+      {state.management && intents.management ? (
+        <CardManagementSheet
+          state={state.management}
+          intents={intents.management}
+        />
+      ) : null}
     </Screen>
   );
 }
@@ -231,6 +253,7 @@ const useStyles = makeStyles(t => {
       textAlign: 'center',
     },
     start: {
+      gap: t.space.gap,
       paddingHorizontal: t.space.pageX,
       paddingBottom: grouped ? 0 : 14,
       marginBottom: grouped ? 26 : 8,

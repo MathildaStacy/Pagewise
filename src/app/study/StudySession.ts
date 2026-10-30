@@ -15,7 +15,7 @@ import { reduceDetour } from '@core/detour';
 import { resolveLessonPlan } from '@core/lesson';
 import { parse } from '@core/markup';
 import { advanceCitationStreak, validateCitations } from '@core/citations';
-import { parseBlockRef } from '@core/ids';
+import { pageLabel, parseBlockRef } from '@core/ids';
 import { stableStringify, truncateText } from '@core/text';
 import type { GatewayRequest } from '@services/ai/gateway';
 import type { Part, RawOutput, StoredMessage, Usage } from '@services/ai/types';
@@ -30,6 +30,7 @@ import {
   type StudyTask,
 } from './prompts';
 import { finishSection } from './finishSection';
+import { deferQuizzes } from './quizSupport';
 import { executeReadTool, jsonObject, parseToolArgs } from './toolExec';
 import {
   asJson,
@@ -342,6 +343,7 @@ export class StudySession implements StudySessionApi {
         }
       }
       if (options.question) {
+        await this.deferPendingQuizzes();
         if (
           options.sectionId &&
           options.sectionId !== this.state.main.sectionId
@@ -554,7 +556,7 @@ export class StudySession implements StudySessionApi {
       title: step.title,
       pages:
         s.section?.page_from != null
-          ? `p.${s.section.page_from - (s.book?.page_offset ?? 0)}`
+          ? pageLabel(s.book ?? { page_offset: 0 }, s.section.page_from)
           : '',
     });
   }
@@ -1208,7 +1210,7 @@ export class StudySession implements StudySessionApi {
       if (message.kind !== 'card') return false;
       const card = parseStudyCard(message.content);
       return (
-        (card?.kind === 'quiz' && card.picked === null) ||
+        (card?.kind === 'quiz' && card.picked === null && !card.deferred) ||
         (card?.kind === 'proposal' &&
           card.state === 'pending' &&
           !!card.toolCall)
@@ -1217,13 +1219,44 @@ export class StudySession implements StudySessionApi {
   }
   send(text: string): Promise<void> {
     if (!text.trim()) return Promise.resolve();
-    if (this.hasPendingTool()) {
-      this.set({ notice: '请先完成测验或处理 AI 建议' });
+    if (
+      this.state.messages.some(message => {
+        const card =
+          message.kind === 'card' ? parseStudyCard(message.content) : null;
+        return (
+          card?.kind === 'proposal' &&
+          card.state === 'pending' &&
+          !!card.toolCall
+        );
+      })
+    ) {
+      this.set({ notice: '请先确认或取消 AI 建议' });
       return Promise.resolve();
     }
     return this.run(async () => {
+      await this.deferPendingQuizzes();
       await this.ensurePlan();
       await this.request('ask', text.trim(), true);
+    });
+  }
+  private async deferPendingQuizzes(messageId?: number): Promise<void> {
+    const deferred = await deferQuizzes(this.c, this.state.messages, messageId);
+    for (const message of deferred.updated) await this.replaceMessage(message);
+    if (deferred.results.length)
+      this.set({ messages: [...this.state.messages, ...deferred.results] });
+    if (deferred.updated.length && this.state.phase === 'quiz') {
+      const final = deferred.updated.some(message => {
+        const card = parseStudyCard(message.content);
+        return card?.kind === 'quiz' && card.final;
+      });
+      this.set({ phase: final ? 'ready' : 'teaching' });
+      await this.checkpoint();
+    }
+  }
+  deferQuiz(messageId: number): Promise<void> {
+    return this.run(async () => {
+      await this.deferPendingQuizzes(messageId);
+      this.set({ notice: '已暂时跳过，之后仍可回来看题。' });
     });
   }
   act(key: QuickKey): Promise<void> {

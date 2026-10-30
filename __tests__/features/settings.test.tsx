@@ -3,6 +3,7 @@ import Renderer, { act } from 'react-test-renderer';
 import { createTestContainer, createTestDemoContainer } from '@app/testing';
 import type { Container } from '@app/container';
 import { useContainer } from '@app/ContainerProvider';
+import { SCHEMA_VERSION } from '@data/migrations';
 import { useAppNav } from '@features/nav';
 import {
   useMeVM,
@@ -25,7 +26,7 @@ import {
   deleteService,
   assignModel,
 } from '@app/usecases/settings';
-import { SkinProvider, CheckRow } from '@ui/kit';
+import { SkinProvider, CheckRow, Sheet } from '@ui/kit';
 import { MeView } from '@ui/screens/MeView';
 import { MeMineruView } from '@ui/screens/MeMineruView';
 import { MeAIView } from '@ui/screens/MeAIView';
@@ -43,6 +44,7 @@ import {
   aboutSamples,
 } from '@features/settings/samples';
 import * as storageUsecases from '@app/usecases/storage';
+import * as backupOverview from '@app/usecases/backupOverview';
 import { ImportInputError, reparseBook } from '@app/usecases/importBooks';
 import { version } from '../../package.json';
 
@@ -307,6 +309,176 @@ it('shows the original-file recovery instruction when a reparse has no source', 
   expect(vm().state.error).toContain('原文件不在本机');
   expect(nav.open).not.toHaveBeenCalled();
 });
+
+describe('storage backup preview', () => {
+  let choose: jest.SpiedFunction<typeof backupOverview.chooseBackupPreview>;
+  let discard: jest.SpiedFunction<typeof backupOverview.discardBackupPreview>;
+  let restore: jest.SpiedFunction<typeof storageUsecases.restoreBackup>;
+
+  const preview = (
+    path = '/cache/backup-preview-a.zip',
+  ): backupOverview.BackupPreview => ({
+    path,
+    manifest: {
+      format: 'pagewise-backup',
+      version: 1,
+      schemaVersion: SCHEMA_VERSION,
+      appVersion: version,
+      createdAt: '2026-10-29T12:00:00.000Z',
+      books: [
+        {
+          id: 'aima',
+          title: 'AIMA',
+          format: 'pdf',
+          sha256: 'fixture-aima',
+          originalIncluded: true,
+        },
+        {
+          id: 'sicp',
+          title: 'SICP',
+          format: 'epub',
+          sha256: 'fixture-sicp',
+          originalIncluded: false,
+        },
+      ],
+    },
+  });
+  function pending<T>() {
+    let resolve!: (value: T) => void;
+    const promise = new Promise<T>(done => {
+      resolve = done;
+    });
+    return { promise, resolve };
+  }
+  beforeEach(() => {
+    choose = jest
+      .spyOn(backupOverview, 'chooseBackupPreview')
+      .mockResolvedValue(null);
+    discard = jest
+      .spyOn(backupOverview, 'discardBackupPreview')
+      .mockResolvedValue();
+    restore = jest
+      .spyOn(storageUsecases, 'restoreBackup')
+      .mockResolvedValue(true);
+  });
+
+  it('selects only once for same-frame repeated taps and previews without restoring', async () => {
+    const selection = pending<backupOverview.BackupPreview | null>();
+    choose.mockReturnValueOnce(selection.promise);
+    const vm = await mountVM(useStorageVM);
+    await act(async () => {
+      vm().intents.restoreBackup();
+      vm().intents.restoreBackup();
+    });
+    expect(choose).toHaveBeenCalledTimes(1);
+    expect(vm().state.confirmRestore).toBe(false);
+    expect(vm().state.saving).toBe(true);
+    expect(restore).not.toHaveBeenCalled();
+
+    await act(async () => selection.resolve(preview()));
+    expect(vm().state.confirmRestore).toBe(true);
+    expect(vm().state.restorePreview).toContain('2 本书 · 含 1 本原文件');
+    expect(vm().state.saving).toBe(false);
+    expect(restore).not.toHaveBeenCalled();
+    await act(async () => vm().intents.restoreBackup());
+    expect(choose).toHaveBeenCalledTimes(1);
+  });
+
+  it('discards a cancelled preview without restoring and allows another selection', async () => {
+    const first = preview();
+    const second = preview('/cache/backup-preview-b.zip');
+    choose.mockResolvedValueOnce(first).mockResolvedValueOnce(second);
+    const vm = await mountVM(useStorageVM);
+    await act(async () => vm().intents.restoreBackup());
+    expect(vm().state.confirmRestore).toBe(true);
+
+    await act(async () => vm().intents.closeOverlay());
+    expect(vm().state.confirmRestore).toBe(false);
+    expect(vm().state.restorePreview).toBeUndefined();
+    expect(discard).toHaveBeenCalledTimes(1);
+    expect(discard).toHaveBeenCalledWith(c, first);
+    expect(restore).not.toHaveBeenCalled();
+
+    await act(async () => vm().intents.restoreBackup());
+    expect(choose).toHaveBeenCalledTimes(2);
+    expect(vm().state.confirmRestore).toBe(true);
+  });
+
+  it('restores the exact preview archive once and retains it until restoration finishes', async () => {
+    const selected = preview('/cache/backup-preview-selected.zip');
+    const restoration = pending<boolean>();
+    choose.mockResolvedValueOnce(selected);
+    restore.mockReturnValueOnce(restoration.promise);
+    const vm = await mountVM(useStorageVM);
+    await act(async () => vm().intents.restoreBackup());
+    expect(restore).not.toHaveBeenCalled();
+
+    await act(async () => {
+      vm().intents.confirmRestore();
+      vm().intents.confirmRestore();
+      vm().intents.restoreBackup();
+    });
+    expect(restore).toHaveBeenCalledTimes(1);
+    expect(restore).toHaveBeenCalledWith(c, selected.path);
+    expect(choose).toHaveBeenCalledTimes(1);
+    expect(discard).not.toHaveBeenCalled();
+    expect(vm().state.confirmRestore).toBe(false);
+    expect(vm().state.restorePreview).toBeUndefined();
+
+    await act(async () => restoration.resolve(true));
+    expect(discard).toHaveBeenCalledTimes(1);
+    expect(discard).toHaveBeenCalledWith(c, selected);
+    expect(vm().state.saving).toBe(false);
+  });
+
+  it('discards a preview that finishes after cancellation without reopening confirmation', async () => {
+    const selected = preview();
+    const selection = pending<backupOverview.BackupPreview | null>();
+    choose.mockReturnValueOnce(selection.promise);
+    const vm = await mountVM(useStorageVM);
+    await act(async () => vm().intents.restoreBackup());
+    await act(async () => vm().intents.closeOverlay());
+    await act(async () => selection.resolve(selected));
+
+    expect(vm().state.confirmRestore).toBe(false);
+    expect(vm().state.restorePreview).toBeUndefined();
+    expect(discard).toHaveBeenCalledTimes(1);
+    expect(discard).toHaveBeenCalledWith(c, selected);
+    expect(restore).not.toHaveBeenCalled();
+    await act(async () => vm().intents.restoreBackup());
+    expect(choose).toHaveBeenCalledTimes(2);
+  });
+
+  it('discards a preview that arrives after the storage page unmounts', async () => {
+    const selected = preview();
+    const selection = pending<backupOverview.BackupPreview | null>();
+    choose.mockReturnValueOnce(selection.promise);
+    const vm = await mountVM(useStorageVM);
+    await act(async () => vm().intents.restoreBackup());
+    const renderer = renderers.pop()!;
+    await act(async () => renderer.unmount());
+    expect(discard).not.toHaveBeenCalled();
+
+    await act(async () => selection.resolve(selected));
+    expect(discard).toHaveBeenCalledTimes(1);
+    expect(discard).toHaveBeenCalledWith(c, selected);
+    expect(restore).not.toHaveBeenCalled();
+  });
+
+  it('discards an unconfirmed preview when leaving the storage page', async () => {
+    const selected = preview();
+    choose.mockResolvedValueOnce(selected);
+    const vm = await mountVM(useStorageVM);
+    await act(async () => vm().intents.restoreBackup());
+    const renderer = renderers.pop()!;
+    await act(async () => renderer.unmount());
+
+    expect(discard).toHaveBeenCalledTimes(1);
+    expect(discard).toHaveBeenCalledWith(c, selected);
+    expect(restore).not.toHaveBeenCalled();
+  });
+});
+
 it('storage reads real book sizes and About switches demo mode and exports redacted logs', async () => {
   await c.close();
   c = await createTestDemoContainer();
@@ -336,7 +508,7 @@ it('storage reads real book sizes and About switches demo mode and exports redac
   expect(formatBytes(1024 * 1024)).toBe('1.0 MB');
 });
 
-it('renders all seven settings pages in both skins and schemes', async () => {
+it('renders all seven settings pages in five skins and both schemes', async () => {
   const me = await mountVM(useMeVM),
     mineru = await mountVM(useMineruVM),
     ai = await mountVM(useAIVM),
@@ -344,7 +516,7 @@ it('renders all seven settings pages in both skins and schemes', async () => {
     prefs = await mountVM(usePrefsVM),
     storage = await mountVM(useStorageVM),
     about = await mountVM(useAboutVM);
-  for (const skinId of ['paper', 'glass'] as const)
+  for (const skinId of ['paper', 'glass', 'meta', 'google', 'win11'] as const)
     for (const scheme of ['light', 'dark'] as const) {
       await act(async () => {
         const r = Renderer.create(
@@ -372,6 +544,65 @@ it('renders all seven settings pages in both skins and schemes', async () => {
       expect(JSON.stringify(renderers.at(-1)!.toJSON())).toContain('Pagewise');
     }
 });
+
+it.each(
+  (['paper', 'glass', 'meta', 'google', 'win11'] as const).flatMap(skin =>
+    (['light', 'dark'] as const).map(scheme => [skin, scheme] as const),
+  ),
+)(
+  '%s/%s retains backup status, selected-file preview and restore controls',
+  async (skin, scheme) => {
+    const confirmRestore = jest.fn(),
+      closeOverlay = jest.fn();
+    const lastBackup = '上次备份：2026-10-29 12:00',
+      restorePreview = '2 本书 · 含 1 本原文件';
+    let r!: Renderer.ReactTestRenderer;
+    await act(async () => {
+      r = Renderer.create(
+        <SkinProvider skinId={skin} scheme={scheme} reduceMotion>
+          <MeStorageView
+            state={{
+              ...storageSamples.normal,
+              confirmRestore: true,
+              lastBackup,
+              restorePreview,
+            }}
+            intents={{
+              back: jest.fn(),
+              clean: jest.fn(),
+              reparse: jest.fn(),
+              exportBackup: jest.fn(),
+              restoreBackup: jest.fn(),
+              refresh: jest.fn(),
+              setIncludeOriginals: jest.fn(),
+              confirmClean: jest.fn(),
+              confirmReparse: jest.fn(),
+              confirmRestore,
+              closeOverlay,
+            }}
+          />
+        </SkinProvider>,
+      );
+      renderers.push(r);
+    });
+    expect(JSON.stringify(r.toJSON())).toContain(lastBackup);
+    expect(JSON.stringify(r.toJSON())).toContain(restorePreview);
+    const sheet = r.root
+      .findAllByType(Sheet)
+      .find(item => item.props.title === '从备份恢复？')!;
+    expect(sheet.props.visible).toBe(true);
+    const restore = sheet.findAll(
+      item =>
+        item.props.accessibilityRole === 'button' &&
+        item.props.accessibilityLabel === '恢复这份备份',
+    )[0];
+    expect(restore).toBeDefined();
+    restore.props.onPress();
+    expect(confirmRestore).toHaveBeenCalledTimes(1);
+    sheet.props.onClose();
+    expect(closeOverlay).toHaveBeenCalledTimes(1);
+  },
+);
 
 it('reads models, selects one and tests the unsaved editor before saving', async () => {
   const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({

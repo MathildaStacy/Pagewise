@@ -15,6 +15,7 @@ import type {
   ReviewSessionIntents,
   ReviewSessionState,
 } from '@features/review/types';
+import { CardEditorSheet } from './CardEditorSheet';
 
 export function ReviewSessionView({
   state,
@@ -108,6 +109,20 @@ export function ReviewSessionView({
         </View>
       ) : null}
       {state.loading ? <Empty body="正在读取卡片…" /> : null}
+      {state.notice ? (
+        <View style={s.message}>
+          <Note tone="neutral">{state.notice}</Note>
+          {intents.undoSuspend ? (
+            <Button
+              variant="text"
+              disabled={state.busy}
+              onPress={intents.undoSuspend}
+            >
+              撤回暂停
+            </Button>
+          ) : null}
+        </View>
+      ) : null}
       {card ? (
         <>
           {flip ? (
@@ -203,6 +218,24 @@ export function ReviewSessionView({
               )}
             </Pressable>
           )}
+          {intents.editCard && intents.suspendCard ? (
+            <View style={s.manageActions}>
+              <Button
+                variant="text"
+                disabled={state.busy || !!state.editor}
+                onPress={intents.editCard}
+              >
+                编辑卡片
+              </Button>
+              <Button
+                variant="text"
+                disabled={state.busy || !!state.editor}
+                onPress={intents.suspendCard}
+              >
+                暂停这张卡
+              </Button>
+            </View>
+          ) : null}
           {state.rate ? (
             <Animated.View
               testID="flashcard-ratings"
@@ -227,10 +260,12 @@ export function ReviewSessionView({
                 <Pressable
                   key={rate.key}
                   onPress={() => intents.rate(rate.key)}
-                  disabled={state.busy}
+                  disabled={state.busy || !!state.editor}
                   accessibilityRole="button"
                   accessibilityLabel={`${rate.label}，${rate.sub}`}
-                  accessibilityState={{ disabled: state.busy }}
+                  accessibilityState={{
+                    disabled: state.busy || !!state.editor,
+                  }}
                   hitSlop={4}
                   style={({ pressed }) => [
                     s.rating,
@@ -279,6 +314,9 @@ export function ReviewSessionView({
           ) : null}
         </>
       ) : null}
+      {intents.editor ? (
+        <CardEditorSheet state={state.editor} intents={intents.editor} />
+      ) : null}
       {state.finished ? (
         <View style={s.finished}>
           {flip ? (
@@ -305,6 +343,13 @@ const useStyles = makeStyles(t => {
     scale = t.type.body.fontSize / (flip ? 17 : 14);
   return {
     message: { padding: t.space.pageX, gap: t.space.gap },
+    manageActions: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      gap: t.space.gap,
+      paddingHorizontal: t.space.pageX,
+    },
     card: {
       marginHorizontal: 14,
       marginVertical: 16,

@@ -88,6 +88,8 @@ export interface QuizCard {
   explain: string;
   final: boolean;
   picked: number | null;
+  /** The user may ask for help or skip without claiming to have answered correctly. */
+  deferred?: boolean;
   toolCall?: { id: string; name: string };
 }
 export interface ProposalCard {
@@ -172,6 +174,7 @@ export interface StudySessionApi {
   jumpStep(index: number): Promise<void>;
   backMain(rebase?: boolean): Promise<void>;
   answerQuiz(messageId: number, index: number): Promise<void>;
+  deferQuiz?(messageId: number): Promise<void>;
   resolveProposal(messageId: number, accept: boolean): Promise<void>;
   resume(action: 'go' | 'review'): Promise<void>;
   setQuote(seq: number | null): void;

@@ -7,6 +7,7 @@ import {
   type RichDoc as CoreDoc,
 } from '@core/markup';
 import { validateCitations } from '@core/citations';
+import { pageLabel, pageRangeLabel, type PageLabelBook } from '@core/ids';
 import {
   parseStudyCard,
   type StudyState as SessionState,
@@ -19,10 +20,10 @@ export function sectionLabel(section: Section | null | undefined) {
 }
 export function blockPage(
   block: Pick<Block, 'page' | 'loc'> | undefined,
-  book: Pick<Book, 'page_offset'> | null,
+  book: PageLabelBook | null,
 ) {
   return block?.page !== null && block?.page !== undefined
-    ? `p.${block.page - (book?.page_offset ?? 0)}`
+    ? pageLabel(book ?? { page_offset: 0 }, block.page, block.loc)
     : block?.loc
     ? `位置 ${block.loc}`
     : '原文';
@@ -34,6 +35,12 @@ export function stepPages(
   book: Book | null,
 ) {
   const found = blocks.filter(b => b.seq >= from && b.seq <= to);
+  if (found[0]?.page != null && found[found.length - 1]?.page != null)
+    return pageRangeLabel(
+      book ?? { page_offset: 0 },
+      found[0].page,
+      found[found.length - 1].page,
+    );
   const first = blockPage(found[0], book),
     last = blockPage(found[found.length - 1], book);
   return first === last ? first : `${first}–${last.replace('p.', '')}`;
@@ -283,6 +290,7 @@ function presentMessage(
         title: card.final ? '本节小测' : '检查一下',
         question: card.question,
         locked: card.picked !== null,
+        deferred: card.deferred,
         options: card.options.map((label, i) => ({
           label,
           state:
