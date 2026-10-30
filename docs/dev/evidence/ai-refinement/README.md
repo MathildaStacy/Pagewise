@@ -39,3 +39,13 @@
 截图均在任务模拟器内捕获并打开检查。面板内的截断来自正常滚动位置；系统状态栏、手势区均保留。
 
 独立界面复核的 [最终评分](finish-verdict.md) 将两项修正均评为 resolved，disposition 为 ship；该评分仅覆盖列出的修正项。[设计继承检查](design-check.md) 记录了与既有组件、皮肤和文档的对照。
+
+## v0.0.9 发布验证（2026-10-31）
+
+- 项目版本和 Android versionName 统一为 `0.0.9`，versionCode 为 `9`。
+- 版本更新后的完整 `npm run check` 通过：103 个套件、1972 项测试、15 个快照；1 套 / 2 项既有跳过。
+- `:app:assembleRelease -PreactNativeArchitectures=arm64-v8a` 通过（3 分钟，654 tasks），包含 Metro 打包和 Hermes 编译。
+- APK 为 `com.pagewise`，最低 API 24，仅 `arm64-v8a`；签名校验通过，签名证书 SHA-256 与已发布的 v0.0.8 一致。
+- 在任务专属只读模拟器中，先安装已发布且校验值一致的 v0.0.8，再用 `adb install -r` 覆盖为 v0.0.9；没有清空数据。原有两本书、四条可见章节对话及书架中的学习进度逐项相同；离线冷启动正常，ReactNativeJS / AndroidRuntime 错误日志为空。
+- 发布 APK：`Pagewise-v0.0.9-android-arm64.apk`，46,182,920 bytes，附 `SHA256SUMS`。
+- SHA-256：`2174b8415cd423c7ee61e816f7499193b0afa5ee8526bc27dd19daf11c5196a6`。
