@@ -12,7 +12,7 @@ import {
   DefaultTheme,
   NavigationContainer,
   StackActions,
-  createNavigationContainerRef,
+  useNavigationContainerRef,
   useIsFocused,
   type RouteProp,
 } from '@react-navigation/native';
@@ -100,7 +100,6 @@ export type RootStackParams = {
 };
 const Stack = createNativeStackNavigator<RootStackParams>();
 const Tabs = createBottomTabNavigator<Record<TabName, undefined>>();
-const navRef = createNavigationContainerRef<RootStackParams>();
 const tabItems = [
   { key: 'Shelf', label: '书架', icon: 'shelf' as const },
   { key: 'Review', label: '复习', icon: 'cards' as const },
@@ -335,6 +334,7 @@ export function RootNavigator({
       | { kind: 'duplicate'; bookId: string };
   } | null;
 }) {
+  const navRef = useNavigationContainerRef<RootStackParams>();
   const [ready, setReady] = useState(false);
   const appliedImport = useRef<number | null>(null);
   useEffect(() => {
@@ -354,7 +354,7 @@ export function RootNavigator({
           : { bookId: selection.bookId },
       ),
     );
-  }, [ready, incomingImport]);
+  }, [ready, incomingImport, navRef]);
   const { skin, tokens } = useSkin();
   const navigation = useMemo<AppNav>(
     () => ({
@@ -388,7 +388,7 @@ export function RootNavigator({
       enterDemo,
       exitDemo,
     }),
-    [enterDemo, exitDemo],
+    [enterDemo, exitDemo, navRef],
   );
   const theme = { ...DefaultTheme, ...skin.navigationTheme(tokens) };
   return (

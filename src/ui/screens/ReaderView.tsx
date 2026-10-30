@@ -450,6 +450,14 @@ function ReaderGuide({
         onToggle={onToggle}
       />
     );
+  const extraCopy = (value?: string) => {
+    const text = value?.trim();
+    return text && text !== '本节导读' ? value : undefined;
+  };
+  const oneLine = extraCopy(guide.oneLine);
+  const body = guide.loading
+    ? '正在生成导读…'
+    : extraCopy(guide.full) ?? oneLine;
   return (
     <Pressable
       accessibilityRole="button"
@@ -462,19 +470,15 @@ function ReaderGuide({
         <Icon name="spark" size={14} color={t.color.accent} />
         <Text style={s.guideTitle}>本节导读</Text>
       </View>
-      {!guide.expanded ? (
+      {!guide.expanded && oneLine ? (
         <Text numberOfLines={1} style={s.guideOne}>
-          {guide.oneLine}
+          {oneLine}
         </Text>
       ) : null}
       <View style={guide.expanded ? s.guideUp : s.guideDown}>
         <Icon name="chev" size={16} color={t.color.ink3} />
       </View>
-      {guide.expanded ? (
-        <Text style={s.guideBody}>
-          {guide.loading ? '正在生成导读…' : guide.full ?? guide.oneLine}
-        </Text>
-      ) : null}
+      {guide.expanded && body ? <Text style={s.guideBody}>{body}</Text> : null}
     </Pressable>
   );
 }

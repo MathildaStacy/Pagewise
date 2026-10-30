@@ -1,4 +1,5 @@
 import type { Section } from '@core/types';
+import { sectionName } from '@features/sectionName';
 import { pageLabel } from '@core/ids';
 import type { BookNotesData, NoteDetailData } from '@app/usecases/notes';
 import type { NotesState, NotesBookState, NoteDetailState } from './types';
@@ -58,7 +59,7 @@ export function presentNotesBook(data: BookNotesData): NotesBookState {
       index = chapters.length;
       groups.set(chapter.id, index);
       chapters.push({
-        title: `${chapter.no ?? ''} ${chapter.title}`.trim(),
+        title: sectionName(chapter),
         sections: [],
       });
     }
@@ -78,7 +79,7 @@ export function presentNotesBook(data: BookNotesData): NotesBookState {
       tags.push({ tone: 'detour', label: '岔路' });
     chapters[index].sections.push({
       id: section.id,
-      label: `${section.no ?? ''} ${section.title}`.trim(),
+      label: sectionName(section),
       status: section.status === 'new' ? undefined : section.status,
       summary: section.summary ?? undefined,
       tags,
@@ -99,7 +100,7 @@ export function presentNoteDetail(
     qa = data.qa.filter(q => q.section_id === sectionId);
   const blockSet = new Set(data.sectionBlocks.map(b => b.seq));
   return {
-    title: s ? `${s.no ?? ''} ${s.title}`.trim() : sectionId,
+    title: s ? sectionName(s) : sectionId,
     subtitle: `笔记${
       s?.page_from != null
         ? ` · ${pageLabel(data.book ?? { page_offset: 0 }, s.page_from)}${

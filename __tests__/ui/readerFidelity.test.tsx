@@ -13,6 +13,7 @@ import {
   AppBar,
   Button,
   Dialog,
+  GuideBar,
   IconButton,
   ReadEnd,
   RichView,
@@ -405,32 +406,175 @@ it.each(['flow', 'orig'] as const)(
   },
 );
 
-it('includes measured guide height in original-page offsets', async () => {
-  const root = await render('glass', {
-    ...readerSamples.normal.read,
-    view: 'orig',
-    original: {
-      available: true,
-      loading: false,
-      pages: [
-        {
-          page: 103,
-          label: 'p.103',
-          size: { w: 600, h: 800 },
-          image: null,
-          blocks: [],
+const groupedReaderSkins = ['glass', 'meta', 'google', 'win11'] as const;
+it.each(
+  groupedReaderSkins.flatMap(skin =>
+    [false, true].map(expanded => ({ skin, expanded })),
+  ),
+)(
+  'shows the default $skin guide label once when expanded=$expanded',
+  async ({ skin, expanded }) => {
+    const toggleGuide = jest.fn();
+    const root = await render(
+      skin,
+      {
+        ...readerSamples.normal.read,
+        guide: { oneLine: '本节导读', expanded, loading: false },
+      },
+      { ...intents, toggleGuide },
+    );
+    const guide = root.findByProps({ accessibilityLabel: '本节导读' });
+    expect(guide.findAllByType(Text).map(node => node.props.children)).toEqual([
+      '本节导读',
+    ]);
+    expect(guide.props.accessibilityRole).toBe('button');
+    expect(guide.props.accessibilityState).toEqual({ expanded });
+    await act(async () => guide.props.onPress());
+    expect(toggleGuide).toHaveBeenCalledTimes(1);
+  },
+);
+
+it.each(
+  ['', ' \n ', ' 本节导读 \n'].flatMap(oneLine =>
+    [false, true].map(expanded => ({ oneLine, expanded })),
+  ),
+)(
+  'omits empty or placeholder guide copy ($oneLine) when expanded=$expanded',
+  async ({ oneLine, expanded }) => {
+    const root = await render('google', {
+      ...readerSamples.normal.read,
+      guide: { oneLine, full: ' \n ', expanded, loading: false },
+    });
+    expect(
+      root
+        .findByProps({ accessibilityLabel: '本节导读' })
+        .findAllByType(Text)
+        .map(node => node.props.children),
+    ).toEqual(['本节导读']);
+  },
+);
+
+it.each(groupedReaderSkins)(
+  'keeps the expanded %s guide generation message and toggle intent',
+  async skin => {
+    const toggleGuide = jest.fn();
+    const root = await render(
+      skin,
+      {
+        ...readerSamples.normal.read,
+        guide: {
+          oneLine: '本节导读',
+          expanded: true,
+          loading: true,
         },
-      ],
-    },
+      },
+      { ...intents, toggleGuide },
+    );
+    const guide = root.findByProps({ accessibilityLabel: '本节导读' });
+    expect(guide.findAllByType(Text).map(node => node.props.children)).toEqual([
+      '本节导读',
+      '正在生成导读…',
+    ]);
+    await act(async () => guide.props.onPress());
+    expect(toggleGuide).toHaveBeenCalledTimes(1);
+  },
+);
+
+it.each(
+  groupedReaderSkins.flatMap(skin =>
+    [false, true].map(expanded => ({ skin, expanded })),
+  ),
+)(
+  'preserves generated $skin guide content when expanded=$expanded',
+  async ({ skin, expanded }) => {
+    const oneLine = ' 先理解代价，再选择节点。 ';
+    const full = ' 结合已走代价和剩余路程的估计，理解最优路径。 ';
+    const root = await render(skin, {
+      ...readerSamples.normal.read,
+      guide: { oneLine, full, expanded, loading: false },
+    });
+    const text = root
+      .findByProps({ accessibilityLabel: '本节导读' })
+      .findAllByType(Text);
+    expect(text.map(node => node.props.children)).toEqual([
+      '本节导读',
+      expanded ? full : oneLine,
+    ]);
+    if (!expanded) expect(text[1].props.numberOfLines).toBe(1);
+  },
+);
+
+it('uses the generated summary when the expanded guide has no body', async () => {
+  const oneLine = '用已走的代价和对剩余路程的估计，选择下一个节点';
+  const root = await render('win11', {
+    ...readerSamples.normal.read,
+    guide: { oneLine, full: ' \n ', expanded: true, loading: false },
   });
-  const list = root.findByType(FlatList);
-  await act(async () =>
-    list.props.ListHeaderComponent.props.onLayout(layout(0, 70)),
-  );
   expect(
-    root.findByType(FlatList).props.getItemLayout(undefined, 0).offset,
-  ).toBe(70);
+    root
+      .findByProps({ accessibilityLabel: '本节导读' })
+      .findAllByType(Text)
+      .map(node => node.props.children),
+  ).toEqual(['本节导读', oneLine]);
 });
+
+it.each([false, true])(
+  'preserves the paper GuideBar default title when expanded=%s',
+  async expanded => {
+    const toggleGuide = jest.fn();
+    const root = await render(
+      'paper',
+      {
+        ...readerSamples.normal.read,
+        guide: { oneLine: '本节导读', expanded, loading: false },
+      },
+      { ...intents, toggleGuide },
+    );
+    expect(root.findByType(GuideBar).props).toMatchObject({
+      title: '本节导读',
+      body: undefined,
+      expanded,
+      onToggle: toggleGuide,
+    });
+  },
+);
+
+it.each([
+  { name: 'generated', guide: readerSamples.normal.read.guide! },
+  {
+    name: 'default',
+    guide: { oneLine: '本节导读', expanded: true, loading: false },
+  },
+])(
+  'includes measured $name guide height in original-page offsets',
+  async ({ guide }) => {
+    const root = await render('glass', {
+      ...readerSamples.normal.read,
+      guide,
+      view: 'orig',
+      original: {
+        available: true,
+        loading: false,
+        pages: [
+          {
+            page: 103,
+            label: 'p.103',
+            size: { w: 600, h: 800 },
+            image: null,
+            blocks: [],
+          },
+        ],
+      },
+    });
+    const list = root.findByType(FlatList);
+    await act(async () =>
+      list.props.ListHeaderComponent.props.onLayout(layout(0, 70)),
+    );
+    expect(
+      root.findByType(FlatList).props.getItemLayout(undefined, 0).offset,
+    ).toBe(70);
+  },
+);
 
 it.each(['paper', 'glass'] as const)(
   'keeps the standalone Reader header from the %s prototype',

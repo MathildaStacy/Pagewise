@@ -1,4 +1,5 @@
 import type { Card, Section } from '@core/types';
+import { sectionName } from '@features/sectionName';
 import { BOX_DAYS, nextReview } from '@core/review';
 import type { ReviewData } from '@app/usecases/review';
 import type { ReviewState, ReviewSessionState } from './types';
@@ -9,7 +10,7 @@ export function sectionLabel(
   id: string,
 ): string {
   const s = sections.find(item => item.book_id === bookId && item.id === id);
-  return s ? `${s.no ?? ''} ${s.title}`.trim() : id;
+  return s ? sectionName(s) : id;
 }
 export function presentReview(data: ReviewData): ReviewState {
   const due = Math.min(data.stats.due, data.limit);

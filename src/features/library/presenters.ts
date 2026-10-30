@@ -1,5 +1,6 @@
 import type { Book, BookPart, Section } from '@core/types';
 import { pageLabel, type PageLabelBook } from '@core/ids';
+import { sectionName } from '@features/sectionName';
 import type { MapRecord, ShelfRecord } from '@app/usecases/library';
 import type {
   BookMapState,
@@ -20,8 +21,7 @@ export const pageRange = (
           ? `–${pageLabel(book, section.page_to).replace(/^p\./, '')}`
           : ''
       }`;
-export const sectionName = (s: Pick<Section, 'no' | 'title'>) =>
-  `${s.no ? s.no + ' ' : ''}${s.title}`;
+export { sectionName };
 const stageLabels = ['上传', '排队', '解析', '下载结果', '建地图'];
 export function parsePart(part: BookPart): ParseProgressState['parts'][number] {
   const stageIndex: Record<BookPart['stage'], number> = {
