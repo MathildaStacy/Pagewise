@@ -1,0 +1,72 @@
+{
+  "version": "0.0.5",
+  "versionCode": 5,
+  "baseCommit": "635c0cbb9458f2bb229a1fc32fd05697853598cc",
+  "localChecks": {
+    "eslint": {
+      "result": "passed",
+      "exitCode": 0,
+      "log": "final-lint.txt"
+    },
+    "typescript": {
+      "result": "passed",
+      "exitCode": 0,
+      "log": "final-typecheck.txt"
+    },
+    "jest": {
+      "result": "passed",
+      "suites": 83,
+      "tests": 1253,
+      "snapshots": 15,
+      "seconds": 29.693,
+      "log": "final-jest.txt"
+    },
+    "androidArm64Release": {
+      "result": "passed",
+      "exitCode": 0,
+      "log": "final-release-build.txt"
+    }
+  },
+  "apk": {
+    "name": "Pagewise-v0.0.5-android-arm64.apk",
+    "sha256": "850684118f91ed8f92d2cbfb507618c757cfa036b5fc291a76ea3b3534f6584b",
+    "bytes": 45694704,
+    "applicationId": "com.pagewise",
+    "versionName": "0.0.5",
+    "versionCode": 5,
+    "minSdk": 24,
+    "debuggable": false,
+    "abis": [
+      "arm64-v8a"
+    ],
+    "signatureVerified": true,
+    "signatureEvidence": "release-signature.txt",
+    "entry": "index.js -> src/App.tsx",
+    "formalEntryRestored": true,
+    "temporaryApplicationIdSuffixAbsent": true,
+    "temporaryBundleMarkersAbsent": [
+      "AcceptanceDemo",
+      "PagewiseAcceptance",
+      "BlurRepro"
+    ],
+    "hermesBundleSha256": "e8d5000ae240f91d936963d2662a110efe8355c590ead7ea13652fe55016e0c8"
+  },
+  "sourceSha256": {
+    "index.js": "441b1a009c5b93d7ec2c0c41b2d47292c50813df83eb53fb88518ae142cb6c9a",
+    "src/App.tsx": "26d56905d349b27c9ed4bd19a75f1da8b71f7244ca00c61bf562ae9d582ffa27",
+    "src/ui/kit/SkinProvider.tsx": "d4b22eb21f4a135efe93423a450f33cb64fad665b103812098853bec1fee5d6d",
+    "__tests__/ui/skin.test.tsx": "760cca1879f3516f266ea1ee621362c5f4f5a97c6c79d1363012b602ec8338b8",
+    "android/app/build.gradle": "21ec860d73d76bee0975be2cfd5a9146bac5ae5b49428a0a8c49d5103031624d",
+    "package.json": "9917facf43a1fe1b470a718e71a7a5b863d36204b2a8401d6355caa91416795c",
+    "package-lock.json": "86769efce7df9f0507cdf0923de70c7b1bbaadd3a90be34b67a8c3ffc428baeb"
+  },
+  "cloudCI": {
+    "baselineRun": "https://github.com/MathildaStacy/Pagewise/actions/runs/40892642803",
+    "finalCommitRun": "Recorded on the v0.0.5 GitHub release after main push; baseline CI is not final-source evidence."
+  },
+  "acceptanceLimits": [
+    "TalkBack recording content checked by local ASR; human voice-quality/prosody/long-form listening not completed.",
+    "Android uses token translucency instead of native blur; iOS native blur retained, no iOS device verification.",
+    "Historical gaps remain in docs/dev/evidence/t12/acceptance-status.md."
+  ]
+}

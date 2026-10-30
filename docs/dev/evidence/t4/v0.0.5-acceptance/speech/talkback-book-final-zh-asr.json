@@ -1,0 +1,22 @@
+{
+  "audio": "talkback-book-final-zh.wav",
+  "model": "Systran/faster-whisper-small",
+  "method": "local ASR, Chinese, int8 CPU, beam_size=5, VAD",
+  "duration": 17.117125,
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 7.0,
+      "text": "打开人工智能,现代方法第四版,Button. Double Tap to Activate.",
+      "avg_logprob": -0.4107273173603145,
+      "no_speech_prob": 0.22626248002052307
+    },
+    {
+      "start": 7.0,
+      "end": 13.88,
+      "text": "输价,Button. Double Tap to Activate.",
+      "avg_logprob": -0.4107273173603145,
+      "no_speech_prob": 0.22626248002052307
+    }
+  ]
+}

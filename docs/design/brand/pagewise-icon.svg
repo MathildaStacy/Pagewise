@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="18 18 72 72">
+  <title>Pagewise — open pages and a bookmark</title>
+<rect x="18" y="18" width="72" height="72" fill="#24467F"/>
+  <path fill="#FBF8F1" d="M29 36C37 33 45 34 52 39V73C45 68 37 67 29 69Z"/>
+  <path fill="#FBF8F1" d="M56 39C59.5 36.8 63.4 35.2 67 34.7V51L70 48L73 51V34.8C75.2 34.9 77.2 35.3 79 36V69C71 67 63 68 56 73Z"/>
+  <path fill="#E7B66B" d="M67 34.7C69 34.4 71 34.4 73 34.8V51L70 48L67 51Z"/>
+</svg>
