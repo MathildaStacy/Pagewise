@@ -17,3 +17,13 @@
 | [纸感对话](paper-light-conversations.png) | 对话层级、当前标记与新建入口 |
 | [深色大字号翻译](glass-dark-large-translation.png) | 实色阅读底、原文预览和中文正文 |
 | [深色大字号对话](glass-dark-large-conversations.png) | 长标题、当前状态与独立操作 |
+
+## v0.0.10 发布验证
+
+- `package.json`、lockfile 和 Android versionName 统一为 `0.0.10`，versionCode 为 `10`。
+- 版本更新后的 `npm run check` 通过：105 个套件、1,992 项测试、15 个快照；Android arm64 Debug 与 Release 同次构建通过。
+- Release APK 的包名为 `com.pagewise`，最低 API 24，仅含 `arm64-v8a`。签名校验通过，证书 SHA-256 与已发布的 v0.0.9 相同，见 [安装包校验](package-verification.json)。
+- 在任务专属只读模拟器中，先安装已发布且 SHA-256 匹配的 v0.0.9，再使用 `adb install -r` 升级为 v0.0.10，没有清空数据。两本书、五条对话的标题 / 章节 / 消息数、两本书的学习进度逐项一致。
+- 关闭模拟器 Wi-Fi 和移动数据后，强制停止并重新启动 Release，书架正常加载，当前应用进程的 ReactNativeJS / AndroidRuntime 错误数为 0，见 [升级校验](native-upgrade.json)。
+- 发布文件为 `Pagewise-v0.0.10-android-arm64.apk`（46,194,744 bytes），附 `SHA256SUMS`。
+- APK SHA-256：`58418a85d4757aa6dbb3e186f2291d5cbeb0ef8bc7aa9bb26af9f0755f2d2317`。

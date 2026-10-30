@@ -1,0 +1,16 @@
+{
+  "from": "0.0.9",
+  "to": "0.0.10",
+  "install": "adb install -r",
+  "clearData": false,
+  "offlineColdStart": true,
+  "booksPreserved": 2,
+  "conversationSummariesPreserved": 5,
+  "bookProgressPreserved": 2,
+  "sameBeforeAndAfter": {
+    "books": true,
+    "progress": true,
+    "conversations": true
+  },
+  "reactNativeOrAndroidRuntimeErrors": 0
+}
