@@ -47,3 +47,12 @@
 真实供应商的目录、联网与翻译参数通过协议夹具验证，没有调用用户的付费 Key；此检查不评价在线模型的翻译质量。
 
 ![五套皮肤的深浅色代码阅读](reader-ai-enhancements-skins.png)
+
+## v0.0.8 发布验证
+
+- 项目版本与 Android versionName 统一为 `0.0.8`，versionCode 为 `8`。
+- 版本更新后完整 `npm run check` 再次通过：100 suites、1,926 tests、15 snapshots；保留 2 项既有跳过。
+- `:app:assembleRelease -PreactNativeArchitectures=arm64-v8a` 通过；APK 为 `com.pagewise`、最低 API 24、仅 arm64-v8a，`apksigner verify` 通过，沿用此前 Android Preview 签名。
+- 在任务专属只读模拟器中，先安装 GitHub 已发布且 SHA256 一致的 v0.0.7，再使用 `adb install -r` 覆盖为 v0.0.8；未清空数据。升级前后书架均有原来的两本书，书名一致，迁移后的原有对话可见，离线冷启动无 ReactNativeJS / AndroidRuntime 错误。
+- 发布 APK 为 `Pagewise-v0.0.8-android-arm64.apk`，46,122,096 bytes。
+- SHA256：`fcba570526a57c177a00a4520cd119b9b957c5a820ce0a71defea49203cb24df`。发布附 `SHA256SUMS`。
