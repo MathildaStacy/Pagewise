@@ -190,6 +190,7 @@ export function useStudyVM(
     blockRef,
     question,
     draftQuestion,
+    focusComposer,
     stuckId,
     preserveMain,
     autoStart,
@@ -218,11 +219,14 @@ export function useStudyVM(
         stuckId,
         preserveMain: standalone || preserveMain,
         autoStart:
-          standalone || draftQuestion !== undefined ? false : autoStart,
+          standalone || draftQuestion !== undefined || focusComposer
+            ? false
+            : autoStart,
       });
-      if (active && !standalone && draftQuestion !== undefined) {
-        setText(draftQuestion);
-        setComposerFocusRequest(request => (request ?? 0) + 1);
+      if (active && !standalone) {
+        if (draftQuestion !== undefined) setText(draftQuestion);
+        if (draftQuestion !== undefined || focusComposer)
+          setComposerFocusRequest(request => (request ?? 0) + 1);
       }
     };
     open().catch(error => {
@@ -246,6 +250,7 @@ export function useStudyVM(
     blockRef,
     question,
     draftQuestion,
+    focusComposer,
     stuckId,
     preserveMain,
     autoStart,
@@ -623,11 +628,23 @@ export function useStudyVM(
     closeOverlay();
     if (start) {
       run(session.setMode('listen', seq));
+      if (standalone) nav.replace({ name: 'Study', bookId });
     } else {
       session.setQuote(seq);
-      run(session.setMode('listen'));
+      run(
+        session.setMode('listen').then(() => {
+          if (!mounted.current) return;
+          if (standalone)
+            nav.replace({
+              name: 'Study',
+              bookId,
+              mode: 'listen',
+              focusComposer: true,
+            });
+          else setComposerFocusRequest(request => (request ?? 0) + 1);
+        }),
+      );
     }
-    if (standalone) nav.replace({ name: 'Study', bookId });
   };
   const menuAction = (key: string) => {
     const seq = selection?.seq;

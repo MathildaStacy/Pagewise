@@ -428,6 +428,7 @@ const useStyles = makeStyles(t => ({
   root: { flex: 1 },
   selectorRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
@@ -438,7 +439,7 @@ const useStyles = makeStyles(t => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    height: 30,
+    minHeight: 30,
     paddingLeft: 10,
     paddingRight: 8,
     borderRadius: t.shape.pill,

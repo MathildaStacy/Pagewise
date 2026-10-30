@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ComponentRef } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -164,8 +165,8 @@ function IconButton({
       hitSlop={4}
       android_ripple={{
         color: t.color.pressed,
-        borderless: !raised,
-        foreground: raised,
+        borderless: !raised && kind !== 'meta',
+        foreground: raised || kind === 'meta',
       }}
       style={({ pressed }) =>
         StyleSheet.create({
@@ -843,6 +844,47 @@ function Composer({
   useEffect(() => {
     if (focusRequest) inputRef.current?.focus();
   }, [focusRequest]);
+  const fieldStyles = StyleSheet.create({
+    wrapper: {
+      flex: 1,
+      minWidth: 0,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    text: { ...t.type.body, fontSize: win ? 15 : 16 },
+    input: {
+      flex: 1,
+      minWidth: 0,
+      color: t.color.ink,
+      backgroundColor: meta ? t.color.surfaceFill : 'transparent',
+      paddingHorizontal: meta ? 16 : 0,
+      paddingVertical: meta ? 8 : 0,
+      borderRadius: 19,
+      minHeight: meta ? 38 : win ? 46 : 48,
+    },
+    placeholder: {
+      ...StyleSheet.absoluteFill,
+      paddingHorizontal: meta ? 16 : 0,
+      justifyContent: 'center',
+    },
+    placeholderText: { color: t.color.ink2 },
+  });
+  const android = Platform.OS === 'android';
+  const field = (
+    <TextInput
+      ref={inputRef}
+      accessibilityLabel={placeholder}
+      // Android hint layout can wrap despite setLines(1); Text supports tail ellipsis.
+      placeholder={android ? '' : placeholder}
+      placeholderTextColor={t.color.ink2}
+      numberOfLines={1}
+      value={value}
+      onChangeText={onChange}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      style={[fieldStyles.text, fieldStyles.input]}
+    />
+  );
   const mic = (
     <Pressable
       accessibilityRole="button"
@@ -910,32 +952,31 @@ function Composer({
           <Icon name="add" size={20} color={t.color.ink2} />
         </Pressable>
       ) : null}
-      <TextInput
-        ref={inputRef}
-        accessibilityLabel={placeholder}
-        placeholder={placeholder}
-        placeholderTextColor={t.color.ink2}
-        value={value}
-        onChangeText={onChange}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        style={
-          StyleSheet.create({
-            root: {
-              ...t.type.body,
-              fontSize: win ? 15 : 16,
-              flex: 1,
-              minWidth: 0,
-              color: t.color.ink,
-              backgroundColor: meta ? t.color.surfaceFill : 'transparent',
-              paddingHorizontal: meta ? 16 : 0,
-              paddingVertical: meta ? 8 : 0,
-              borderRadius: 19,
-              minHeight: meta ? 38 : win ? 46 : 48,
-            },
-          }).root
-        }
-      />
+      {android ? (
+        <View style={fieldStyles.wrapper}>
+          {field}
+          {!value ? (
+            <View
+              pointerEvents="none"
+              accessible={false}
+              importantForAccessibility="no-hide-descendants"
+              style={fieldStyles.placeholder}
+            >
+              <Text
+                testID="composer-placeholder"
+                accessible={false}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={[fieldStyles.text, fieldStyles.placeholderText]}
+              >
+                {placeholder}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      ) : (
+        field
+      )}
       {!meta ? mic : null}
       <Pressable
         accessibilityRole="button"
@@ -1055,6 +1096,8 @@ function StepProgress({
     b = t.brand!,
     meta = b.kind === 'meta',
     win = b.kind === 'win11';
+  const { fontScale } = useWindowDimensions();
+  const circleSize = 20 * (b.kind === 'google' ? Math.max(1, fontScale) : 1);
   return (
     <View
       testID={`${b.kind}-step-progress`}
@@ -1232,9 +1275,9 @@ function StepProgress({
                 style={
                   StyleSheet.create({
                     root: {
-                      width: meta ? 46 : 20,
-                      height: meta ? 46 : 20,
-                      borderRadius: 24,
+                      width: meta ? 46 : circleSize,
+                      height: meta ? 46 : circleSize,
+                      borderRadius: meta ? 24 : circleSize / 2,
                       alignItems: 'center',
                       justifyContent: 'center',
                       borderWidth:
@@ -1296,7 +1339,7 @@ function StepProgress({
                     root: {
                       flex: meta ? 1 : undefined,
                       minWidth: meta ? 76 : undefined,
-                      height: meta ? undefined : 32,
+                      minHeight: meta ? undefined : 32,
                       flexDirection: meta ? 'column' : 'row',
                       gap: meta ? 5 : 8,
                       alignItems: 'center',

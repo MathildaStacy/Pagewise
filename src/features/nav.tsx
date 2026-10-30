@@ -12,6 +12,7 @@ export type AppRoute =
       blockRef?: string;
       question?: string;
       draftQuestion?: string;
+      focusComposer?: boolean;
       stuckId?: number;
     }
   | { name: 'Reader'; bookId: string; sectionId?: string; blockRef?: string }

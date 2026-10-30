@@ -4,6 +4,8 @@ import type { StudyOpenOptions } from '@app/study/types';
 export interface StudyEntryOptions extends StudyOpenOptions {
   /** Fill the editable composer and wait for the user to send. */
   draftQuestion?: string;
+  /** Focus the current draft after returning from a quoted source. */
+  focusComposer?: boolean;
 }
 
 export type QuickKey =

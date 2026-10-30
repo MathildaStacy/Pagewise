@@ -1,5 +1,5 @@
 import Renderer, { act } from 'react-test-renderer';
-import { ScrollView, TextInput } from 'react-native';
+import { ScrollView, Text, TextInput } from 'react-native';
 import { createTestDemoContainer } from '@app/testing';
 import type { Container } from '@app/container';
 import { useContainer } from '@app/ContainerProvider';
@@ -221,7 +221,21 @@ it('keeps the Ask composer and book scopes above the scrolling answer', async ()
     answer.findAllByType(ScrollView).filter(node => node.props.horizontal),
   ).toHaveLength(0);
   expect(r.root.findAllByType(TextInput)).toHaveLength(1);
-  expect(scrolls.filter(node => node.props.horizontal)).toHaveLength(1);
+  const scopes = scrolls.filter(node => node.props.horizontal);
+  expect(scopes).toHaveLength(1);
+  expect(scopes[0].props.keyboardShouldPersistTaps).toBe('handled');
+  const book = vm().state.books.find(value => value.id === 'slm')!;
+  const scope = scopes[0].findAll(
+    node =>
+      typeof node.props.onPress === 'function' &&
+      node
+        .findAllByType(Text)
+        .some(
+          text => text.props.children === book.title.replace(/[（(].*$/u, ''),
+        ),
+  )[0];
+  await act(async () => scope.props.onPress());
+  expect(vm().state.scope).toBe(book.id);
   await act(async () => {
     answer.props.onScroll({ nativeEvent: { contentOffset: { y: 600 } } });
   });

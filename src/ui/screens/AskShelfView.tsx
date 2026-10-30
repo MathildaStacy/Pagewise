@@ -94,6 +94,7 @@ export function AskShelfView({
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
           style={s.scopeFrame}
           contentContainerStyle={s.scopes}
         >

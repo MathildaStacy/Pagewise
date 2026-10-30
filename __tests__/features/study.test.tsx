@@ -229,6 +229,110 @@ it.each(['selector', 'source'] as const)(
     focus.mockRestore();
   },
 );
+it.each([
+  ['meta', false],
+  ['google', false],
+  ['win11', false],
+  ['meta', true],
+  ['google', true],
+  ['win11', true],
+] as const)(
+  '%s focuses the quoted-source composer once from a pin without prefilling its question (standalone: %s)',
+  async (skin, standalone) => {
+    const stream = jest.spyOn(c.ai, 'stream');
+    const complete = jest.spyOn(c.ai, 'complete');
+    const focus = jest.spyOn(TextInput.prototype, 'focus');
+    const session = getStudySession(c, 'aima');
+    let study!: ReturnType<typeof useStudyVM>;
+    let reading!: ReturnType<typeof useReaderVM>;
+    function StudyProbe() {
+      study = useStudyVM('aima', { autoStart: false });
+      return <StudyView {...study} />;
+    }
+    function ReaderProbe() {
+      reading = useReaderVM('aima', '3.5.2');
+      return <ReaderView {...reading} />;
+    }
+    const tree = (screen: React.ReactNode) => (
+      <ContainerProvider value={c}>
+        <AppNavProvider value={nav}>
+          <SkinProvider skinId={skin} scheme="light" reduceMotion>
+            {screen}
+          </SkinProvider>
+        </AppNavProvider>
+      </ContainerProvider>
+    );
+    await act(() => {
+      renderer = ReactTestRenderer.create(
+        tree(standalone ? <ReaderProbe /> : <StudyProbe />),
+      );
+    });
+    if (!standalone) {
+      await act(() => study.intents.setText('保留原来没有发送的草稿'));
+      await act(() => study.intents.setMode('read'));
+    }
+    const current = () => (standalone ? reading : study);
+    const main = { ...session.store.getState().main };
+    const messages = [...session.store.getState().messages];
+    const pin = current().state.read.items.find(
+      item => item.kind === 'block' && item.pin,
+    );
+    if (pin?.kind !== 'block' || !pin.pin) throw new Error('missing pin');
+    await act(() => current().intents.pressPin(pin.pin!.id));
+    expect(current().state.overlay?.kind).toBe('pin');
+    await act(() => current().intents.overlayAction('ask'));
+    if (standalone) {
+      const route = jest.mocked(nav.replace).mock.calls.at(-1)![0];
+      expect(route).toEqual({
+        name: 'Study',
+        bookId: 'aima',
+        mode: 'listen',
+        focusComposer: true,
+      });
+      if (route.name !== 'Study') throw new Error('missing Study route');
+      await act(() =>
+        renderer!.update(
+          tree(
+            <StudyScreen
+              bookId={route.bookId}
+              mode={route.mode}
+              focusComposer={route.focusComposer}
+            />,
+          ),
+        ),
+      );
+    }
+    const shown = () =>
+      renderer!.root.findByType(StudyView).props as ReturnType<
+        typeof useStudyVM
+      >;
+    expect(shown().state.mode).toBe('listen');
+    expect(shown().state.listen.composer.value).toBe(
+      standalone ? '' : '保留原来没有发送的草稿',
+    );
+    expect(shown().state.listen.composer.value).not.toBe(pin.pin.label);
+    expect(shown().state.listen.composer.quote?.excerpt).not.toBe('原文');
+    expect(session.store.getState().pendingQuote).toBe(pin.seq);
+    expect(session.store.getState().main).toEqual(main);
+    expect(session.store.getState().messages).toEqual(messages);
+    expect(stream).not.toHaveBeenCalled();
+    expect(complete).not.toHaveBeenCalled();
+    expect(focus).toHaveBeenCalledTimes(1);
+    const input = renderer!.root.findByType(TextInput);
+    await act(() => input.props.onChangeText('引用这段继续问'));
+    expect(shown().state.listen.composer.value).toBe('引用这段继续问');
+    await act(() => shown().intents.quick('source'));
+    await act(() => shown().intents.setMode('listen'));
+    expect(shown().state.listen.composer.value).toBe('引用这段继续问');
+    expect(session.store.getState().pendingQuote).toBe(pin.seq);
+    expect(focus).toHaveBeenCalledTimes(1);
+    expect(stream).not.toHaveBeenCalled();
+    expect(complete).not.toHaveBeenCalled();
+    stream.mockRestore();
+    complete.mockRestore();
+    focus.mockRestore();
+  },
+);
 it('calculates exact quick actions at last step, quiz, ready, detour and resume', async () => {
   const session = getStudySession(c, 'aima');
   await session.open({ autoStart: false });
@@ -358,7 +462,12 @@ it('reader excludes titles from selection and preserves main when asking about a
   await act(() => vm().intents.menuAction('ask'));
   expect(session.store.getState().pendingQuote).toBe(block.seq);
   expect(session.store.getState().main).toEqual(initial);
-  expect(nav.replace).toHaveBeenCalledWith({ name: 'Study', bookId: 'aima' });
+  expect(nav.replace).toHaveBeenCalledWith({
+    name: 'Study',
+    bookId: 'aima',
+    mode: 'listen',
+    focusComposer: true,
+  });
 });
 it.each([false, true])(
   'opens a full-text result in its own section and at its block without moving the main lesson (warm session: %s)',

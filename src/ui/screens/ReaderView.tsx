@@ -151,6 +151,11 @@ export function ReaderContent({
     viewport = useRef(0),
     pending = useRef<string | null>(null),
     retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const googleArticle = t.brand?.kind === 'google';
+  const { width, fontScale } = useWindowDimensions();
+  const [contentHeight, setContentHeight] = useState(0);
+  const [headerHeight, setHeaderHeight] = useState(0);
+  const [footerHeight, setFooterHeight] = useState(0);
   const rows = useMemo(() => {
     const pages: {
       id: string;
@@ -205,6 +210,11 @@ export function ReaderContent({
   const target = state.scrollTo?.ref;
   const index = target ? rows.findIndex(row => row.block?.ref === target) : -1;
   useEffect(() => {
+    // Returning from original mode mounts a new list with new header geometry.
+    geometry.current.clear();
+    if (state.view !== 'flow') viewport.current = 0;
+  }, [state.view, t.type.bookBody.fontSize, t.layout.groupedLists]);
+  useEffect(() => {
     if (index < 0 || state.view !== 'flow') return;
     pending.current = target ?? null;
     settleTarget.current();
@@ -219,12 +229,18 @@ export function ReaderContent({
       if (retryTimer.current) clearTimeout(retryTimer.current);
     };
   }, [index, target, state.scrollTo?.token, state.view]);
-  useEffect(() => {
-    geometry.current.clear();
-  }, [t.type.bookBody.fontSize, t.layout.groupedLists]);
   const guide = state.guide ? (
     <ReaderGuide guide={state.guide} onToggle={intents.toggleGuide} />
   ) : null;
+  const footer = state.readEnd.visible ? (
+    <ReadEnd
+      label={state.readEnd.label}
+      hint={state.readEnd.hint}
+      onPress={intents.finishReading}
+    />
+  ) : (
+    <View style={s.footerSpace} />
+  );
   const renderItem = ({ item }: { item: FlowRow }) => (
     <View style={[s.flowRow, item.start && s.flowStart, item.end && s.flowEnd]}>
       {item.block ? (
@@ -241,7 +257,12 @@ export function ReaderContent({
   return (
     <View style={s.grow}>
       <View style={s.toolbar}>
-        <View style={s.segmentWidth}>
+        <View
+          style={[
+            s.segmentWidth,
+            fontScale > 1 && { width: Math.min(width - 32, 140 * fontScale) },
+          ]}
+        >
           <Segmented
             options={[
               { key: 'orig', label: '原版' },
@@ -286,6 +307,13 @@ export function ReaderContent({
             CellRendererComponent={ReaderCell}
             keyExtractor={item => item.id}
             contentContainerStyle={s.readerBody}
+            // The article backdrop belongs to the header and extends behind virtualized rows.
+            removeClippedSubviews={googleArticle ? false : undefined}
+            onContentSizeChange={
+              googleArticle
+                ? (_, height) => setContentHeight(height)
+                : undefined
+            }
             onLayout={event => {
               viewport.current = event.nativeEvent.layout.height;
               settleTarget.current();
@@ -336,7 +364,29 @@ export function ReaderContent({
               }, 150);
             }}
             ListHeaderComponent={
-              <View style={s.readerHeader}>
+              <View
+                style={s.readerHeader}
+                onLayout={
+                  googleArticle
+                    ? event => setHeaderHeight(event.nativeEvent.layout.height)
+                    : undefined
+                }
+              >
+                {googleArticle && rows.length > 0 ? (
+                  <View
+                    testID="google-reader-article"
+                    pointerEvents="none"
+                    style={[
+                      s.articleBackdrop,
+                      {
+                        height: Math.max(
+                          0,
+                          contentHeight - headerHeight - footerHeight,
+                        ),
+                      },
+                    ]}
+                  />
+                ) : null}
                 {guide}
                 {state.loading ? <Empty body="正在读取原文…" /> : null}
                 {state.error ? (
@@ -355,14 +405,16 @@ export function ReaderContent({
               ) : undefined
             }
             ListFooterComponent={
-              state.readEnd.visible ? (
-                <ReadEnd
-                  label={state.readEnd.label}
-                  hint={state.readEnd.hint}
-                  onPress={intents.finishReading}
-                />
+              googleArticle ? (
+                <View
+                  onLayout={event =>
+                    setFooterHeight(event.nativeEvent.layout.height)
+                  }
+                >
+                  {footer}
+                </View>
               ) : (
-                <View style={s.footerSpace} />
+                footer
               )
             }
           />
@@ -442,6 +494,8 @@ function titleText(nodes: RichInline[]): string {
     .join('');
 }
 
+const ORIGINAL_LABEL_HEIGHT = 20;
+
 function OriginalReaderPages({
   state,
   intents,
@@ -486,6 +540,7 @@ function OriginalReaderPages({
     ? Math.max(
         0,
         offsets[targetIndex] +
+          ORIGINAL_LABEL_HEIGHT +
           (destinationBlock?.y0 ?? 0) * (heights[targetIndex] - 42) -
           viewport * 0.3,
       )
@@ -570,7 +625,8 @@ function OriginalReaderPages({
           if (!page) return;
           setCenter(page.page);
           const y =
-            (middle - offsets[index] - 20) / Math.max(1, heights[index] - 42);
+            (middle - offsets[index] - ORIGINAL_LABEL_HEIGHT) /
+            Math.max(1, heights[index] - 42);
           const block = [...page.blocks].sort(
             (a, b) =>
               Math.abs((a.y0 + a.y1) / 2 - y) - Math.abs((b.y0 + b.y1) / 2 - y),
@@ -994,6 +1050,7 @@ const useStyles = makeStyles(t => ({
   grow: { flex: 1 },
   toolbar: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     paddingHorizontal: t.layout.groupedLists ? 16 : 12,
     paddingTop: t.layout.groupedLists ? 0 : 8,
@@ -1007,6 +1064,7 @@ const useStyles = makeStyles(t => ({
   segmentWidth: { width: t.layout.groupedLists ? 140 : 150 },
   hint: {
     ...t.type.caption,
+    minWidth: 100,
     color: t.layout.groupedLists ? t.color.ink2 : t.color.ink3,
     flex: 1,
     textAlign: 'right',
@@ -1014,9 +1072,22 @@ const useStyles = makeStyles(t => ({
   empty: { flex: 1, justifyContent: 'center', padding: t.space.pageX },
   readerBody: { paddingBottom: 0 },
   readerHeader: { paddingBottom: t.layout.groupedLists ? 12 : 14 },
+  articleBackdrop: {
+    position: 'absolute',
+    top: '100%',
+    left: 16,
+    right: 16,
+    borderRadius: t.shape.md,
+    backgroundColor: t.color.paper,
+    boxShadow:
+      t.scheme === 'light'
+        ? '0 1px 2px rgba(0,0,0,.30), 0 1px 3px 1px rgba(0,0,0,.15)'
+        : undefined,
+  },
   flowRow: {
     marginHorizontal: t.layout.groupedLists ? 16 : 12,
-    paddingHorizontal: t.layout.groupedLists ? 20 : 16,
+    paddingHorizontal:
+      t.brand?.kind === 'google' ? 22 : t.layout.groupedLists ? 20 : 16,
     backgroundColor: t.layout.groupedLists ? t.color.paper : undefined,
     ...(t.brand ? { marginHorizontal: t.brand.kind === 'meta' ? 0 : 16 } : {}),
   },
@@ -1027,9 +1098,17 @@ const useStyles = makeStyles(t => ({
     ...(t.brand
       ? {
           borderTopLeftRadius:
-            t.brand.kind === 'meta' ? t.shape.xs * 0 : t.shape.lg,
+            t.brand.kind === 'meta'
+              ? t.shape.xs * 0
+              : t.brand.kind === 'google'
+              ? t.shape.md
+              : t.shape.lg,
           borderTopRightRadius:
-            t.brand.kind === 'meta' ? t.shape.xs * 0 : t.shape.lg,
+            t.brand.kind === 'meta'
+              ? t.shape.xs * 0
+              : t.brand.kind === 'google'
+              ? t.shape.md
+              : t.shape.lg,
         }
       : {}),
   },
@@ -1041,9 +1120,17 @@ const useStyles = makeStyles(t => ({
     ...(t.brand
       ? {
           borderBottomLeftRadius:
-            t.brand.kind === 'meta' ? t.shape.xs * 0 : t.shape.lg,
+            t.brand.kind === 'meta'
+              ? t.shape.xs * 0
+              : t.brand.kind === 'google'
+              ? t.shape.md
+              : t.shape.lg,
           borderBottomRightRadius:
-            t.brand.kind === 'meta' ? t.shape.xs * 0 : t.shape.lg,
+            t.brand.kind === 'meta'
+              ? t.shape.xs * 0
+              : t.brand.kind === 'google'
+              ? t.shape.md
+              : t.shape.lg,
         }
       : {}),
   },
@@ -1104,7 +1191,7 @@ const useStyles = makeStyles(t => ({
     ...t.type.caption,
     color: t.color.ink3,
     textAlign: 'center',
-    height: 20,
+    height: ORIGINAL_LABEL_HEIGHT,
   },
   originalPlaceholder: {
     backgroundColor: t.color.paper,

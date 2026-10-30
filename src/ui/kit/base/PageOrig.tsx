@@ -1,9 +1,12 @@
-import { useRef, type ComponentRef } from 'react';
+import { useRef, useState, type ComponentRef } from 'react';
 import { Image, Pressable, View } from 'react-native';
 import type { PageOrigProps } from '../contracts';
 import { Icon } from '../Icon';
 import { makeStyles } from '../makeStyles';
 import { useTokens } from '../context';
+
+const PIN_SIZE = 32;
+const PIN_TARGET_SIZE = 48;
 
 export function PageOrig({
   uri,
@@ -16,6 +19,13 @@ export function PageOrig({
   const t = useTokens(),
     s = useStyles();
   const page = useRef<ComponentRef<typeof View>>(null);
+  const [bounds, setBounds] = useState({ width: 0, height: 0 });
+  const validBlocks = blocks.filter(
+    b =>
+      [b.x0, b.y0, b.x1, b.y1].every(Number.isFinite) &&
+      b.x1 > b.x0 &&
+      b.y1 > b.y0,
+  );
   return (
     <View
       ref={page}
@@ -23,6 +33,13 @@ export function PageOrig({
       style={[s.page, { aspectRatio: width / height }]}
       accessibilityLabel="原版书页"
       accessibilityRole="none"
+      onLayout={({ nativeEvent: { layout } }) =>
+        setBounds(previous =>
+          previous.width === layout.width && previous.height === layout.height
+            ? previous
+            : { width: layout.width, height: layout.height },
+        )
+      }
     >
       <Image
         source={{ uri }}
@@ -30,80 +47,104 @@ export function PageOrig({
         style={s.image}
         accessibilityLabel="原版书页图片"
       />
-      {blocks
-        .filter(
-          b =>
-            [b.x0, b.y0, b.x1, b.y1].every(Number.isFinite) &&
-            b.x1 > b.x0 &&
-            b.y1 > b.y0,
-        )
-        .map(block => {
-          const marks = new Set(
-            block.marks ??
-              (block.state
-                ? [
-                    block.state === 'current'
-                      ? 'now'
-                      : block.state === 'done'
-                      ? 'heard'
-                      : block.state,
-                  ]
-                : []),
+      {validBlocks.map(block => {
+        const marks = new Set(
+          block.marks ??
+            (block.state
+              ? [
+                  block.state === 'current'
+                    ? 'now'
+                    : block.state === 'done'
+                    ? 'heard'
+                    : block.state,
+                ]
+              : []),
+        );
+        const disabled = !onBlock || block.selectable === false;
+        const select = () =>
+          page.current?.measureInWindow((x, y, w, h) =>
+            onBlock?.(block.ref, {
+              x: x + block.x0 * w,
+              y: y + block.y0 * h,
+              w: (block.x1 - block.x0) * w,
+              h: (block.y1 - block.y0) * h,
+            }),
           );
-          const disabled = !onBlock || block.selectable === false;
-          const select = () =>
-            page.current?.measureInWindow((x, y, w, h) =>
-              onBlock?.(block.ref, {
-                x: x + block.x0 * w,
-                y: y + block.y0 * h,
-                w: (block.x1 - block.x0) * w,
-                h: (block.y1 - block.y0) * h,
-              }),
-            );
-          return (
-            <View
-              key={block.ref}
-              pointerEvents="box-none"
+        return (
+          <View
+            key={block.ref}
+            pointerEvents="box-none"
+            style={[
+              s.block,
+              {
+                left: `${block.x0 * 100}%`,
+                top: `${block.y0 * 100}%`,
+                width: `${(block.x1 - block.x0) * 100}%`,
+                height: `${(block.y1 - block.y0) * 100}%`,
+              },
+            ]}
+          >
+            <Pressable
+              testID={`pdf-block-${block.ref}`}
+              onPress={select}
+              disabled={disabled}
+              accessibilityRole="button"
+              accessibilityLabel={
+                block.label ??
+                `内容块 b${block.ref}${block.pin ? '，有问答便签' : ''}`
+              }
+              accessibilityState={{
+                disabled,
+                selected: marks.has('selected') || marks.has('now'),
+              }}
               style={[
-                s.block,
-                {
-                  left: `${block.x0 * 100}%`,
-                  top: `${block.y0 * 100}%`,
-                  width: `${(block.x1 - block.x0) * 100}%`,
-                  height: `${(block.y1 - block.y0) * 100}%`,
-                },
+                s.hit,
+                marks.has('heard') && s.heard,
+                marks.has('now') && s.now,
+                marks.has('selected') && s.selected,
               ]}
             >
-              <Pressable
-                testID={`pdf-block-${block.ref}`}
-                onPress={select}
-                disabled={disabled}
-                accessibilityRole="button"
-                accessibilityLabel={
-                  block.label ??
-                  `内容块 b${block.ref}${block.pin ? '，有问答便签' : ''}`
-                }
-                accessibilityState={{
-                  disabled,
-                  selected: marks.has('selected') || marks.has('now'),
-                }}
-                style={[
-                  s.hit,
-                  marks.has('heard') && s.heard,
-                  marks.has('now') && s.now,
-                  marks.has('selected') && s.selected,
-                ]}
-              >
-                {marks.has('highlight') || marks.has('flash') ? (
-                  <View
-                    pointerEvents="none"
-                    testID={`pdf-fill-${block.ref}`}
-                    style={[s.fill, marks.has('flash') ? s.flash : s.highlight]}
-                  />
-                ) : null}
-              </Pressable>
-              {block.pin ? (
+              {marks.has('highlight') || marks.has('flash') ? (
+                <View
+                  pointerEvents="none"
+                  testID={`pdf-fill-${block.ref}`}
+                  style={[s.fill, marks.has('flash') ? s.flash : s.highlight]}
+                />
+              ) : null}
+            </Pressable>
+          </View>
+        );
+      })}
+      {/* Page-level targets stay usable even when their PDF block is tiny. */}
+      {bounds.width > 0 && bounds.height > 0
+        ? validBlocks
+            .filter(block => block.pin)
+            .map(block => {
+              const badgeLeft = Math.max(
+                0,
+                Math.min(
+                  block.x1 * bounds.width - PIN_SIZE,
+                  bounds.width - PIN_SIZE,
+                ),
+              );
+              const badgeTop = Math.max(
+                0,
+                Math.min(block.y0 * bounds.height, bounds.height - PIN_SIZE),
+              );
+              const targetWidth = Math.min(PIN_TARGET_SIZE, bounds.width);
+              const targetHeight = Math.min(PIN_TARGET_SIZE, bounds.height);
+              const inset = (PIN_TARGET_SIZE - PIN_SIZE) / 2;
+              const left = Math.max(
+                0,
+                Math.min(badgeLeft - inset, bounds.width - targetWidth),
+              );
+              const top = Math.max(
+                0,
+                Math.min(badgeTop - inset, bounds.height - targetHeight),
+              );
+              return (
                 <Pressable
+                  key={block.ref}
                   testID={`pdf-pin-${block.ref}`}
                   accessibilityRole="button"
                   accessibilityLabel={
@@ -111,14 +152,25 @@ export function PageOrig({
                   }
                   onPress={() => onPin?.(block.ref)}
                   disabled={!onPin}
-                  style={s.pin}
+                  style={[
+                    s.pinTarget,
+                    { left, top, width: targetWidth, height: targetHeight },
+                  ]}
                 >
-                  <Icon name="pin" size={14} color={t.color.pin} />
+                  <View
+                    pointerEvents="none"
+                    testID={`pdf-pin-badge-${block.ref}`}
+                    style={[
+                      s.pin,
+                      { left: badgeLeft - left, top: badgeTop - top },
+                    ]}
+                  >
+                    <Icon name="pin" size={14} color={t.color.pin} />
+                  </View>
                 </Pressable>
-              ) : null}
-            </View>
-          );
-        })}
+              );
+            })
+        : null}
     </View>
   );
 }
@@ -150,12 +202,11 @@ const useStyles = makeStyles(t => ({
   },
   highlight: { backgroundColor: t.color.highlight },
   flash: { backgroundColor: t.color.accentBg },
+  pinTarget: { position: 'absolute' },
   pin: {
     position: 'absolute',
-    right: 0,
-    top: 0,
-    minWidth: 32,
-    minHeight: 32,
+    width: PIN_SIZE,
+    height: PIN_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: t.color.pinBg,
