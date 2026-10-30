@@ -1,0 +1,47 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R 4 0 R] /Count 2 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 432 600] /Resources << /Font << /F1 5 0 R >> >> /Contents 6 0 R >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 432 600] /Resources << /Font << /F1 5 0 R >> >> /Contents 7 0 R >>
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+6 0 obj
+<< /Length 177 >>
+stream
+0.06 0.20 0.43 rg 0 0 432 600 re f 1 0.65 0.20 rg 28 420 376 14 re f BT /F1 44 Tf 1 1 1 rg 28 354 Td (PAGEWISE) Tj 0 -58 Td (PDF COVER) Tj /F1 17 Tf 0 -116 Td (FIRST PAGE) Tj ET
+endstream
+endobj
+7 0 obj
+<< /Length 86 >>
+stream
+0.65 0.08 0.18 rg 0 0 432 600 re f BT /F1 40 Tf 1 1 1 rg 30 330 Td (SECOND PAGE) Tj ET
+endstream
+endobj
+8 0 obj
+<< /Title (PDF Cover Check) /Author (Pagewise acceptance fixture) >>
+endobj
+xref
+0 9
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000121 00000 n 
+0000000247 00000 n 
+0000000373 00000 n 
+0000000448 00000 n 
+0000000676 00000 n 
+0000000812 00000 n 
+trailer
+<< /Size 9 /Root 1 0 R /Info 8 0 R >>
+startxref
+896
+%%EOF

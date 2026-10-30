@@ -1,0 +1,91 @@
+{
+  "fromVersion": "0.0.10",
+  "toVersion": "0.0.11",
+  "dataCleared": false,
+  "integrity": "ok",
+  "schemaVersion": 4,
+  "allLearningTablesUnchanged": true,
+  "tables": {
+    "book": {
+      "rows": 4,
+      "sha256": "754ceb707fb6439b332b9b840bbc78d9c857340bf1efed2077d6dd41c96b3c88"
+    },
+    "book_part": {
+      "rows": 5,
+      "sha256": "cf583958c4ed00c720d9fb1cd8d88bb91e7a42b246a34ad99182642a1dd1da7b"
+    },
+    "section": {
+      "rows": 1359,
+      "sha256": "e493124da19add7e2d9d5f975b17341d91cc9a6b76845d7d91678d720e393494"
+    },
+    "section_part": {
+      "rows": 1195,
+      "sha256": "a9c4de898d0fb410f13dcd21932f0de547a41c57a158c68d4dc80f6d9a31f652"
+    },
+    "study_state": {
+      "rows": 2,
+      "sha256": "16a09083dc80c627e4c40192401f5e06512f3c4a02279b481a455af78251763c"
+    },
+    "study_conversation": {
+      "rows": 5,
+      "sha256": "1ae27036fbf002d4cd4f25edebe08b695166b1e02b88ab883b596137bda619d2"
+    },
+    "message": {
+      "rows": 96,
+      "sha256": "bdb16b61d9ddbd91331f83d3492420daab64371be8faf1fdc43138005e141ad2"
+    },
+    "qa": {
+      "rows": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "stuck": {
+      "rows": 2,
+      "sha256": "6d682082d8ef1dd6b39f845e456bcdd7fac663634f683d9fea13da8ed910bebf"
+    },
+    "section_note": {
+      "rows": 1,
+      "sha256": "ac13e0b5670495df95d9b259b141b060dfe3c1a654ad8431d2445a40f1d4368a"
+    },
+    "highlight": {
+      "rows": 1,
+      "sha256": "69f10e6552329c218fb41a67f272d355bc945335d7e339ee913b2455c4769d07"
+    },
+    "pin": {
+      "rows": 1,
+      "sha256": "2f281f4611d24d0b6ec6bf9dfc0f07ad00bc4206fc329c0f5be72cf8c01f254a"
+    },
+    "card": {
+      "rows": 16,
+      "sha256": "2475ef6586cef725d71c4523dd3b6a33b31c565743af0e5ee93a108639f9b822"
+    },
+    "review_log": {
+      "rows": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "document_refinement": {
+      "rows": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    }
+  },
+  "cover": {
+    "sourcePage": 1,
+    "priorityFrom": 2,
+    "width": 360,
+    "height": 500,
+    "firstPageBlueBackground": [
+      15,
+      51,
+      110
+    ],
+    "location": "files/books/pdf-cover-acceptance/cover.png",
+    "originalSourceRestoredOrReparsed": false
+  },
+  "pageCacheCleared": true,
+  "persistedCoverVisibleAfterCacheClear": true,
+  "offlineColdStart": true,
+  "nativeSkins": [
+    "paper/light/1.0",
+    "win11/dark/1.3"
+  ],
+  "runtimeErrorCount": 0
+}

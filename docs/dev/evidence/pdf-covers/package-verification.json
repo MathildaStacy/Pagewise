@@ -1,0 +1,14 @@
+{
+  "package": "com.pagewise",
+  "versionName": "0.0.11",
+  "versionCode": 11,
+  "minSdk": 24,
+  "architectures": [
+    "arm64-v8a"
+  ],
+  "hermesBundleIncluded": true,
+  "certificateSha256": "fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c",
+  "certificateMatchesV0010": true,
+  "apkSha256": "86a34900992af5d110a334d0839dca48dd5adcd53cbfdda105a34ffb4c28d366",
+  "apkBytes": 46198228
+}
