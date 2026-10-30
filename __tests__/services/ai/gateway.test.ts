@@ -491,3 +491,36 @@ test('HTTP错误脱敏覆盖短Key、Authorization、通用sk和MinerU前缀', (
   ])
     expect(text).not.toContain(secret);
 });
+
+test.each([null, false, true])(
+  'requires explicitly declared vision support (%s) before transmitting page images',
+  async vision => {
+    const fetch = jest.fn(async () => answer());
+    const config = deps(fetch);
+    config.resolve = () => ({
+      ...connection(),
+      service: {
+        ...service(),
+        capabilities: { ...inferCapabilities('gpt-5.5'), vision },
+      },
+    });
+    const gateway = createAiGateway(config);
+    const request = {
+      ...req,
+      images: [
+        { data: 'cGFnZQ==', mime: 'image/png' as const, label: 'page 1' },
+      ],
+    };
+    if (vision) {
+      await expect(gateway.complete('tidy', request)).resolves.toMatchObject({
+        stop: 'end',
+      });
+      expect(fetch).toHaveBeenCalledTimes(1);
+    } else {
+      await expect(gateway.complete('tidy', request)).rejects.toMatchObject({
+        code: 'bad_request',
+      });
+      expect(fetch).not.toHaveBeenCalled();
+    }
+  },
+);

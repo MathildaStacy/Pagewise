@@ -503,6 +503,12 @@ export async function importPdfResult(
     const old = await priorBlocks(tx, repos, bookId),
       previous = await priorSections(repos, bookId);
     await repos.blocks.deleteByPages(bookId, part.page_from, part.page_to);
+    await repos.refinements.invalidate(
+      bookId,
+      c.clock.now().toISOString(),
+      part.page_from,
+      part.page_to,
+    );
     await repos.blocks.insertMany(bookId, blocks);
     milestone('inserted', blocks.length);
     const current = await allBlocks(tx, bookId);
@@ -631,6 +637,7 @@ export async function importEpubResult(
         section => !sections.some(value => value.id === section.id),
       ),
     );
+    await repos.refinements.invalidate(bookId, c.clock.now().toISOString());
     await tx.run('DELETE FROM block WHERE book_id=?', [bookId]);
     await repos.blocks.insertMany(
       bookId,

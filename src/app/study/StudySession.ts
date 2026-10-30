@@ -11,6 +11,7 @@ import type {
 } from '@core/types';
 import {
   buildContext,
+  formatBlocks,
   type ConversationGroup,
   type LoadedContext,
 } from '@core/context';
@@ -510,7 +511,7 @@ export class StudySession implements StudySessionApi {
     }
     const [section, blocks, parts, messages] = await Promise.all([
       this.c.repos.sections.get(this.bookId, id),
-      this.c.repos.blocks.bySection(this.bookId, id),
+      this.c.repos.blocks.reading.bySection(this.bookId, id),
       this.c.repos.sections.parts(this.bookId, id),
       this.c.repos.messages.thread(this.bookId, id, {
         conversation_id: conversation.id,
@@ -686,6 +687,7 @@ export class StudySession implements StudySessionApi {
     return jsonObject(parseTaskJson(textOf(response.parts))) ?? {};
   }
   private async ensurePlan() {
+    await this.refreshReadingSource();
     if (this.state.plan || !this.state.partBlocks.length) return;
     this.set({
       phase: 'planning',
@@ -816,6 +818,7 @@ export class StudySession implements StudySessionApi {
     existingUser?: Message,
   ) {
     if (this.controller?.signal.aborted) return;
+    await this.refreshReadingSource();
     const quote = existingUser?.quote_seq ?? this.state.pendingQuote;
     if (!existingUser && question && quote !== null) {
       const block = await this.c.repos.blocks.get(this.bookId, quote);
@@ -944,12 +947,52 @@ export class StudySession implements StudySessionApi {
       groups.splice(index, following - index);
       index--;
     }
+    // Keep recorded tool results intact; refresh changed source blocks in the transient source layer.
+    const sourceRefs = new Set<number>();
+    const sourceOutputs: string[] = [];
+    for (const group of loaded)
+      for (const item of group.messages) {
+        const message = this.state.messages.find(value => value.id === item.id);
+        for (const ref of message?.allowed_refs ?? []) sourceRefs.add(ref);
+        for (const part of item.parts)
+          if (part.t === 'result') {
+            sourceOutputs.push(part.output);
+            for (const match of part.output.matchAll(/<block id="b(\d+)"/g))
+              sourceRefs.add(Number(match[1]));
+          }
+      }
+    const loadedBlocks = (
+      await Promise.all(
+        [...sourceRefs].map(ref =>
+          this.c.repos.blocks.reading.get(this.bookId, ref),
+        ),
+      )
+    ).filter((block): block is Block => !!block);
+    const changedSource = loadedBlocks.filter(
+      block =>
+        sourceOutputs.some(output =>
+          output.includes(`<block id="b${block.seq}"`),
+        ) &&
+        !sourceOutputs.some(output =>
+          output.includes(
+            formatBlocks([block], this.state.book?.page_offset ?? 0),
+          ),
+        ),
+    );
+    const currentBlocks = [
+      ...new Map(
+        [...this.state.partBlocks, ...changedSource].map(block => [
+          block.seq,
+          block,
+        ]),
+      ).values(),
+    ];
     const assemble = () =>
       buildContext({
         system: buildTeachPrompt(this.state.prefs),
         sections: this.state.sections,
         currentSectionId: this.state.main.sectionId,
-        currentBlocks: this.state.partBlocks,
+        currentBlocks,
         studyRecord: {
           progress: asJson(this.state.main),
           stuck: stuck.map(item => ({
@@ -1024,25 +1067,13 @@ export class StudySession implements StudySessionApi {
         throw new Error('本段上下文过长，请切换到较短的段落后重试');
     }
     this.set({ context: context.estimate });
-    const sourceRefs = new Set<number>();
-    for (const group of loaded)
-      for (const item of group.messages) {
-        const message = this.state.messages.find(value => value.id === item.id);
-        for (const ref of message?.allowed_refs ?? []) sourceRefs.add(ref);
-        for (const part of item.parts)
-          if (part.t === 'result')
-            for (const match of part.output.matchAll(/<block id="b(\d+)"/g))
-              sourceRefs.add(Number(match[1]));
-      }
-    const loadedBlocks = (
-      await Promise.all(
-        [...sourceRefs].map(ref => this.c.repos.blocks.get(this.bookId, ref)),
-      )
-    ).filter((block): block is Block => !!block);
     const round: Round = {
       request: {
         system:
           context.system +
+          (changedSource.length
+            ? '\ncurrent_source 中的块是当前阅读原文；若与历史工具结果相同编号的文本不同，以 current_source 为准。'
+            : '') +
           (this.state.config?.search
             ? '\n联网搜索已开启。将互联网补充信息与原书内容明确区分，提供来源网址；互联网内容不能冒充原书引用。'
             : ''),
@@ -2182,7 +2213,10 @@ export class StudySession implements StudySessionApi {
     refresh = false,
   ): Promise<string> {
     if (signal?.aborted) throw new Error('已停止翻译');
-    const blocks = await this.c.repos.blocks.bySection(this.bookId, sectionId);
+    const blocks = await this.c.repos.blocks.reading.bySection(
+      this.bookId,
+      sectionId,
+    );
     const chunks = translationChunks(blocks);
     const source = chunks.map(chunk => chunk.source).join('\n\n');
     if (!source.trim()) throw new Error('本节暂无可翻译的原文，请先完成解析');
@@ -2240,7 +2274,7 @@ export class StudySession implements StudySessionApi {
     signal?: AbortSignal,
     config?: ConversationConfig,
   ): Promise<string> {
-    const block = await this.c.repos.blocks.get(this.bookId, seq);
+    const block = await this.c.repos.blocks.reading.get(this.bookId, seq);
     if (!block) throw new Error('找不到这段原文');
     const controller = new AbortController();
     this.extraControllers.add(controller);
@@ -2275,7 +2309,7 @@ export class StudySession implements StudySessionApi {
     const id = this.state.readerSectionId ?? this.state.main.sectionId,
       section = await this.c.repos.sections.get(this.bookId, id);
     if (section?.guide) return section.guide;
-    const blocks = await this.c.repos.blocks.bySection(this.bookId, id),
+    const blocks = await this.c.repos.blocks.reading.bySection(this.bookId, id),
       controller = new AbortController();
     this.extraControllers.add(controller);
     try {
@@ -2312,6 +2346,17 @@ export class StudySession implements StudySessionApi {
   }
   clearNotice() {
     this.set({ notice: null, error: null, flashRef: null, scrollToStep: null });
+  }
+  private async refreshReadingSource() {
+    const blocks = await this.c.repos.blocks.reading.bySection(
+      this.bookId,
+      this.state.main.sectionId,
+    );
+    const bySeq = new Map(blocks.map(b => [b.seq, b]));
+    this.set({
+      blocks,
+      partBlocks: this.state.partBlocks.map(b => bySeq.get(b.seq) ?? b),
+    });
   }
   async dispose() {
     this.disposed = true;

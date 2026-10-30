@@ -35,7 +35,7 @@ export async function loadStudyReader(
   if (!id) throw new Error('本书还没有可读的小节');
   const [section, blocks, highlights, pins, note] = await Promise.all([
     c.repos.sections.get(bookId, id),
-    c.repos.blocks.bySection(bookId, id),
+    c.repos.blocks.reading.bySection(bookId, id),
     c.repos.notes.highlights.list(bookId),
     c.repos.notes.pins.list(bookId, id),
     c.repos.notes.userText.get(bookId, id),

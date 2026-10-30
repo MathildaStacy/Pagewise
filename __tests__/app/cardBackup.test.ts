@@ -17,6 +17,8 @@ import { createCardsRepo } from '@data/repos/cards';
 import { createConversationsRepo } from '@data/repos/conversations';
 import { createMessagesRepo } from '@data/repos/messages';
 import { createStudyRepo } from '@data/repos/study';
+import { createRepos } from '@data/repos';
+import { refinementChunks, ruleEdits } from '@core/refinement';
 import { createTestContainer } from '@app/testing';
 import type { Container } from '@app/container';
 import {
@@ -259,5 +261,59 @@ it('exports and restores each conversation, its options and progress, the select
     expect(await db.all('PRAGMA foreign_key_check')).toEqual([]);
   } finally {
     await db.close();
+  }
+});
+
+it('restores adopted refinement and its immutable source, including portable image paths', async () => {
+  const directory = `${io.documentDir}/books/book/images`;
+  await io.mkdir(directory);
+  await writeFile(`${directory}/figure.png`, 'fixture');
+  await c.repos.blocks.insertMany('book', [
+    { seq: 1, type: 'text', text: 'a\nb', chars: 3, section_id: 'one' },
+    {
+      seq: 2,
+      type: 'image',
+      text: '',
+      image_path: `${directory}/figure.png`,
+      chars: 0,
+      section_id: 'one',
+    },
+  ]);
+  const source = await c.repos.blocks.bySection('book', 'one');
+  await c.repos.refinements.create({
+    book_id: 'book',
+    section_id: 'one',
+    mode: 'structure',
+    status: 'applied',
+    completed: 1,
+    document: {
+      version: 1,
+      source,
+      chunks: refinementChunks(source, 'structure'),
+      edits: ruleEdits(source),
+      issues: [],
+      selected: [1],
+    },
+    config: null,
+    error: null,
+    input_tokens: 0,
+    output_tokens: 0,
+    created_at: at,
+    updated_at: at,
+  });
+  const archive = await exportBackup(c);
+  await restoreBackup(c, archive);
+  const restoredDb = openDb(restored);
+  try {
+    const repos = createRepos(restoredDb);
+    expect((await repos.blocks.bySection('book', 'one'))[0].text).toBe('a\nb');
+    expect((await repos.blocks.reading.bySection('book', 'one'))[0].text).toBe(
+      'a b',
+    );
+    const run = await repos.refinements.applied('book', 'one');
+    expect(run?.document.source[1].image_path).toBe('images/figure.png');
+    expect(await restoredDb.all('PRAGMA foreign_key_check')).toEqual([]);
+  } finally {
+    await restoredDb.close();
   }
 });

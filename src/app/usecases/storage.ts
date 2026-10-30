@@ -1,4 +1,5 @@
 import type { Block } from '@core/types';
+import type { RefinementDocument } from '@core/refinement';
 import { version as appVersion } from '../../../package.json';
 import { SCHEMA_VERSION, migrate } from '@data/migrations';
 import type { Db } from '@data/db';
@@ -13,6 +14,8 @@ import type { Container } from '../container';
 import { disposeContainerSessions } from '../study/registry';
 import { disposeReaderRuntime } from '../readerRuntime';
 import { getParseQueue } from './parseQueue';
+import { createRepos } from '@data/repos';
+import { disposeRefinements } from './refinement';
 export type { StorageIO } from '@services/backup';
 export { BackupError } from '@services/backup';
 const ports = new WeakMap<Container, StorageIO>();
@@ -63,6 +66,7 @@ export async function clearParseCache(
   const io = storageRuntime(c),
     directory = bookPath(io, bookId);
   await getParseQueue(c).dispose();
+  await disposeRefinements(c);
   await disposeContainerSessions(c);
   await disposeReaderRuntime(c);
   const blocks = await c.db.all<Block>(
@@ -79,6 +83,10 @@ export async function clearParseCache(
     ).values(),
   ];
   await c.db.transaction(async tx => {
+    await createRepos(tx).refinements.invalidate(
+      bookId,
+      c.clock.now().toISOString(),
+    );
     await tx.run(
       'INSERT INTO setting(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',
       [`reparse.blocks.${bookId}`, JSON.stringify(snapshot)],
@@ -168,11 +176,36 @@ export async function exportBackup(
             assets.add(relative);
           }
           // Absolute EPUB paths belong to this install; persist the portable book-relative path.
-          if (relative !== image.image_path)
+          if (relative !== image.image_path) {
             await db.run(
               'UPDATE block SET image_path=? WHERE book_id=? AND seq=?',
               [relative, book.id, image.seq],
             );
+            const revisions = await db.all<{
+              id: number;
+              document_json: string;
+            }>(
+              'SELECT id,document_json FROM document_refinement WHERE book_id=?',
+              [book.id],
+            );
+            for (const revision of revisions) {
+              const document = JSON.parse(
+                revision.document_json,
+              ) as RefinementDocument;
+              const sourceBlock = document.source.find(
+                block =>
+                  block.seq === image.seq &&
+                  block.image_path === image.image_path,
+              );
+              if (sourceBlock) {
+                sourceBlock.image_path = relative;
+                await db.run(
+                  'UPDATE document_refinement SET document_json=? WHERE id=?',
+                  [JSON.stringify(document), revision.id],
+                );
+              }
+            }
+          }
         }
         if (assets.size) book.imageFiles = [...assets].sort();
       }

@@ -1,5 +1,6 @@
 import type { Block, BlockInsert, BlockSearchHit } from '@core/types';
 import type { Db, SqlValue } from '../db';
+import { createRefinementsRepo } from './refinements';
 
 const columns = [
   'id',
@@ -66,7 +67,34 @@ function snippet(text: string, query: string): string {
 }
 
 export function createBlocksRepo(db: Db) {
+  const project = createRefinementsRepo(db).project;
   return {
+    /** Reading projections never replace the source rows used by PDF geometry, highlights and reparsing. */
+    reading: {
+      async bySection(bookId: string, sectionId: string): Promise<Block[]> {
+        return project(
+          await db.all<Block>(
+            'SELECT * FROM block WHERE book_id=? AND section_id=? ORDER BY seq',
+            [bookId, sectionId],
+          ),
+        );
+      },
+      async range(bookId: string, from: number, to: number): Promise<Block[]> {
+        return project(
+          await db.all<Block>(
+            'SELECT * FROM block WHERE book_id=? AND seq BETWEEN ? AND ? ORDER BY seq',
+            [bookId, from, to],
+          ),
+        );
+      },
+      async get(bookId: string, seq: number): Promise<Block | undefined> {
+        const row = await db.get<Block>(
+          'SELECT * FROM block WHERE book_id=? AND seq=?',
+          [bookId, seq],
+        );
+        return row ? (await project([row]))[0] : undefined;
+      },
+    },
     async insertMany(
       bookId: string,
       blocks: Omit<BlockInsert, 'book_id'>[],

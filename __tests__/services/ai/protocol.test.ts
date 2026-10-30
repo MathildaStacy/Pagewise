@@ -436,3 +436,61 @@ test('兼容 Responses 的字符串 / text 块 / 汇总 output_text，正文与�
     ]);
   }
 });
+
+describe('transient document page images', () => {
+  const images: RequestInput['images'] = [
+    { data: 'cGFnZQ==', mime: 'image/png', label: '原 PDF 第 7 页' },
+  ];
+  test.each(['anthropic', 'openai', 'chat'] as const)(
+    'encodes page labels and image data for %s without touching conversation history',
+    protocol => {
+      const history = [msg('user', [{ t: 'text', text: '历史问题' }])];
+      const before = JSON.stringify(history);
+      const input = base({ ...oai, protocol }, history);
+      const body = buildRequest({ ...input, images }).body as any;
+      if (protocol === 'anthropic') {
+        expect(body.messages[0].content).toEqual(
+          expect.arrayContaining([
+            { type: 'text', text: '原 PDF 第 7 页' },
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: 'image/png',
+                data: 'cGFnZQ==',
+              },
+            },
+          ]),
+        );
+      } else if (protocol === 'openai') {
+        expect(body.input[0].content).toEqual(
+          expect.arrayContaining([
+            { type: 'input_text', text: '原 PDF 第 7 页' },
+            {
+              type: 'input_image',
+              image_url: 'data:image/png;base64,cGFnZQ==',
+              detail: 'high',
+            },
+          ]),
+        );
+      } else {
+        expect(body.messages[1].content).toEqual(
+          expect.arrayContaining([
+            { type: 'text', text: '原 PDF 第 7 页' },
+            {
+              type: 'image_url',
+              image_url: {
+                url: 'data:image/png;base64,cGFnZQ==',
+                detail: 'high',
+              },
+            },
+          ]),
+        );
+      }
+      expect(JSON.stringify(history)).toBe(before);
+      expect(buildRequest({ ...input, images: [] })).toEqual(
+        buildRequest(input),
+      );
+    },
+  );
+});

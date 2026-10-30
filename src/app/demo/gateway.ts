@@ -175,6 +175,8 @@ function tidy(req: GatewayRequest): ParsedResponse | null {
   return oneText(JSON.stringify(result));
 }
 function scripted(req: GatewayRequest): ParsedResponse {
+  if (decode(req.contextBlocks.at(-1)?.text).task === 'document_refinement')
+    return oneText(JSON.stringify({ edits: [], issues: [] }));
   const taskResult = tidy(req);
   if (taskResult) return taskResult;
   const user = [...req.history].reverse().find(m => m.role === 'user');

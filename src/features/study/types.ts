@@ -108,6 +108,9 @@ export type ThreadItem =
   | { kind: 'typing'; id: string }
   | { kind: 'error'; id: string; text: string; retry: boolean };
 export interface ReaderBlock {
+  refined?: boolean;
+  continuesFrom?: number;
+  headingLevel?: number;
   kind: 'block';
   ref: string;
   seq: number;
@@ -130,6 +133,7 @@ export interface ReaderOriginalPage {
   blocks: (PageOrigProps['blocks'][number] & { pinId?: string })[];
 }
 export interface ReaderState {
+  refinement?: RefinementState;
   canTranslate?: boolean;
   view: 'orig' | 'flow';
   hint: string;
@@ -265,6 +269,14 @@ export interface StudyState {
   overlay: StudyOverlay | null;
 }
 export interface StudyIntents {
+  openRefinement?(): void;
+  refinementAction?(action: string): void;
+  refinementMode?(mode: 'structure' | 'vision'): void;
+  refinementToggle?(seq: number): void;
+  refinementLocate?(seq: number): void;
+  refinementOptions?(
+    patch: Partial<import('@features/settings/types').ConversationConfig>,
+  ): void;
   openSource?(url: string): void;
   setAiOptions?(patch: Partial<ConversationConfig>): void;
   openConversations?(): void;
@@ -312,6 +324,42 @@ export interface ReaderScreenState {
   read: ReaderState;
   overlay: StudyOverlay | null;
   toast: string | null;
+}
+export type RefinementContent =
+  | { kind: 'text'; text: string }
+  | { kind: 'equation'; tex: string }
+  | { kind: 'table'; rows: string[][] };
+export interface RefinementState {
+  busy: boolean;
+  activity: 'loading' | 'generate' | 'save' | null;
+  scope: string;
+  canResume: boolean;
+  hasPreviousApplied: boolean;
+  error?: string;
+  mode: 'structure' | 'vision';
+  canVision: boolean;
+  aiOptions: import('@features/settings/types').AiOptionsState;
+  status:
+    | 'idle'
+    | 'paused'
+    | 'running'
+    | 'ready'
+    | 'applied'
+    | 'undone'
+    | 'failed'
+    | 'stale';
+  completed: number;
+  total: number;
+  tokens?: string;
+  edits: {
+    seq: number;
+    location: string;
+    before: RefinementContent;
+    after: RefinementContent;
+    reason: string;
+    selected: boolean;
+  }[];
+  issues: { seq: number; location: string; reason: string }[];
 }
 export interface SectionDoneState {
   hero: { kicker: string; title: string; stats: string };

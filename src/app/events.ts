@@ -1,4 +1,5 @@
 export interface AppEvents {
+  'source.refined': { bookId: string; sectionId: string };
   'cards.changed': { bookId?: string };
   'stuck.changed': { bookId: string; sectionId?: string };
   'section.status': {

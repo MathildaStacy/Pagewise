@@ -63,6 +63,7 @@ import type {
 } from '@features/study/types';
 import type { AiOptionsState } from '@features/settings/types';
 import { AiOptionsControl } from './AiOptionsControl';
+import { RefinementSheet } from './RefinementSheet';
 
 export function ReaderView({
   state,
@@ -95,6 +96,12 @@ export function ReaderView({
       <View style={s.readerTools}>
         <Button
           variant="text"
+          label="精修本节"
+          disabled={state.read.loading || !state.read.items.length}
+          onPress={() => intents.openRefinement?.()}
+        />
+        <Button
+          variant="text"
           label="本节对话"
           onPress={() => intents.openConversations?.()}
         />
@@ -108,6 +115,7 @@ export function ReaderView({
       <View style={s.grow}>
         <ReaderContent state={state.read} intents={intents} />
       </View>
+      <RefinementSheet state={state.read.refinement} intents={intents} />
       <StudyOverlays
         overlay={state.overlay}
         intents={intents}
@@ -740,9 +748,27 @@ function ReaderBlockRow({
         item.marks.includes('flash') ? s.flash : undefined,
       ]}
     >
+      {item.refined ? (
+        <Button
+          variant="text"
+          size="sm"
+          label={`AI 精修${item.continuesFrom != null ? ' · 接续上段' : ''}`}
+          onPress={() => intents.openRefinement?.()}
+        />
+      ) : null}
       {item.type === 'title' ? (
         <View style={s.readerTitle}>
-          <Text accessibilityRole="header" style={s.readerTitleText}>
+          <Text
+            accessibilityRole="header"
+            style={[
+              s.readerTitleText,
+              item.headingLevel === 1
+                ? s.refinedHeadingMajor
+                : item.headingLevel && item.headingLevel >= 3
+                ? s.refinedHeadingMinor
+                : undefined,
+            ]}
+          >
             {item.doc
               .map(part => (part.t === 'p' ? titleText(part.c) : ''))
               .join('\n')}
@@ -1099,6 +1125,7 @@ export function StudyOverlays({
 const useStyles = makeStyles(t => ({
   readerTools: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     paddingHorizontal: t.space.pageX,
   },
@@ -1289,6 +1316,12 @@ const useStyles = makeStyles(t => ({
     paddingVertical: t.layout.groupedLists ? 3 : 2,
   },
   titleBlock: { marginBottom: t.layout.groupedLists ? 12 : 8 },
+  refinedHeadingMajor: { ...t.type.title, color: t.color.paperInk },
+  refinedHeadingMinor: {
+    ...t.type.bookBody,
+    fontWeight: '700',
+    color: t.color.paperInk,
+  },
   readerTitleText: {
     ...t.type.bookBody,
     fontFamily: t.type.sansFamily,

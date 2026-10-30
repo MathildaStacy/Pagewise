@@ -14,7 +14,7 @@ import {
 import { createReaderRuntime, setReaderRuntime } from '@app/readerRuntime';
 import { loadStudyReader } from '@app/usecases/studyReader';
 import { FlatList } from 'react-native';
-import { PageOrig } from '@ui/kit';
+import { Button, PageOrig } from '@ui/kit';
 import {
   useStudyVM,
   useReaderVM,
@@ -1028,6 +1028,48 @@ const doneIntents: SectionDoneIntents = {
   retry: noop,
   save: noop,
 };
+it('opens refinement from both source readers and gives adopted blocks a visible label', async () => {
+  const openRefinement = jest.fn();
+  const read = {
+    ...readerSamples.normal.read,
+    items: readerSamples.normal.read.items.map(item =>
+      item.kind === 'block' && item.seq === 2
+        ? { ...item, refined: true, continuesFrom: 1 }
+        : item,
+    ),
+  };
+  const views = [
+    <StudyView
+      state={{ ...studySamples.normal, mode: 'read', read }}
+      intents={{ ...intents, openRefinement }}
+    />,
+    <ReaderView
+      state={{ ...readerSamples.normal, read }}
+      intents={{ ...intents, openRefinement }}
+    />,
+  ];
+  for (const view of views) {
+    await act(() => {
+      renderer = ReactTestRenderer.create(
+        <SkinProvider skinId="paper" scheme="light" reduceMotion>
+          {view}
+        </SkinProvider>,
+      );
+    });
+    const buttons = renderer!.root.findAllByType(Button);
+    const entry = buttons.find(b => b.props.label === '精修本节')!;
+    const badge = buttons.find(
+      b => b.props.label === 'AI 精修 · 接续上段',
+    )!;
+    expect(entry.props.disabled).toBe(false);
+    expect(badge).toBeDefined();
+    await act(() => entry.props.onPress());
+    await act(() => badge.props.onPress());
+    await act(() => renderer!.unmount());
+    renderer = undefined;
+  }
+  expect(openRefinement).toHaveBeenCalledTimes(4);
+});
 it.each(['paper', 'glass'] as const)(
   'renders normal, empty, loading, error, and long pages in %s',
   async skin => {

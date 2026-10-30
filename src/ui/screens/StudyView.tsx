@@ -38,6 +38,7 @@ import type {
 } from '@features/study/types';
 import { ReaderContent, StudyOverlays } from './ReaderView';
 import { AiOptionsControl } from './AiOptionsControl';
+import { RefinementSheet } from './RefinementSheet';
 export function StudyView({
   state,
   intents,
@@ -171,12 +172,20 @@ export function StudyView({
             {state.conversationTitle}
           </Text>
           {state.mode === 'read' ? (
-            <Button
-              variant="text"
-              label="翻译本节"
-              disabled={!state.read.canTranslate}
-              onPress={() => intents.translateSection?.()}
-            />
+            <>
+              <Button
+                variant="text"
+                label="精修本节"
+                disabled={state.read.loading || !state.read.items.length}
+                onPress={() => intents.openRefinement?.()}
+              />
+              <Button
+                variant="text"
+                label="翻译本节"
+                disabled={!state.read.canTranslate}
+                onPress={() => intents.translateSection?.()}
+              />
+            </>
           ) : null}
           <Button
             variant="text"
@@ -314,6 +323,7 @@ export function StudyView({
           </>
         )}
       </View>
+      <RefinementSheet state={state.read.refinement} intents={intents} />
       <StudyOverlays
         overlay={state.overlay}
         intents={intents}

@@ -23,7 +23,7 @@ export interface ContextMessage<Ui = never> {
   createdAt: string;
 }
 export type SourceBlock = Pick<Block, 'seq' | 'type' | 'text'> &
-  Partial<Pick<Block, 'page' | 'loc' | 'latex'>>;
+  Partial<Pick<Block, 'page' | 'loc' | 'latex' | 'html' | 'refinement'>>;
 export interface ConversationGroup<Ui = never> {
   id: string;
   messages: readonly ContextMessage<Ui>[];
@@ -105,10 +105,14 @@ export function formatBlocks(
           ? ` loc="${escapeXml(block.loc)}"`
           : '';
       const text =
-        block.type === 'equation' ? block.latex ?? block.text : block.text;
-      return `<block id="b${block.seq}"${location} type="${
-        block.type
-      }">${escapeXml(text)}</block>`;
+        block.type === 'equation'
+          ? block.latex ?? block.text
+          : block.type === 'table'
+          ? block.html ?? block.text
+          : block.text;
+      return `<block id="b${block.seq}"${location} type="${block.type}"${
+        block.refinement ? ' source="ai_refined"' : ''
+      }>${escapeXml(text)}</block>`;
     })
     .join('\n');
 }

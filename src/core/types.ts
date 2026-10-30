@@ -107,6 +107,13 @@ export type BlockType =
   | 'caption'
   | 'footnote';
 export interface Block {
+  /** Present only on a reading projection; source rows and source coordinates stay immutable. */
+  refinement?: {
+    originalText: string;
+    originalType: BlockType;
+    reason: string;
+    continuesFrom: number | null;
+  };
   id: number;
   book_id: string;
   seq: number;

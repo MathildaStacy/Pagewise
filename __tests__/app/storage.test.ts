@@ -16,6 +16,7 @@ import os from 'node:os';
 import { createDb, type Db, type Row } from '@data/db';
 import { createTestDemoContainer } from '@app/testing';
 import type { Container } from '@app/container';
+import { generateRefinement } from '@app/usecases/refinement';
 import {
   configureStorageRuntime,
   clearParseCache,
@@ -111,6 +112,9 @@ afterEach(async () => {
   await rm(folder, { recursive: true, force: true });
 });
 it('clears only derived database/files and retains every kind of learning record plus source text for reparse matching', async () => {
+  const refinement = await generateRefinement(c, 'aima', '3.5.2', {
+    mode: 'structure',
+  });
   const tables = [
     'section',
     'message',
@@ -136,6 +140,7 @@ it('clears only derived database/files and retains every kind of learning record
   }
   await writeFile(path.join(bookDir, 'source.pdf'), 'original');
   await clearParseCache(c, 'aima');
+  expect((await c.repos.refinements.get(refinement.id))?.status).toBe('stale');
   for (const table of ['block', 'book_part', 'section_part', 'lesson_plan'])
     expect(
       await c.db.all(`SELECT * FROM ${table} WHERE book_id=?`, ['aima']),

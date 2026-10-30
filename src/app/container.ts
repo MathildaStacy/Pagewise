@@ -25,6 +25,7 @@ import { disposeMathRuntime } from './math';
 import { getParseQueue } from './usecases/parseQueue';
 import { disposeReaderRuntime } from './readerRuntime';
 import { createLogger, type Logger } from './log';
+import { disposeRefinements } from './usecases/refinement';
 
 /** 所有 IO 和应用设置通过容器注入，Demo 与正式书库使用独立数据库。 */
 export interface Container {
@@ -124,6 +125,7 @@ export async function createContainer(
       (() => {
         closing ??= (async () => {
           await getParseQueue(container).dispose();
+          await disposeRefinements(container);
           await disposeContainerSessions(container);
           await disposeReaderRuntime(container);
           disposeMathRuntime(container);

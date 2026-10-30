@@ -10,10 +10,10 @@ describe('SQLite schema migration', () => {
   afterEach(async () => db.close());
 
   it('installs T3 schema, keeps foreign keys enabled, and migration idempotent', async () => {
-    expect(migrations).toHaveLength(3);
-    expect(SCHEMA_VERSION).toBe(3);
-    expect(await migrate(db)).toEqual({ from: 0, to: 3 });
-    expect(await migrate(db)).toEqual({ from: 3, to: 3 });
+    expect(migrations).toHaveLength(4);
+    expect(SCHEMA_VERSION).toBe(4);
+    expect(await migrate(db)).toEqual({ from: 0, to: 4 });
+    expect(await migrate(db)).toEqual({ from: 4, to: 4 });
     expect(await db.get('PRAGMA foreign_keys')).toEqual({ foreign_keys: 1 });
     expect(
       await db.get(
@@ -67,16 +67,16 @@ describe('SQLite schema migration', () => {
   });
 
   it('rejects a newer database without downgrading it', async () => {
-    await db.run('PRAGMA user_version = 4');
+    await db.run('PRAGMA user_version = 5');
     await expect(migrate(db)).rejects.toThrow(
-      '数据库版本 4 比这个 App 支持的版本（3）新',
+      '数据库版本 5 比这个 App 支持的版本（4）新',
     );
-    expect(await db.get('PRAGMA user_version')).toEqual({ user_version: 4 });
+    expect(await db.get('PRAGMA user_version')).toEqual({ user_version: 5 });
   });
 
   it('treats an absent user_version result as zero', async () => {
     const spy = jest.spyOn(db, 'get').mockResolvedValueOnce(undefined);
-    expect(await migrate(db)).toEqual({ from: 0, to: 3 });
+    expect(await migrate(db)).toEqual({ from: 0, to: 4 });
     spy.mockRestore();
   });
 

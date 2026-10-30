@@ -58,7 +58,7 @@ export async function executeReadTool(
         `没有找到小节 ${id}`,
       );
     }
-    let blocks = await c.repos.blocks.bySection(bookId, id);
+    let blocks = await c.repos.blocks.reading.bySection(bookId, id);
     const part =
       typeof args.part === 'number' &&
       Number.isInteger(args.part) &&

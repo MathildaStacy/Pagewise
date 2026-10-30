@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRefinementVM } from './useRefinementVM';
 import { parseStudyCard } from '@app/study/types';
 import { useStore } from 'zustand';
 import { useContainer } from '@app/ContainerProvider';
@@ -146,6 +147,10 @@ export function useStudyVM(
       ? blockTarget
       : options.sectionId ?? raw.readerSectionId ?? raw.main.sectionId
     : raw.readerSectionId ?? raw.main.sectionId;
+  const refinement = useRefinementVM(
+    bookId,
+    mode === 'read' ? readerId : raw.main.sectionId,
+  );
   const reader =
     loadedReader?.book.id === bookId && loadedReader.section.id === readerId
       ? loadedReader
@@ -292,9 +297,12 @@ export function useStudyVM(
     const stops = [
       c.events.subscribe('section.status', refreshReader),
       c.events.subscribe('stuck.changed', refreshReader),
+      c.events.subscribe('source.refined', value => {
+        if (value.bookId === bookId) refreshReader();
+      }),
     ];
     return () => stops.forEach(stop => stop());
-  }, [c, refreshReader]);
+  }, [c, bookId, refreshReader]);
   const blocks = useMemo(
     () =>
       new Map([
@@ -305,8 +313,11 @@ export function useStudyVM(
         ...(reader?.originalBlocks ?? reader?.blocks ?? []).map(
           b => [b.seq, b] as const,
         ),
+        ...(raw.readerView === 'flow' ? reader?.blocks ?? [] : []).map(
+          b => [b.seq, b] as const,
+        ),
       ]),
-    [c, bookId, cache, raw.blocks, reader],
+    [c, bookId, cache, raw.blocks, raw.readerView, reader],
   );
   useEffect(() => {
     const refs = new Set([
@@ -478,6 +489,7 @@ export function useStudyVM(
       busy: raw.busy,
     },
     read: {
+      refinement: refinement.state,
       canTranslate: Boolean(reader?.blocks.length),
       view: raw.readerView,
       hint:
@@ -908,6 +920,15 @@ export function useStudyVM(
     openConversations,
     newConversation,
     translateSection: startTranslation,
+    openRefinement: refinement.open,
+    refinementAction: refinement.action,
+    refinementMode: refinement.setMode,
+    refinementToggle: refinement.toggle,
+    refinementLocate: seq => {
+      refinement.action('close');
+      run(showPeek(seq));
+    },
+    refinementOptions: refinement.setOptions,
     back: () =>
       standalone ? nav.back() : nav.replace({ name: 'BookMap', bookId }),
     setMode,
@@ -947,6 +968,11 @@ export function useStudyVM(
             title: '新增对话',
             sub: '保留当前记录，开始新的对话',
           },
+          {
+            key: 'refinement',
+            title: '精修本节',
+            sub: '修复断段、标题和识别问题，查看后采纳',
+          },
           { key: 'map', title: '书的地图', sub: '全书目录、进度和每节状态' },
           { key: 'notes', title: '本节笔记', sub: '摘要、问答、卡点、高亮' },
           { key: 'context', title: 'AI 看到的内容', sub: '本轮上下文和 token' },
@@ -955,7 +981,8 @@ export function useStudyVM(
       }),
     menuSelect: key => {
       setOverlay(null);
-      if (key === 'conversations') openConversations();
+      if (key === 'refinement') refinement.open();
+      else if (key === 'conversations') openConversations();
       else if (key === 'newConversation') newConversation();
       else if (key.startsWith('conversation:')) {
         if (!guard()) return;

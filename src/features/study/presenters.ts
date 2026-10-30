@@ -14,7 +14,12 @@ import {
   type StudyState as SessionState,
 } from '@app/study/types';
 import type { RichDoc, RichInline } from '@ui/kit';
-import type { QuickKey, ReaderItem, ThreadItem } from './types';
+import type {
+  QuickKey,
+  ReaderItem,
+  RefinementContent,
+  ThreadItem,
+} from './types';
 
 export function sectionLabel(section: Section | null | undefined) {
   return section ? sectionName(section) : '正在读取';
@@ -484,6 +489,15 @@ export function tableRows(html: string | null, text: string): string[][] {
   );
   return rows.length ? rows : [[text || html.replace(/<[^>]*>/g, ' ')]];
 }
+export function presentRefinementContent(
+  block: Pick<Block, 'type' | 'text' | 'latex' | 'html'>,
+): RefinementContent {
+  if (block.type === 'equation')
+    return { kind: 'equation', tex: block.latex ?? block.text };
+  if (block.type === 'table')
+    return { kind: 'table', rows: tableRows(block.html, block.text) };
+  return { kind: 'text', text: block.text };
+}
 export function presentReaderItems(
   blocks: Block[],
   book: Book | null,
@@ -517,6 +531,10 @@ export function presentReaderItems(
       raw.phase !== 'ready';
     result.push({
       kind: 'block',
+      refined: Boolean(b.refinement),
+      continuesFrom: b.refinement?.continuesFrom ?? undefined,
+      headingLevel:
+        b.refinement && b.type === 'title' ? b.level ?? undefined : undefined,
       ref: `b${b.seq}`,
       seq: b.seq,
       type: b.type,

@@ -123,6 +123,12 @@ export function createAiGateway(deps: GatewayDependencies): AiGateway {
       throw new AiError('auth', '请先在「我的 → AI 服务」填写 API Key');
     }
     const service = connection.service;
+    if (req.images?.length && service.capabilities?.vision !== true) {
+      throw new AiError(
+        'bad_request',
+        '原页复核需要明确支持图片输入的模型，请检查模型能力设置',
+      );
+    }
     const identity = JSON.stringify([
       service.id,
       service.baseUrl,

@@ -27,6 +27,8 @@ export interface ToolDef {
 }
 
 export interface RequestInput {
+  /** Transient source-page images; never stored in conversation history. */
+  images?: { data: string; mime: 'image/png' | 'image/jpeg'; label: string }[];
   service: Pick<AiService, 'protocol' | 'model' | 'baseUrl'> &
     Partial<AiService>;
   /** 固定系统提示（断点 1，所有对话共用）。 */
@@ -124,9 +126,8 @@ function anthropicMessages(input: RequestInput): AMessage[] {
     }
   };
   let cached = 0;
-  push(
-    'user',
-    input.contextBlocks
+  push('user', [
+    ...input.contextBlocks
       .filter(block => block.text.length > 0)
       .map(block => ({
         type: 'text',
@@ -135,7 +136,14 @@ function anthropicMessages(input: RequestInput): AMessage[] {
           ? { cache_control: { type: 'ephemeral' } }
           : {}),
       })),
-  );
+    ...(input.images ?? []).flatMap(img => [
+      { type: 'text', text: img.label },
+      {
+        type: 'image',
+        source: { type: 'base64', media_type: img.mime, data: img.data },
+      },
+    ]),
+  ]);
   for (const m of input.history) {
     if (m.role === 'assistant') {
       if (sameModel(m.raw, input.service)) {
@@ -238,17 +246,28 @@ function anthropicBody(input: RequestInput): Record<string, unknown> {
 
 function openaiInput(input: RequestInput): unknown[] {
   const prefix = input.contextBlocks.filter(block => block.text.length > 0);
-  const out: unknown[] = prefix.length
-    ? [
-        {
-          role: 'user',
-          content: prefix.map(block => ({
-            type: 'input_text',
-            text: block.text,
-          })),
-        },
-      ]
-    : [];
+  const out: unknown[] =
+    prefix.length || input.images?.length
+      ? [
+          {
+            role: 'user',
+            content: [
+              ...prefix.map(block => ({
+                type: 'input_text',
+                text: block.text,
+              })),
+              ...(input.images ?? []).flatMap(img => [
+                { type: 'input_text', text: img.label },
+                {
+                  type: 'input_image',
+                  image_url: `data:${img.mime};base64,${img.data}`,
+                  detail: 'high',
+                },
+              ]),
+            ],
+          },
+        ]
+      : [];
   for (const m of input.history) {
     if (m.role === 'assistant') {
       if (sameModel(m.raw, input.service)) {
@@ -334,11 +353,28 @@ function openaiBody(input: RequestInput): Record<string, unknown> {
 function chatMessages(input: RequestInput): unknown[] {
   const out: unknown[] = [
     { role: 'system', content: input.system },
-    ...(input.contextBlocks.length
+    ...(input.contextBlocks.length || input.images?.length
       ? [
           {
             role: 'user',
-            content: input.contextBlocks.map(block => block.text).join('\n\n'),
+            content: input.images?.length
+              ? [
+                  ...input.contextBlocks.map(block => ({
+                    type: 'text',
+                    text: block.text,
+                  })),
+                  ...input.images.flatMap(img => [
+                    { type: 'text', text: img.label },
+                    {
+                      type: 'image_url',
+                      image_url: {
+                        url: `data:${img.mime};base64,${img.data}`,
+                        detail: 'high',
+                      },
+                    },
+                  ]),
+                ]
+              : input.contextBlocks.map(block => block.text).join('\n\n'),
           },
         ]
       : []),
