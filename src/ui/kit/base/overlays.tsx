@@ -8,6 +8,7 @@ import {
 } from 'react';
 import {
   Modal,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
@@ -39,6 +40,7 @@ import type {
 import { useSkin, useTokens } from '../context';
 import { Button } from '../proxy';
 import { Icon } from '../Icon';
+import { KeyboardScrollView } from '../KeyboardScrollView';
 
 /** 同一 View 容器切换材质，只替换背景，不重建内容子树。 */
 export function GlassSurface({
@@ -508,7 +510,7 @@ export function Dialog({
       animationType={reduceMotion ? 'none' : 'fade'}
       onRequestClose={onCancel}
     >
-      <View style={dialogMaskStyle}>
+      <KeyboardAvoidingView behavior="padding" style={dialogMaskStyle}>
         <Pressable
           style={[
             StyleSheet.absoluteFill,
@@ -519,7 +521,7 @@ export function Dialog({
           accessibilityState={{ disabled: false }}
           onPress={onCancel}
         />
-        <ScrollView
+        <KeyboardScrollView
           style={dialogScrollStyle}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={dialogContentStyle}
@@ -572,8 +574,8 @@ export function Dialog({
               </View>
             </View>
           </View>
-        </ScrollView>
-      </View>
+        </KeyboardScrollView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

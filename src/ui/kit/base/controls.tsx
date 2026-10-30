@@ -1,6 +1,7 @@
 import {
   Animated,
   Easing,
+  KeyboardAvoidingView,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,6 +17,7 @@ import { Icon } from '../Icon';
 import { makeStyles } from '../makeStyles';
 import * as Kit from '../proxy';
 import { Gradient } from '../Gradient';
+import { KeyboardScrollView } from '../KeyboardScrollView';
 import {
   Children,
   cloneElement,
@@ -97,59 +99,61 @@ export function Screen({ scroll, edges, children, style }: KitProps['Screen']) {
     scrollInset: { paddingTop: navigationHeight },
   });
   return (
-    <SafeAreaView
-      edges={edges}
-      style={[s.screen, style]}
-      accessibilityRole="none"
-      accessibilityLabel="页面"
-      accessibilityState={{}}
-    >
-      {t.brand?.kind === 'win11' ? (
-        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-          <Gradient
-            colors={t.brand.mica}
-            vertical
-            style={StyleSheet.create({ root: { flex: 1 } }).root}
-          />
-        </View>
-      ) : null}
-      {scroll ? (
-        <View style={layout.body}>
-          {hasHeader ? (
-            <View
-              testID="screen-navigation"
-              style={floatingHeader ? layout.overlayHeader : undefined}
-              onLayout={event => {
-                const height = event.nativeEvent.layout.height;
-                if (height > 0) setNavigationHeight(height);
-              }}
+    <KeyboardAvoidingView behavior="padding" style={layout.body}>
+      <SafeAreaView
+        edges={edges}
+        style={[s.screen, style]}
+        accessibilityRole="none"
+        accessibilityLabel="页面"
+        accessibilityState={{}}
+      >
+        {t.brand?.kind === 'win11' ? (
+          <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+            <Gradient
+              colors={t.brand.mica}
+              vertical
+              style={StyleSheet.create({ root: { flex: 1 } }).root}
+            />
+          </View>
+        ) : null}
+        {scroll ? (
+          <View style={layout.body}>
+            {hasHeader ? (
+              <View
+                testID="screen-navigation"
+                style={floatingHeader ? layout.overlayHeader : undefined}
+                onLayout={event => {
+                  const height = event.nativeEvent.layout.height;
+                  if (height > 0) setNavigationHeight(height);
+                }}
+              >
+                {header}
+              </View>
+            ) : null}
+            <KeyboardScrollView
+              onScroll={event => setScrollY(event.nativeEvent.contentOffset.y)}
+              scrollEventThrottle={16}
+              contentContainerStyle={[
+                s.scrollContent,
+                floatingHeader ? layout.scrollInset : undefined,
+                largeTitle ? s.floatingTabSpace : undefined,
+                t.brand && hasHeader && first.props.variant === 'root'
+                  ? s.floatingTabSpace
+                  : undefined,
+              ]}
+              keyboardShouldPersistTaps="handled"
             >
-              {header}
-            </View>
-          ) : null}
-          <ScrollView
-            onScroll={event => setScrollY(event.nativeEvent.contentOffset.y)}
-            scrollEventThrottle={16}
-            contentContainerStyle={[
-              s.scrollContent,
-              floatingHeader ? layout.scrollInset : undefined,
-              largeTitle ? s.floatingTabSpace : undefined,
-              t.brand && hasHeader && first.props.variant === 'root'
-                ? s.floatingTabSpace
-                : undefined,
-            ]}
-            keyboardShouldPersistTaps="handled"
-          >
-            {largeTitle
-              ? cloneElement(first, { scrollY, part: 'largeTitle' })
-              : null}
-            {hasHeader ? parts.slice(1) : children}
-          </ScrollView>
-        </View>
-      ) : (
-        children
-      )}
-    </SafeAreaView>
+              {largeTitle
+                ? cloneElement(first, { scrollY, part: 'largeTitle' })
+                : null}
+              {hasHeader ? parts.slice(1) : children}
+            </KeyboardScrollView>
+          </View>
+        ) : (
+          children
+        )}
+      </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
 

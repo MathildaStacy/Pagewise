@@ -1,7 +1,6 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import {
   FlatList,
-  KeyboardAvoidingView,
   Pressable,
   Text,
   View,
@@ -112,7 +111,7 @@ export function StudyView({
           : ['top', 'left', 'right', 'bottom']
       }
     >
-      <KeyboardAvoidingView style={s.root} behavior="padding">
+      <View style={s.root}>
         <AppBar
           variant="push"
           title={
@@ -288,7 +287,7 @@ export function StudyView({
             </View>
           </>
         )}
-      </KeyboardAvoidingView>
+      </View>
       <StudyOverlays overlay={state.overlay} intents={intents} />
       <ToastHost toast={state.toast ? { message: state.toast } : null} />
     </Screen>

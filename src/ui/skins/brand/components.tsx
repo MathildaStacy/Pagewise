@@ -11,6 +11,7 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
+import { KeyboardScrollView } from '../../kit/KeyboardScrollView';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ComponentMap, KitProps } from '../../kit/contracts';
 import { useSkin, useTokens } from '../../kit/context';
@@ -1785,7 +1786,7 @@ function Dialog({
             }).root
           }
         >
-          <ScrollView
+          <KeyboardScrollView
             keyboardShouldPersistTaps="handled"
             style={StyleSheet.create({ root: { flexGrow: 0 } }).root}
           >
@@ -1860,7 +1861,7 @@ function Dialog({
                 />
               </View>
             </View>
-          </ScrollView>
+          </KeyboardScrollView>
         </View>
       </KeyboardAvoidingView>
     </Modal>
