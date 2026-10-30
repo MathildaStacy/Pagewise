@@ -1,3 +1,19 @@
+import type { RichDoc } from '@ui/kit';
+
+export interface NoteSearchState {
+  query: string;
+  busy: boolean;
+  results: {
+    id: string;
+    bookId: string;
+    sectionId: string;
+    kind: string;
+    where: string;
+    excerpt: string;
+  }[];
+  hasMore: boolean;
+  error?: string;
+}
 export interface NotesState {
   books: {
     id: string;
@@ -8,10 +24,14 @@ export interface NotesState {
   }[];
   loading: boolean;
   error?: string;
+  search?: NoteSearchState;
 }
 export interface NotesIntents {
   openBook(id: string): void;
   retry(): void;
+  setSearchQuery?(query: string): void;
+  retrySearch?(): void;
+  openSearchResult?(id: string): void;
 }
 export interface NotesBookState {
   title: string;
@@ -53,8 +73,14 @@ export interface NoteDetailState {
   subtitle: string;
   canOpenSource: boolean;
   summary?: string;
-  qa: { q: string; a: string }[];
-  detourQa: { from: string; q: string; a: string }[];
+  qa: { id?: string; q: string; a: string; messageIds?: number[] }[];
+  detourQa: {
+    id?: string;
+    from: string;
+    q: string;
+    a: string;
+    messageIds?: number[];
+  }[];
   stuck: { text: string; resolved: boolean }[];
   highlights: { ref: string; text: string; page: string }[];
   pins: { ref: string; q: string; page: string }[];
@@ -62,6 +88,19 @@ export interface NoteDetailState {
   loading: boolean;
   saveStatus: string;
   error?: string;
+  conversation?: NoteConversationState | null;
+}
+export interface NoteConversationState {
+  title: string;
+  loading: boolean;
+  error?: string;
+  missing?: boolean;
+  messages: {
+    id: string;
+    role: 'user' | 'assistant';
+    doc: RichDoc;
+    detour: boolean;
+  }[];
 }
 export interface NoteDetailIntents {
   back(): void;
@@ -69,4 +108,8 @@ export interface NoteDetailIntents {
   openHighlight(ref: string): void;
   setUserText(value: string): void;
   retry(): void;
+  openConversation?(id: string): void;
+  closeConversation?(): void;
+  retryConversation?(): void;
+  openConversationSource?(ref: number): void;
 }

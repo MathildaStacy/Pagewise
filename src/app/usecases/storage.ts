@@ -201,7 +201,13 @@ export async function exportBackup(
       await io.share(archive, 'application/zip');
       return archive;
     }
-    return await io.saveDownloads(archive, name, 'application/zip');
+    const saved = await io.saveDownloads(archive, name, 'application/zip');
+    await c.repos.settings.set('backup.lastExport', {
+      createdAt: manifest.createdAt,
+      books: manifest.books.length,
+      originals: manifest.books.filter(book => book.originalIncluded).length,
+    });
+    return saved;
   } finally {
     await io.remove(working);
     if (destination === 'downloads') await io.remove(archive);
@@ -272,6 +278,8 @@ export async function restoreBackup(
             throw new BackupError('备份缺少声明的图片');
       await sanitizeSnapshot(db);
       await migrate(db as Db);
+      // An export made on another installation is not a successful local backup.
+      await db.run('DELETE FROM setting WHERE key=?', ['backup.lastExport']);
       await db.run(
         'INSERT INTO setting(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',
         [

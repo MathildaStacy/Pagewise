@@ -1,5 +1,5 @@
 import type { Book, BookPart, Section } from '@core/types';
-import { pageLabel, type PageLabelBook } from '@core/ids';
+import { pageLabel, pageRangeLabel, type PageLabelBook } from '@core/ids';
 import type { MapRecord, ShelfRecord } from '@app/usecases/library';
 import type {
   BookMapState,
@@ -15,11 +15,7 @@ export const pageRange = (
 ) =>
   section.page_from === null
     ? 'EPUB · 章节位置'
-    : `${pageLabel(book, section.page_from)}${
-        section.page_to !== null && section.page_to !== section.page_from
-          ? `–${pageLabel(book, section.page_to).replace(/^p\./, '')}`
-          : ''
-      }`;
+    : pageRangeLabel(book, section.page_from, section.page_to);
 export const sectionName = (s: Pick<Section, 'no' | 'title'>) =>
   `${s.no ? s.no + ' ' : ''}${s.title}`;
 const stageLabels = ['上传', '排队', '解析', '下载结果', '建地图'];
@@ -194,6 +190,26 @@ export function presentShelf(
       )
     : 0;
   const step = current.study!.main_step;
+  const latestStuck = current.stuck
+    .filter(value => value.section_id === section?.id && !value.resolved_at)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id - a.id)[0];
+  const brief = (value: string) => {
+    const chars = Array.from(value.replace(/\s+/gu, ' ').trim());
+    return chars.length > 54
+      ? `${chars.slice(0, 54).join('')}…`
+      : chars.join('');
+  };
+  const question = current.recentQuestion?.content.trim();
+  const target = current.plan?.steps
+    .slice(step)
+    .find(value => value.status !== 'done' && value.status !== 'skipped');
+  const recap = [
+    question ? `上次问：${brief(question)}` : '',
+    latestStuck ? `卡点：${brief(latestStuck.text)}` : '',
+    target ? `接着学：${brief(target.title)}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
   return {
     books,
     empty: false,
@@ -205,13 +221,8 @@ export function presentShelf(
       meta: [chapterLabel, section ? pageRange(section, current.book) : '']
         .filter(Boolean)
         .join(' · '),
-      ...(days >= 1 && current.stuck.length
-        ? {
-            recap: `上次 ${days} 天前，讲完了第 ${Math.max(
-              1,
-              step,
-            )} 步。卡点：${current.stuck[0].text}`,
-          }
+      ...(recap
+        ? { recap: `${days >= 1 ? `上次 ${days} 天前 · ` : ''}${recap}` }
         : {}),
       steps:
         current.plan?.steps.map(s => ({

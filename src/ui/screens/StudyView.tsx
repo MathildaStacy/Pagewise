@@ -325,6 +325,29 @@ function ThreadCard({
             onPick={index => intents.answerQuiz(item.id, index)}
           />
           {item.explain ? <Note tone="neutral">{item.explain}</Note> : null}
+          {!item.locked && !item.deferred ? (
+            <View style={s.quizHelp}>
+              {intents.quizHint ? (
+                <Button
+                  variant="text"
+                  onPress={() => intents.quizHint?.(item.id)}
+                >
+                  给个提示
+                </Button>
+              ) : null}
+              {intents.deferQuiz ? (
+                <Button
+                  variant="text"
+                  onPress={() => intents.deferQuiz?.(item.id)}
+                >
+                  暂时跳过
+                </Button>
+              ) : null}
+            </View>
+          ) : null}
+          {item.deferred && !item.locked ? (
+            <Note tone="neutral">已暂时跳过，可继续提问或回来看题。</Note>
+          ) : null}
         </View>
       );
     case 'proposal':
@@ -408,6 +431,7 @@ const useStyles = makeStyles(t => ({
     gap: t.space.gap,
   },
   quiz: { gap: t.space.gap },
+  quizHelp: { flexDirection: 'row', flexWrap: 'wrap', gap: t.space.gap },
   error: { paddingVertical: t.space.gap, gap: t.space.gap },
   hint: { ...t.type.caption, color: t.color.ink2 },
 }));

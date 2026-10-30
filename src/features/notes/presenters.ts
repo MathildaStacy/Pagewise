@@ -1,5 +1,5 @@
 import type { Section } from '@core/types';
-import { pageLabel } from '@core/ids';
+import { pageLabel, pageRangeLabel } from '@core/ids';
 import type { BookNotesData, NoteDetailData } from '@app/usecases/notes';
 import type { NotesState, NotesBookState, NoteDetailState } from './types';
 
@@ -102,22 +102,32 @@ export function presentNoteDetail(
     title: s ? `${s.no ?? ''} ${s.title}`.trim() : sectionId,
     subtitle: `笔记${
       s?.page_from != null
-        ? ` · ${pageLabel(data.book ?? { page_offset: 0 }, s.page_from)}${
-            s.page_to !== s.page_from
-              ? `–${pageLabel(
-                  data.book ?? { page_offset: 0 },
-                  s.page_to,
-                ).replace(/^p[.]/, '')}`
-              : ''
-          }`
+        ? ` · ${pageRangeLabel(
+            data.book ?? { page_offset: 0 },
+            s.page_from,
+            s.page_to,
+          )}`
         : ''
     }`,
     canOpenSource: data.sectionBlocks.length > 0,
     summary: s?.summary ?? undefined,
-    qa: qa.filter(q => !q.from_section).map(q => ({ q: q.q, a: q.a })),
+    qa: qa
+      .filter(q => !q.from_section)
+      .map(q => ({
+        id: String(q.id),
+        q: q.q,
+        a: q.a,
+        messageIds: q.message_ids,
+      })),
     detourQa: qa
       .filter(q => q.from_section)
-      .map(q => ({ from: `学 ${q.from_section} 时回来问的`, q: q.q, a: q.a })),
+      .map(q => ({
+        id: String(q.id),
+        from: `学 ${q.from_section} 时回来问的`,
+        q: q.q,
+        a: q.a,
+        messageIds: q.message_ids,
+      })),
     stuck: data.stuck
       .filter(item => item.section_id === sectionId)
       .map(item => ({ text: item.text, resolved: !!item.resolved_at })),

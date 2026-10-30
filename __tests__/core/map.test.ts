@@ -1,5 +1,5 @@
-import { buildMap, inferPageOffset } from '@core/map';
-import { pageLabel } from '@core/ids';
+import { buildMap, inferPageOffset, mapSectionForReview } from '@core/map';
+import { pageLabel, pageRangeLabel } from '@core/ids';
 import type { Block, OutlineEntry, Section } from '@core/types';
 
 const makeBlock = (
@@ -213,6 +213,110 @@ it('uses PDF label mapping first, requires supported page-number coverage and ex
     '目录 · 3',
   );
   expect(pageLabel(book, null)).toBe('无页码');
+});
+it('labels unlabeled front matter by physical page without changing printed labels or PDF coordinates', () => {
+  const book = { page_offset: 41 };
+  expect(pageLabel(book, 1)).toBe('PDF 第 1 页');
+  expect(pageLabel(book, 41)).toBe('PDF 第 41 页');
+  expect(pageLabel(book, 42)).toBe('p.1');
+  expect(pageRangeLabel(book, 1, 3)).toBe('PDF 第 1–3 页');
+  expect(pageRangeLabel(book, 40, 43)).toBe('PDF 第 40–43 页');
+  expect(pageRangeLabel(book, 42, 44)).toBe('p.1–3');
+  expect(pageRangeLabel(book, 42, null)).toBe('p.1');
+  expect(pageRangeLabel(book, 42, 0)).toBe('p.1');
+  expect(pageRangeLabel(book, 42, 40)).toBe('p.1');
+  expect(pageRangeLabel(book, null, 42)).toBe('无页码');
+  const labels = ['Cover', 'i', 'ii', '1'];
+  expect(pageLabel({ ...book, pageLabels: labels }, 1)).toBe('p.Cover');
+  expect(pageRangeLabel({ ...book, pageLabels: labels }, 2, 3)).toBe('p.i–ii');
+  expect(pageRangeLabel({ ...book, pageLabels: labels }, 3, 4)).toBe('p.ii–1');
+});
+it('adopts matching bookmark hierarchy for unnumbered typography without hiding numbered disagreements', () => {
+  const blocks = [
+    makeBlock(
+      42001,
+      42,
+      'title',
+      'Chapter 01: The Process Is Your Edge',
+      undefined,
+      1,
+    ),
+    makeBlock(
+      43001,
+      43,
+      'title',
+      '1.1 Why process discipline matters',
+      undefined,
+      2,
+    ),
+    makeBlock(43002, 43, 'text', 'Section introduction', 400),
+    makeBlock(43003, 43, 'title', 'A vocabulary for change', undefined, 2),
+    makeBlock(43004, 43, 'text', 'Synthetic subsection body', 500),
+  ];
+  const outline = [
+    { title: 'Chapter 01: The Process Is Your Edge', page: 42, level: 1 },
+    { title: '1.1 Why process discipline matters', page: 43, level: 2 },
+    { title: 'A vocabulary for change', page: 43, level: 3 },
+  ];
+  const map = buildMap(blocks, outline);
+  expect(map.sections.find(section => section.id === 'u43003')).toMatchObject({
+    level: 3,
+    parent_id: '1.1',
+    flag: null,
+    block_from: 43002,
+    block_to: 43004,
+  });
+  expect(map.flags).toEqual([]);
+  const disputed = buildMap(
+    blocks,
+    outline.map(item =>
+      item.title.startsWith('1.1 ') ? { ...item, level: 3 } : item,
+    ),
+  );
+  expect(disputed.flags).toContainEqual({
+    sectionId: '1.1',
+    kind: 'level',
+    detail: { recognized: 2, outline: 3 },
+  });
+});
+it('compatibly clears only legacy unnumbered level flags and retains other review evidence without mutation', () => {
+  const template = buildMap([
+    makeBlock(1001, 1, 'title', 'Plain title', undefined, 3),
+    makeBlock(1002, 1, 'text', 'Synthetic body', 500),
+  ]).sections[0];
+  const level = { kind: 'level', detail: { recognized: 2, outline: 3 } };
+  const section: Section = { ...template, flag: 'level', flag_detail: [level] };
+  const before = JSON.stringify(section);
+  expect(mapSectionForReview(section)).toMatchObject({
+    flag: null,
+    flag_detail: null,
+  });
+  expect(JSON.stringify(section)).toBe(before);
+  expect(mapSectionForReview({ ...section, no: '1.1' }).flag).toBe('level');
+  expect(mapSectionForReview({ ...section, source: 'manual' }).flag).toBe(
+    'level',
+  );
+  expect(mapSectionForReview({ ...section, level: 2 }).flag).toBe('level');
+  expect(mapSectionForReview({ ...section, flag_detail: null }).flag).toBe(
+    'level',
+  );
+  const conflict = {
+    kind: 'level',
+    detail: { reason: 'number-conflict', recognizedNo: '4', outlineNo: '3' },
+  };
+  expect(
+    mapSectionForReview({ ...section, flag_detail: [conflict, level] }),
+  ).toMatchObject({
+    flag: 'level',
+    flag_detail: [conflict],
+  });
+  const merged = { kind: 'merged', detail: { blocks: [1001, 1002] } };
+  expect(
+    mapSectionForReview({ ...section, flag_detail: [merged, level] }),
+  ).toMatchObject({
+    flag: 'merged',
+    flag_detail: [merged],
+  });
 });
 it('recognizes numbered text titles but retains prose and generates stable IDs for unnumbered headings', () => {
   const blocks = [

@@ -2,11 +2,14 @@ import type { ReactNode } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import {
   AppBar,
+  AiMessage,
   Button,
   Empty,
   ListSection,
   Note,
   Screen,
+  Sheet,
+  RichView,
   useTokens,
   makeStyles,
   usePresentation,
@@ -86,6 +89,15 @@ export function NoteDetailView({
                   {separator(index)}
                   <Text style={s.question}>{qa.q}</Text>
                   <Text style={s.answer}>{qa.a}</Text>
+                  {qa.id && qa.messageIds?.length ? (
+                    <Button
+                      variant="text"
+                      size="sm"
+                      onPress={() => intents.openConversation?.(qa.id!)}
+                    >
+                      完整问答
+                    </Button>
+                  ) : null}
                 </View>
               ))}
             </NoteGroup>
@@ -98,6 +110,15 @@ export function NoteDetailView({
                   <Text style={s.detour}>{qa.from}</Text>
                   <Text style={s.question}>{qa.q}</Text>
                   <Text style={s.answer}>{qa.a}</Text>
+                  {qa.id && qa.messageIds?.length ? (
+                    <Button
+                      variant="text"
+                      size="sm"
+                      onPress={() => intents.openConversation?.(qa.id!)}
+                    >
+                      完整问答
+                    </Button>
+                  ) : null}
                 </View>
               ))}
             </NoteGroup>
@@ -171,6 +192,67 @@ export function NoteDetailView({
           ) : null}
         </View>
       )}
+      <Sheet
+        visible={!!state.conversation}
+        title={state.conversation?.title ?? '完整问答'}
+        subtitle="当时的提问与完整回答"
+        detent="full"
+        onClose={() => intents.closeConversation?.()}
+        actions={
+          state.canOpenSource
+            ? [
+                {
+                  label: '本节原文',
+                  kind: 'ghost',
+                  onPress: intents.openSource,
+                },
+              ]
+            : []
+        }
+      >
+        {state.conversation?.loading ? (
+          <Empty body="正在读取完整问答…" />
+        ) : null}
+        {state.conversation?.error ? (
+          <View style={s.conversationMessage}>
+            <Note tone="bad">{state.conversation.error}</Note>
+            <Button
+              variant="text"
+              onPress={() => intents.retryConversation?.()}
+            >
+              重试
+            </Button>
+          </View>
+        ) : state.conversation &&
+          !state.conversation.loading &&
+          !state.conversation.messages.length ? (
+          <Empty body="这条问答的完整对话已不在本地，仍可查看笔记中的摘要。" />
+        ) : null}
+        {state.conversation?.missing && state.conversation.messages.length ? (
+          <Note tone="warn">部分对话已不在本地，以下显示仍保留的内容。</Note>
+        ) : null}
+        {state.conversation?.messages.map(message => (
+          <View key={message.id} style={s.conversationMessage}>
+            <Text style={s.conversationRole}>
+              {message.role === 'user' ? '我的提问' : 'AI 回答'}
+            </Text>
+            {message.role === 'user' ? (
+              <RichView
+                doc={message.doc}
+                onCite={intents.openConversationSource}
+                onFigure={intents.openConversationSource}
+              />
+            ) : (
+              <AiMessage
+                doc={message.doc}
+                detour={message.detour}
+                onCite={intents.openConversationSource}
+                onFigure={intents.openConversationSource}
+              />
+            )}
+          </View>
+        ))}
+      </Sheet>
     </Screen>
   );
 }
@@ -179,6 +261,12 @@ const useStyles = makeStyles(t => {
     scale = t.type.body.fontSize / (grouped ? 17 : 14);
   return {
     error: { padding: t.space.pageX },
+    conversationMessage: { paddingVertical: t.space.gap },
+    conversationRole: {
+      ...t.type.label,
+      color: t.color.ink2,
+      marginBottom: t.space.gap,
+    },
     document: {
       backgroundColor: grouped ? t.color.bg : t.color.surface,
       paddingHorizontal: grouped ? 0 : 14,

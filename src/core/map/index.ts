@@ -8,6 +8,7 @@ import type {
   PageNumberSample,
 } from './types';
 export type * from './types';
+export { mapSectionForReview } from './review';
 export {
   buildBlockMigration,
   collectReferencedSeqs,
@@ -307,6 +308,7 @@ function reconcile(
           headingOrder.get(a.heading)! - headingOrder.get(b.heading)!,
       )[0]?.heading;
     if (match) {
+      const numberedLevel = match.no !== null;
       if (parsed?.no) {
         if (!match.no) match.no = parsed.no;
         else if (match.no !== parsed.no)
@@ -320,10 +322,13 @@ function reconcile(
           });
       }
       if (match.level !== item.level) {
-        match.flags.push({
-          kind: 'level',
-          detail: { recognized: match.level, outline: item.level },
-        });
+        // An unnumbered title's MinerU level describes typography. A matching
+        // bookmark supplies its hierarchy; only explicit numbering disagrees.
+        if (numberedLevel)
+          match.flags.push({
+            kind: 'level',
+            detail: { recognized: match.level, outline: item.level },
+          });
         match.level = levelOf(item.level);
       }
       continue;

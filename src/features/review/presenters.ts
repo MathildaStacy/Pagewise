@@ -29,6 +29,10 @@ export function presentReview(data: ReviewData): ReviewState {
       enabled: due > 0,
       label: due ? `开始复习 ${due} 张` : '今天没有要复习的卡片',
     },
+    quickStart: {
+      enabled: due > 0,
+      label: `先复习 ${Math.min(5, due || 5)} 张`,
+    },
     stuckList: data.stuck.map(s => ({
       id: String(s.id),
       text: s.text,

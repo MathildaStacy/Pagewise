@@ -3,6 +3,7 @@ import Renderer, { act } from 'react-test-renderer';
 import { createTestContainer, createTestDemoContainer } from '@app/testing';
 import type { Container } from '@app/container';
 import { useContainer } from '@app/ContainerProvider';
+import { SCHEMA_VERSION } from '@data/migrations';
 import { useAppNav } from '@features/nav';
 import {
   useMeVM,
@@ -43,6 +44,7 @@ import {
   aboutSamples,
 } from '@features/settings/samples';
 import * as storageUsecases from '@app/usecases/storage';
+import * as backupOverview from '@app/usecases/backupOverview';
 import { ImportInputError, reparseBook } from '@app/usecases/importBooks';
 import { version } from '../../package.json';
 
@@ -307,6 +309,176 @@ it('shows the original-file recovery instruction when a reparse has no source', 
   expect(vm().state.error).toContain('原文件不在本机');
   expect(nav.open).not.toHaveBeenCalled();
 });
+
+describe('storage backup preview', () => {
+  let choose: jest.SpiedFunction<typeof backupOverview.chooseBackupPreview>;
+  let discard: jest.SpiedFunction<typeof backupOverview.discardBackupPreview>;
+  let restore: jest.SpiedFunction<typeof storageUsecases.restoreBackup>;
+
+  const preview = (
+    path = '/cache/backup-preview-a.zip',
+  ): backupOverview.BackupPreview => ({
+    path,
+    manifest: {
+      format: 'pagewise-backup',
+      version: 1,
+      schemaVersion: SCHEMA_VERSION,
+      appVersion: version,
+      createdAt: '2026-10-29T12:00:00.000Z',
+      books: [
+        {
+          id: 'aima',
+          title: 'AIMA',
+          format: 'pdf',
+          sha256: 'fixture-aima',
+          originalIncluded: true,
+        },
+        {
+          id: 'sicp',
+          title: 'SICP',
+          format: 'epub',
+          sha256: 'fixture-sicp',
+          originalIncluded: false,
+        },
+      ],
+    },
+  });
+  function pending<T>() {
+    let resolve!: (value: T) => void;
+    const promise = new Promise<T>(done => {
+      resolve = done;
+    });
+    return { promise, resolve };
+  }
+  beforeEach(() => {
+    choose = jest
+      .spyOn(backupOverview, 'chooseBackupPreview')
+      .mockResolvedValue(null);
+    discard = jest
+      .spyOn(backupOverview, 'discardBackupPreview')
+      .mockResolvedValue();
+    restore = jest
+      .spyOn(storageUsecases, 'restoreBackup')
+      .mockResolvedValue(true);
+  });
+
+  it('selects only once for same-frame repeated taps and previews without restoring', async () => {
+    const selection = pending<backupOverview.BackupPreview | null>();
+    choose.mockReturnValueOnce(selection.promise);
+    const vm = await mountVM(useStorageVM);
+    await act(async () => {
+      vm().intents.restoreBackup();
+      vm().intents.restoreBackup();
+    });
+    expect(choose).toHaveBeenCalledTimes(1);
+    expect(vm().state.confirmRestore).toBe(false);
+    expect(vm().state.saving).toBe(true);
+    expect(restore).not.toHaveBeenCalled();
+
+    await act(async () => selection.resolve(preview()));
+    expect(vm().state.confirmRestore).toBe(true);
+    expect(vm().state.restorePreview).toContain('2 本书 · 含 1 本原文件');
+    expect(vm().state.saving).toBe(false);
+    expect(restore).not.toHaveBeenCalled();
+    await act(async () => vm().intents.restoreBackup());
+    expect(choose).toHaveBeenCalledTimes(1);
+  });
+
+  it('discards a cancelled preview without restoring and allows another selection', async () => {
+    const first = preview();
+    const second = preview('/cache/backup-preview-b.zip');
+    choose.mockResolvedValueOnce(first).mockResolvedValueOnce(second);
+    const vm = await mountVM(useStorageVM);
+    await act(async () => vm().intents.restoreBackup());
+    expect(vm().state.confirmRestore).toBe(true);
+
+    await act(async () => vm().intents.closeOverlay());
+    expect(vm().state.confirmRestore).toBe(false);
+    expect(vm().state.restorePreview).toBeUndefined();
+    expect(discard).toHaveBeenCalledTimes(1);
+    expect(discard).toHaveBeenCalledWith(c, first);
+    expect(restore).not.toHaveBeenCalled();
+
+    await act(async () => vm().intents.restoreBackup());
+    expect(choose).toHaveBeenCalledTimes(2);
+    expect(vm().state.confirmRestore).toBe(true);
+  });
+
+  it('restores the exact preview archive once and retains it until restoration finishes', async () => {
+    const selected = preview('/cache/backup-preview-selected.zip');
+    const restoration = pending<boolean>();
+    choose.mockResolvedValueOnce(selected);
+    restore.mockReturnValueOnce(restoration.promise);
+    const vm = await mountVM(useStorageVM);
+    await act(async () => vm().intents.restoreBackup());
+    expect(restore).not.toHaveBeenCalled();
+
+    await act(async () => {
+      vm().intents.confirmRestore();
+      vm().intents.confirmRestore();
+      vm().intents.restoreBackup();
+    });
+    expect(restore).toHaveBeenCalledTimes(1);
+    expect(restore).toHaveBeenCalledWith(c, selected.path);
+    expect(choose).toHaveBeenCalledTimes(1);
+    expect(discard).not.toHaveBeenCalled();
+    expect(vm().state.confirmRestore).toBe(false);
+    expect(vm().state.restorePreview).toBeUndefined();
+
+    await act(async () => restoration.resolve(true));
+    expect(discard).toHaveBeenCalledTimes(1);
+    expect(discard).toHaveBeenCalledWith(c, selected);
+    expect(vm().state.saving).toBe(false);
+  });
+
+  it('discards a preview that finishes after cancellation without reopening confirmation', async () => {
+    const selected = preview();
+    const selection = pending<backupOverview.BackupPreview | null>();
+    choose.mockReturnValueOnce(selection.promise);
+    const vm = await mountVM(useStorageVM);
+    await act(async () => vm().intents.restoreBackup());
+    await act(async () => vm().intents.closeOverlay());
+    await act(async () => selection.resolve(selected));
+
+    expect(vm().state.confirmRestore).toBe(false);
+    expect(vm().state.restorePreview).toBeUndefined();
+    expect(discard).toHaveBeenCalledTimes(1);
+    expect(discard).toHaveBeenCalledWith(c, selected);
+    expect(restore).not.toHaveBeenCalled();
+    await act(async () => vm().intents.restoreBackup());
+    expect(choose).toHaveBeenCalledTimes(2);
+  });
+
+  it('discards a preview that arrives after the storage page unmounts', async () => {
+    const selected = preview();
+    const selection = pending<backupOverview.BackupPreview | null>();
+    choose.mockReturnValueOnce(selection.promise);
+    const vm = await mountVM(useStorageVM);
+    await act(async () => vm().intents.restoreBackup());
+    const renderer = renderers.pop()!;
+    await act(async () => renderer.unmount());
+    expect(discard).not.toHaveBeenCalled();
+
+    await act(async () => selection.resolve(selected));
+    expect(discard).toHaveBeenCalledTimes(1);
+    expect(discard).toHaveBeenCalledWith(c, selected);
+    expect(restore).not.toHaveBeenCalled();
+  });
+
+  it('discards an unconfirmed preview when leaving the storage page', async () => {
+    const selected = preview();
+    choose.mockResolvedValueOnce(selected);
+    const vm = await mountVM(useStorageVM);
+    await act(async () => vm().intents.restoreBackup());
+    const renderer = renderers.pop()!;
+    await act(async () => renderer.unmount());
+
+    expect(discard).toHaveBeenCalledTimes(1);
+    expect(discard).toHaveBeenCalledWith(c, selected);
+    expect(restore).not.toHaveBeenCalled();
+  });
+});
+
 it('storage reads real book sizes and About switches demo mode and exports redacted logs', async () => {
   await c.close();
   c = await createTestDemoContainer();

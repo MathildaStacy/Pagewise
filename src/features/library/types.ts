@@ -164,6 +164,7 @@ export interface ParseProgressState extends PageState {
     progress: number;
     stages: { label: string; state: 'done' | 'current' | 'error' | 'todo' }[];
     error?: string;
+    needsToken?: boolean;
     warning?: string;
   }[];
 }

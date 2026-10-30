@@ -93,6 +93,8 @@ export interface StorageState extends SettingStatus {
   confirmClean: string | null;
   confirmReparse: string | null;
   confirmRestore: boolean;
+  lastBackup?: string;
+  restorePreview?: string;
 }
 export interface StorageIntents {
   back(): void;

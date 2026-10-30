@@ -74,7 +74,7 @@ export type RootStackParams = {
   };
   Reader: { bookId: string; sectionId?: string; blockRef?: string };
   SectionDone: { bookId: string; sectionId: string; draftId: string };
-  ReviewSession: undefined;
+  ReviewSession: { limit?: number } | undefined;
   NotesBook: { bookId: string };
   NoteDetail: { bookId: string; sectionId: string };
   MeMineru: undefined;
@@ -218,7 +218,7 @@ function Page({
     case 'ImportSettings':
       return <ImportSettingsScreen draftId={route.params.draftId} />;
     case 'ReviewSession':
-      return <ReviewSessionScreen />;
+      return <ReviewSessionScreen limit={route.params?.limit} />;
     case 'NotesBook':
       return <NotesBookScreen bookId={route.params.bookId} />;
     case 'NoteDetail':

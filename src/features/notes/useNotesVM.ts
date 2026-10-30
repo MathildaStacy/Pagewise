@@ -13,6 +13,8 @@ import {
 } from '@app/usecases/notes';
 import { useAppNav } from '@features/nav';
 import { exportNotes } from '@app/usecases/exportNotes';
+import { useNoteSearch } from './useNoteSearch';
+import { useNoteConversation } from './useNoteConversation';
 import {
   exportPreview,
   presentNoteDetail,
@@ -31,6 +33,7 @@ import type {
 export function useNotesVM(): { state: NotesState; intents: NotesIntents } {
   const c = useContainer(),
     nav = useAppNav();
+  const search = useNoteSearch(c);
   const [state, setState] = useState<NotesState>({ books: [], loading: true });
   const alive = useRef(true);
   const refresh = useCallback(() => {
@@ -59,10 +62,21 @@ export function useNotesVM(): { state: NotesState; intents: NotesIntents } {
     }, [refresh]),
   );
   return {
-    state,
+    state: { ...state, search: search.state },
     intents: {
       retry: refresh,
       openBook: id => nav.open({ name: 'NotesBook', bookId: id }),
+      setSearchQuery: search.setQuery,
+      retrySearch: search.retry,
+      openSearchResult: id => {
+        const result = search.state.results.find(item => item.id === id);
+        if (result)
+          nav.open({
+            name: 'NoteDetail',
+            bookId: result.bookId,
+            sectionId: result.sectionId,
+          });
+      },
     },
   };
 }
@@ -186,6 +200,7 @@ export function useNoteDetailVM(
 ): { state: NoteDetailState; intents: NoteDetailIntents } {
   const c = useContainer(),
     nav = useAppNav();
+  const conversation = useNoteConversation(c, bookId, sectionId);
   const [state, setState] = useState<NoteDetailState>({
     title: sectionId,
     subtitle: '笔记',
@@ -260,7 +275,7 @@ export function useNoteDetailVM(
     };
   }, [refresh, flush]);
   return {
-    state,
+    state: { ...state, conversation: conversation.state },
     intents: {
       back: () => {
         flush().then(saved => {
@@ -272,11 +287,27 @@ export function useNoteDetailVM(
         else refresh();
       },
       openSource: () => {
-        if (state.canOpenSource)
+        if (state.canOpenSource) {
+          if (conversation.state) conversation.close();
           nav.open({ name: 'Reader', bookId, sectionId });
+        }
       },
       openHighlight: blockRef =>
         nav.open({ name: 'Reader', bookId, sectionId, blockRef }),
+      openConversation: id => conversation.open(Number(id)),
+      closeConversation: conversation.close,
+      retryConversation: conversation.retry,
+      openConversationSource: ref => {
+        const block = conversation.source(ref);
+        if (!block) return;
+        conversation.close();
+        nav.open({
+          name: 'Reader',
+          bookId,
+          sectionId: block.section_id ?? sectionId,
+          blockRef: `b${ref}`,
+        });
+      },
       setUserText: value => {
         text.current = value;
         dirty.current = true;

@@ -45,6 +45,9 @@ export function MeStorageView({
         )}
       </SettingsGroup>
       <SettingsGroup title={groupedLists ? '备份' : undefined}>
+        {state.lastBackup ? (
+          <SettingsNote>{state.lastBackup}</SettingsNote>
+        ) : null}
         <SettingsRow
           title="导出备份"
           subtitle="整库：书的地图、学习记录、笔记、闪卡、设置；不含 API Key 和 Token"
@@ -108,6 +111,9 @@ export function MeStorageView({
         title="从备份恢复？"
         onClose={intents.closeOverlay}
       >
+        {state.restorePreview ? (
+          <SettingsNote>{state.restorePreview}</SettingsNote>
+        ) : null}
         <SettingsNote>
           恢复将替换本机学习数据，完成后重新打开应用。备份不含 Key 和
           Token，新设备上需要重新填写。请先导出当前数据。
@@ -115,7 +121,7 @@ export function MeStorageView({
         <View style={s.overlayActions}>
           <SettingsButton
             block
-            label="选择备份并恢复"
+            label="恢复这份备份"
             onPress={intents.confirmRestore}
           />
           <SettingsButton

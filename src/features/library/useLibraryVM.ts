@@ -25,6 +25,7 @@ import {
   type ImportSelection,
 } from '@app/usecases/importBooks';
 import { getParseQueue } from '@app/usecases/parseQueue';
+import { requiresMineruToken } from '@app/usecases/mineruConnection';
 import {
   loadEpubImportError,
   loadParseWarnings,
@@ -570,6 +571,7 @@ export function useParseProgressVM(bookId: string) {
           cover: { title: book.title, color: book.cover_color },
           parts: parts.map(part => ({
             ...parsePart(part),
+            needsToken: requiresMineruToken(part.error_code),
             warning: warnings[String(part.part_no)],
           })),
           ready:
@@ -584,8 +586,8 @@ export function useParseProgressVM(bookId: string) {
               : book.format === 'epub'
               ? '正在本机解析 EPUB，完成后即可学习。'
               : book.ready_to_page
-              ? `p.1–${book.ready_to_page} 已就绪，这部分的章节现在就能学。`
-              : '解析在后台进行，可以离开这个页面。每片完成后，那部分的章节就能开始学。',
+              ? `PDF 前 ${book.ready_to_page} 页已就绪，这部分的章节现在就能学。离开应用后本机传输会暂停，回到前台会继续。`
+              : '可以离开这个页面。锁屏或切到其他应用后，本机上传和下载会暂停；已提交的服务端解析仍会继续，回到前台后会接着处理。',
         })),
       )
       .catch(error =>

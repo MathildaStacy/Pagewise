@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { parseStudyCard } from '@app/study/types';
 import { useStore } from 'zustand';
 import { useContainer } from '@app/ContainerProvider';
 import { resolveStudyBlockImage } from '@app/bookImages';
@@ -18,7 +19,7 @@ import {
   saveStudyPin,
   toggleStudyHighlight,
 } from '@app/usecases/studyReader';
-import { parseBlockRef } from '@core/ids';
+import { pageRangeLabel, parseBlockRef } from '@core/ids';
 import type { Block, Section } from '@core/types';
 import { useAppNav } from '@features/nav';
 import {
@@ -386,10 +387,11 @@ export function useStudyVM(
     const section =
       mode === 'read' ? readSection : activeSection ?? raw.section;
     if (!section?.page_from) return undefined;
-    const offset = raw.book?.page_offset ?? 0;
-    const from = section.page_from - offset;
-    const to = (section.page_to ?? section.page_from) - offset;
-    return from === to ? `p.${from}` : `p.${from}–${to}`;
+    return pageRangeLabel(
+      raw.book ?? { page_offset: 0 },
+      section.page_from,
+      section.page_to,
+    );
   })();
   const state: StudyState = {
     header: {
@@ -823,6 +825,21 @@ export function useStudyVM(
     toggleHistory: () => setHistory(old => !old),
     answerQuiz: (id, index) => {
       if (guard()) run(session.answerQuiz(Number(id), index));
+    },
+    deferQuiz: id => {
+      if (guard()) run(session.deferQuiz?.(Number(id)) ?? Promise.resolve());
+    },
+    quizHint: id => {
+      const message = session.store
+        .getState()
+        .messages.find(item => item.id === Number(id));
+      const quiz = message ? parseStudyCard(message.content) : null;
+      if (guard() && quiz?.kind === 'quiz')
+        run(
+          session.send(
+            `关于这道题：${quiz.question}。请只给一个提示，先不要透露正确选项。`,
+          ),
+        );
     },
     resolveProposal: (id, accept) => {
       if (guard()) run(session.resolveProposal(Number(id), accept));

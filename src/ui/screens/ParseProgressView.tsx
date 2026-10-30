@@ -83,9 +83,11 @@ export function ParseProgressView({
                     <Note tone="bad">{part.error}</Note>
                   </View>
                   <View style={s.partActions}>
-                    <Button size="sm" onPress={intents.goUpdateToken}>
-                      去更新 Token
-                    </Button>
+                    {part.needsToken ? (
+                      <Button size="sm" onPress={intents.goUpdateToken}>
+                        去更新 Token
+                      </Button>
+                    ) : null}
                     <Button
                       size="sm"
                       variant={groupedLists ? 'secondary' : 'ghost'}

@@ -79,6 +79,7 @@ export type ThreadItem =
       question: string;
       options: { label: string; state: 'idle' | 'right' | 'wrong' | 'muted' }[];
       locked: boolean;
+      deferred?: boolean;
       explain?: string;
     }
   | {
@@ -253,6 +254,8 @@ export interface StudyIntents {
   toggleFold(id: string): void;
   toggleHistory(): void;
   answerQuiz(id: string, index: number): void;
+  deferQuiz?(id: string): void;
+  quizHint?(id: string): void;
   resolveProposal(id: string, accept: boolean): void;
   resumeAction(key: string): void;
   retry(id?: string): void;
