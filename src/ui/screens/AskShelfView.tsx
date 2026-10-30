@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import {
   AiMessage,
@@ -32,17 +33,19 @@ export function AskShelfView({
 }) {
   const s = useStyles(),
     t = useTokens();
+  const [scrollY, setScrollY] = useState(0);
   const books = state.hits.filter(
     (hit, i) => state.hits.findIndex(h => h.bookId === hit.bookId) === i,
   );
   return (
     <View style={s.root}>
-      <Screen scroll edges={['top', 'left', 'right', 'bottom']}>
+      <Screen edges={['top', 'left', 'right', 'bottom']}>
         <AppBar
           title="问书架"
           subtitle="在你所有书的原文里找答案"
           variant="push"
           onBack={intents.back}
+          scrollY={scrollY}
         />
         <Gradient
           colors={t.brand?.ai ?? [t.color.accent, t.color.detour]}
@@ -121,131 +124,140 @@ export function AskShelfView({
             </Pressable>
           ))}
         </ScrollView>
-        {state.error ? (
-          <View style={s.pad}>
-            <Note tone="bad">{state.error}</Note>
-            <Button onPress={() => intents.ask(state.asked)}>重试</Button>
-          </View>
-        ) : null}
-        {!state.asked ? (
-          <>
-            <SettingsGroup title="试试这样问">
-              {suggestions.map(item => (
-                <SettingsRow
-                  key={item.q}
-                  title={item.q}
-                  icon={<Icon name={item.icon} variant="color" size={40} />}
-                  chevron
-                  onPress={() => intents.ask(item.q)}
-                />
-              ))}
-            </SettingsGroup>
-            {state.recent.length || state.demo ? (
-              <SettingsGroup title="最近问过">
-                {(state.recent.length
-                  ? state.recent
-                  : ['贪心搜索为什么不是最优的？']
-                ).map(q => (
+        <ScrollView
+          testID="ask-answer"
+          style={s.answer}
+          contentContainerStyle={s.answerContent}
+          keyboardShouldPersistTaps="handled"
+          onScroll={event => setScrollY(event.nativeEvent.contentOffset.y)}
+          scrollEventThrottle={16}
+        >
+          {state.error ? (
+            <View style={s.pad}>
+              <Note tone="bad">{state.error}</Note>
+              <Button onPress={() => intents.ask(state.asked)}>重试</Button>
+            </View>
+          ) : null}
+          {!state.asked ? (
+            <>
+              <SettingsGroup title="试试这样问">
+                {suggestions.map(item => (
                   <SettingsRow
-                    key={q}
-                    title={q}
-                    subtitle={
-                      state.demo
-                        ? '10 月 26 日 · 人工智能：现代方法'
-                        : undefined
-                    }
-                    icon={<Icon name="clock" size={22} />}
+                    key={item.q}
+                    title={item.q}
+                    icon={<Icon name={item.icon} variant="color" size={40} />}
                     chevron
-                    onPress={() => intents.ask(q)}
+                    onPress={() => intents.ask(item.q)}
                   />
                 ))}
               </SettingsGroup>
-            ) : null}
-            <View style={s.pad}>
-              <Note tone="neutral" variant="ai" icon="info">
-                跨书问答只读你书架上已解析的内容，回答里每个说法都带书名和页码。解析中的书只搜已就绪的部分。
-              </Note>
-            </View>
-          </>
-        ) : (
-          <View style={s.thread}>
-            <UserBubble text={state.asked} />
-            <ToolSteps
-              lines={state.tools.map((text, i) => ({
-                text,
-                running: state.busy && i === state.tools.length - 1,
-              }))}
-            />
-            {state.answer ? (
-              <>
-                <View style={s.who}>
-                  <Icon name="spark" variant="color" size={28} />
-                  <Text style={s.whoText}>Pagewise · 跨书回答</Text>
-                </View>
-                <AiMessage
-                  doc={state.doc}
-                  streaming={state.busy}
-                  onCite={ref => intents.openHit(ref - 1)}
-                />
-              </>
-            ) : state.busy ? (
-              <Text accessibilityLiveRegion="polite" style={s.small}>
-                正在读取相关原文…
-              </Text>
-            ) : null}
-            {state.done && state.hits.length ? (
-              <>
-                <Text style={s.sectionTitle}>
-                  原文命中 · {state.hits.length} 处
-                </Text>
-                {books.map(book => (
-                  <View key={book.bookId} style={s.hitGroup}>
-                    <View style={s.bookHeader}>
-                      <Cover {...book.cover} size="sm" />
-                      <Text style={s.bookTitle}>{book.bookTitle}</Text>
-                      <Text style={s.small}>
-                        {
-                          state.hits.filter(h => h.bookId === book.bookId)
-                            .length
-                        }
-                      </Text>
-                    </View>
-                    {state.hits.map((hit, i) =>
-                      hit.bookId === book.bookId ? (
-                        <Pressable
-                          key={hit.ref}
-                          accessibilityRole="button"
-                          onPress={() => intents.openHit(i)}
-                          style={s.hit}
-                        >
-                          <View style={s.grow}>
-                            <Text style={s.hitTitle}>{hit.section}</Text>
-                            <Text numberOfLines={2} style={s.excerpt}>
-                              {hit.text}
-                            </Text>
-                          </View>
-                          <Text style={s.small}>{hit.page}</Text>
-                        </Pressable>
-                      ) : null,
-                    )}
+              {state.recent.length || state.demo ? (
+                <SettingsGroup title="最近问过">
+                  {(state.recent.length
+                    ? state.recent
+                    : ['贪心搜索为什么不是最优的？']
+                  ).map(q => (
+                    <SettingsRow
+                      key={q}
+                      title={q}
+                      subtitle={
+                        state.demo
+                          ? '10 月 26 日 · 人工智能：现代方法'
+                          : undefined
+                      }
+                      icon={<Icon name="clock" size={22} />}
+                      chevron
+                      onPress={() => intents.ask(q)}
+                    />
+                  ))}
+                </SettingsGroup>
+              ) : null}
+              <View style={s.pad}>
+                <Note tone="neutral" variant="ai" icon="info">
+                  跨书问答只读你书架上已解析的内容，回答里每个说法都带书名和页码。解析中的书只搜已就绪的部分。
+                </Note>
+              </View>
+            </>
+          ) : (
+            <View style={s.thread}>
+              <UserBubble text={state.asked} />
+              <ToolSteps
+                lines={state.tools.map((text, i) => ({
+                  text,
+                  running: state.busy && i === state.tools.length - 1,
+                }))}
+              />
+              {state.answer ? (
+                <>
+                  <View style={s.who}>
+                    <Icon name="spark" variant="color" size={28} />
+                    <Text style={s.whoText}>Pagewise · 跨书回答</Text>
                   </View>
-                ))}
-                <View style={s.actions}>
-                  <Button icon="teach" onPress={intents.continue}>
-                    带到听讲里继续问
-                  </Button>
-                  <Button
-                    icon="note"
-                    variant="secondary"
-                    onPress={intents.save}
-                  >
-                    存到笔记
-                  </Button>
-                </View>
-              </>
-            ) : null}
-          </View>
-        )}
+                  <AiMessage
+                    doc={state.doc}
+                    streaming={state.busy}
+                    onCite={ref => intents.openHit(ref - 1)}
+                  />
+                </>
+              ) : state.busy ? (
+                <Text accessibilityLiveRegion="polite" style={s.small}>
+                  正在读取相关原文…
+                </Text>
+              ) : null}
+              {state.done && state.hits.length ? (
+                <>
+                  <Text style={s.sectionTitle}>
+                    原文命中 · {state.hits.length} 处
+                  </Text>
+                  {books.map(book => (
+                    <View key={book.bookId} style={s.hitGroup}>
+                      <View style={s.bookHeader}>
+                        <Cover {...book.cover} size="sm" />
+                        <Text style={s.bookTitle}>{book.bookTitle}</Text>
+                        <Text style={s.small}>
+                          {
+                            state.hits.filter(h => h.bookId === book.bookId)
+                              .length
+                          }
+                        </Text>
+                      </View>
+                      {state.hits.map((hit, i) =>
+                        hit.bookId === book.bookId ? (
+                          <Pressable
+                            key={hit.ref}
+                            accessibilityRole="button"
+                            onPress={() => intents.openHit(i)}
+                            style={s.hit}
+                          >
+                            <View style={s.grow}>
+                              <Text style={s.hitTitle}>{hit.section}</Text>
+                              <Text numberOfLines={2} style={s.excerpt}>
+                                {hit.text}
+                              </Text>
+                            </View>
+                            <Text style={s.small}>{hit.page}</Text>
+                          </Pressable>
+                        ) : null,
+                      )}
+                    </View>
+                  ))}
+                  <View style={s.actions}>
+                    <Button icon="listen" onPress={intents.continue}>
+                      带到听讲里继续问
+                    </Button>
+                    <Button
+                      icon="note"
+                      variant="secondary"
+                      onPress={intents.save}
+                    >
+                      存到笔记
+                    </Button>
+                  </View>
+                </>
+              ) : null}
+            </View>
+          )}
+        </ScrollView>
       </Screen>
       <ToastHost toast={state.toast ? { message: state.toast } : null} />
     </View>
@@ -253,6 +265,8 @@ export function AskShelfView({
 }
 const useStyles = makeStyles(t => ({
   root: { flex: 1 },
+  answer: { flex: 1 },
+  answerContent: { flexGrow: 1 },
   grow: { flex: 1, minWidth: 0 },
   pad: { padding: 16, gap: 12 },
   askBorder: {

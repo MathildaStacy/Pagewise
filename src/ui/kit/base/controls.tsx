@@ -20,6 +20,7 @@ import {
   Children,
   cloneElement,
   isValidElement,
+  type ComponentRef,
   useEffect,
   useRef,
   useState,
@@ -577,6 +578,7 @@ export function QuickActions({ items, onPress }: KitProps['QuickActions']) {
 
 export function Composer({
   value,
+  focusRequest,
   onChange,
   placeholder,
   onSend,
@@ -589,6 +591,10 @@ export function Composer({
 }: KitProps['Composer']) {
   const s = useStyles();
   const t = useTokens();
+  const inputRef = useRef<ComponentRef<typeof TextInput>>(null);
+  useEffect(() => {
+    if (focusRequest) inputRef.current?.focus();
+  }, [focusRequest]);
   return (
     <View
       accessibilityRole="none"
@@ -624,6 +630,7 @@ export function Composer({
       ) : null}
       <View style={s.composer}>
         <TextInput
+          ref={inputRef}
           accessibilityLabel={placeholder}
           value={value}
           onChangeText={onChange}

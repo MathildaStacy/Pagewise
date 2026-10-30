@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import {
+  PixelRatio,
   Pressable,
   ScrollView,
   Text,
   TextInput,
   View,
-  useWindowDimensions,
 } from 'react-native';
 import {
   AppBar,
@@ -41,8 +41,7 @@ export function ShelfView({
   const win = t.brand?.kind === 'win11';
   const [filter, setFilter] = useState('all');
   const [grid, setGrid] = useState(false);
-  const { width } = useWindowDimensions();
-  const gridWidth = (width - 56) / 3;
+  const [gridWidth, setGridWidth] = useState<number>();
   const category = (book: ShelfState['books'][number]) =>
     book.category ??
     (book.status.tone === 'accent'
@@ -226,7 +225,18 @@ export function ShelfView({
             {win && !books.length ? (
               <Empty body="这个分类下没有书" />
             ) : grid && win ? (
-              <View style={s.grid}>
+              <View
+                testID="shelf-grid"
+                style={s.grid}
+                onLayout={({ nativeEvent: { layout } }) => {
+                  const scale = PixelRatio.get();
+                  // Three tracks inside this container's padding and gaps.
+                  // Round down so Yoga's pixel rounding cannot wrap track three.
+                  setGridWidth(
+                    Math.floor(((layout.width - 32 - 24) / 3) * scale) / scale,
+                  );
+                }}
+              >
                 {books.map(book => (
                   <Pressable
                     key={book.id}
@@ -513,7 +523,7 @@ const useStyles = makeStyles(t => ({
     paddingTop: 4,
     paddingBottom: 20,
   },
-  gridBook: { gap: 6, alignItems: 'flex-start' },
+  gridBook: { gap: 6, alignItems: 'flex-start', minWidth: 0 },
   gridTitle: {
     ...t.type.caption,
     fontSize: t.type.caption.fontSize + 0.5,

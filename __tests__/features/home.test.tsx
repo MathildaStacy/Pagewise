@@ -1,4 +1,5 @@
 import Renderer, { act } from 'react-test-renderer';
+import { ScrollView, TextInput } from 'react-native';
 import { createTestDemoContainer } from '@app/testing';
 import type { Container } from '@app/container';
 import { useContainer } from '@app/ContainerProvider';
@@ -8,7 +9,8 @@ import { useAppNav } from '@features/nav';
 import { useAskVM, useHomeVM, useWelcomeVM } from '@features/home/useHomeVM';
 import { presentShelf } from '@features/library/presenters';
 import { ShelfView } from '@ui/screens/ShelfView';
-import { SkinProvider, type RichInline } from '@ui/kit';
+import { AskShelfView } from '@ui/screens/AskShelfView';
+import { AppBar, Screen, SkinProvider, type RichInline } from '@ui/kit';
 
 jest.mock('@app/ContainerProvider', () => ({ useContainer: jest.fn() }));
 jest.mock('@features/nav', () => ({ useAppNav: jest.fn() }));
@@ -183,13 +185,47 @@ it('streams the prototype answer, opens its citations, saves a note, and continu
   );
   expect(vm().state.toast).toContain('已保存');
   vm().intents.continue();
-  expect(nav.open).toHaveBeenLastCalledWith(
-    expect.objectContaining({
-      name: 'Study',
-      mode: 'listen',
-      question: 'A* 和 Dijkstra 是什么关系？',
-    }),
-  );
+  expect(nav.open).toHaveBeenLastCalledWith({
+    name: 'Study',
+    bookId: hit.bookId,
+    mode: 'listen',
+    draftQuestion: 'A* 和 Dijkstra 是什么关系？',
+  });
+});
+
+it('keeps the Ask composer and book scopes above the scrolling answer', async () => {
+  const vm = await mount(useAskVM);
+  let r!: Renderer.ReactTestRenderer;
+  await act(async () => {
+    r = Renderer.create(
+      <SkinProvider skinId="win11" scheme="light" reduceMotion>
+        <AskShelfView
+          state={{
+            ...vm().state,
+            asked: '一个问题',
+            answer: '回答',
+            done: true,
+          }}
+          intents={vm().intents}
+        />
+      </SkinProvider>,
+    );
+    renderers.push(r);
+  });
+  const scrolls = r.root.findAllByType(ScrollView);
+  const answer = scrolls.find(node => node.props.testID === 'ask-answer')!;
+  expect(r.root.findByType(Screen).props.scroll).toBeFalsy();
+  expect(answer).toBeDefined();
+  expect(answer.findAllByType(TextInput)).toHaveLength(0);
+  expect(
+    answer.findAllByType(ScrollView).filter(node => node.props.horizontal),
+  ).toHaveLength(0);
+  expect(r.root.findAllByType(TextInput)).toHaveLength(1);
+  expect(scrolls.filter(node => node.props.horizontal)).toHaveLength(1);
+  await act(async () => {
+    answer.props.onScroll({ nativeEvent: { contentOffset: { y: 600 } } });
+  });
+  expect(r.root.findByType(AppBar).props.scrollY).toBe(600);
 });
 
 it('honors the book scope and stops an in-flight answer', async () => {

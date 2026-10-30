@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ComponentRef } from 'react';
 import {
   Animated,
   Easing,
@@ -1011,6 +1011,7 @@ function QuickActions({ items, onPress }: QuickActionsProps) {
 
 function Composer({
   value,
+  focusRequest,
   onChange,
   placeholder,
   onSend,
@@ -1022,6 +1023,10 @@ function Composer({
   onStop,
 }: ComposerProps) {
   const t = useTokens();
+  const inputRef = useRef<ComponentRef<typeof TextInput>>(null);
+  useEffect(() => {
+    if (focusRequest) inputRef.current?.focus();
+  }, [focusRequest]);
   return (
     <View
       accessibilityLabel="提问输入区"
@@ -1149,6 +1154,7 @@ function Composer({
           }
         >
           <TextInput
+            ref={inputRef}
             accessibilityLabel={placeholder}
             value={value}
             onChangeText={onChange}

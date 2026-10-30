@@ -15,6 +15,7 @@ import {
   DoneCard,
   Empty,
   FoldCard,
+  Icon,
   IconButton,
   ModeSwitch,
   Note,
@@ -147,12 +148,22 @@ export function StudyView({
         {brand?.kind === 'win11' ? (
           <View style={s.selectorRow}>
             <ModeSwitch value={state.mode} onChange={intents.setMode} />
-            <Button
-              variant="text"
-              size="sm"
-              label="AI 看到的内容 ›"
-              onPress={intents.openContext}
-            />
+            {state.mode === 'listen' ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="AI 看到的内容"
+                hitSlop={6}
+                onPress={intents.openContext}
+                style={({ pressed }) => [
+                  s.winContext,
+                  pressed && s.winContextPressed,
+                ]}
+              >
+                <View style={s.contextDot} />
+                <Text style={s.winContextLabel}>AI 看到的内容</Text>
+                <Icon name="chev" size={13} color={s.winContextLabel.color} />
+              </Pressable>
+            ) : null}
           </View>
         ) : null}
         {state.mode === 'read' ? (
@@ -254,6 +265,7 @@ export function StudyView({
                 ) : null}
                 <Composer
                   value={comp.value}
+                  focusRequest={comp.focusRequest}
                   onChange={intents.setText}
                   placeholder={
                     brand?.kind === 'win11' && !state.listen.detour
@@ -421,6 +433,26 @@ const useStyles = makeStyles(t => ({
     paddingHorizontal: 16,
     paddingBottom: 8,
     gap: 8,
+  },
+  winContext: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 30,
+    paddingLeft: 10,
+    paddingRight: 8,
+    borderRadius: t.shape.pill,
+    backgroundColor: t.brand?.cardLo,
+    borderWidth: 1,
+    borderColor: t.brand?.stroke,
+  },
+  winContextPressed: { backgroundColor: t.brand?.cardHi },
+  winContextLabel: { ...t.type.caption, color: t.color.ink2 },
+  contextDot: {
+    width: 8,
+    height: 8,
+    borderRadius: t.shape.xs,
+    backgroundColor: t.color.ok,
   },
   listenArea: { flex: 1 },
   dock: {

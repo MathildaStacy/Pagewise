@@ -77,6 +77,7 @@ export type RootStackParams = {
     sectionId?: string;
     blockRef?: string;
     question?: string;
+    draftQuestion?: string;
     stuckId?: number;
   };
   Reader: { bookId: string; sectionId?: string; blockRef?: string };

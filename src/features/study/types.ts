@@ -1,4 +1,10 @@
 import type { ComposerQuote, PageOrigProps, RichDoc } from '@ui/kit';
+import type { StudyOpenOptions } from '@app/study/types';
+
+export interface StudyEntryOptions extends StudyOpenOptions {
+  /** Fill the editable composer and wait for the user to send. */
+  draftQuestion?: string;
+}
 
 export type QuickKey =
   | 'next'
@@ -228,6 +234,7 @@ export interface StudyState {
     }[];
     composer: {
       value: string;
+      focusRequest?: number;
       placeholder: string;
       canSend: boolean;
       streaming: boolean;

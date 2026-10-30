@@ -11,6 +11,7 @@ export type AppRoute =
       sectionId?: string;
       blockRef?: string;
       question?: string;
+      draftQuestion?: string;
       stuckId?: number;
     }
   | { name: 'Reader'; bookId: string; sectionId?: string; blockRef?: string }

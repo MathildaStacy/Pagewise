@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState, type ComponentRef } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -310,24 +310,35 @@ function TabBar({ items, active, onSelect }: KitProps['TabBar']) {
                     root: {
                       width: google ? 64 : 40,
                       height: 32,
-                      borderRadius: 16,
-                      overflow: 'hidden',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor:
-                        google && selected
-                          ? b.secondaryContainer
-                          : 'transparent',
                     },
                   }).root
                 }
               >
-                <Icon
-                  name={item.icon}
-                  filled={selected}
-                  size={b.kind === 'meta' ? 26 : win ? 22 : 24}
-                  color={google && selected ? b.onSecondaryContainer : fg}
-                />
+                <View
+                  style={
+                    StyleSheet.create({
+                      root: {
+                        width: '100%',
+                        height: '100%',
+                        borderRadius: 16,
+                        overflow: 'hidden',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor:
+                          google && selected
+                            ? b.secondaryContainer
+                            : 'transparent',
+                      },
+                    }).root
+                  }
+                >
+                  <Icon
+                    name={item.icon}
+                    filled={selected}
+                    size={b.kind === 'meta' ? 26 : win ? 22 : 24}
+                    color={google && selected ? b.onSecondaryContainer : fg}
+                  />
+                </View>
                 {item.badge != null ? (
                   <Text
                     style={
@@ -341,7 +352,9 @@ function TabBar({ items, active, onSelect }: KitProps['TabBar']) {
                           borderRadius: 10,
                           backgroundColor: t.color.bad,
                           color:
-                            t.scheme === 'dark' && b.kind !== 'meta'
+                            t.scheme === 'dark' && win
+                              ? '#2B0A06'
+                              : t.scheme === 'dark' && google
                               ? t.color.badBg
                               : '#FFFFFF',
                           fontSize: 11,
@@ -566,7 +579,7 @@ function ModeSwitch({ value, onChange }: KitProps['ModeSwitch']) {
         >
           {kind === 'win11' ? (
             <Icon
-              name={key === 'read' ? 'book' : 'teach'}
+              name={key === 'read' ? 'book' : 'listen'}
               size={16}
               color={value === key ? t.color.ink : t.color.ink2}
             />
@@ -808,6 +821,7 @@ function QuickActions({ items, onPress }: KitProps['QuickActions']) {
 }
 function Composer({
   value,
+  focusRequest,
   onChange,
   placeholder,
   onSend,
@@ -825,6 +839,10 @@ function Composer({
     [focused, setFocused] = useState(false),
     meta = b.kind === 'meta',
     win = b.kind === 'win11';
+  const inputRef = useRef<ComponentRef<typeof TextInput>>(null);
+  useEffect(() => {
+    if (focusRequest) inputRef.current?.focus();
+  }, [focusRequest]);
   const mic = (
     <Pressable
       accessibilityRole="button"
@@ -893,6 +911,7 @@ function Composer({
         </Pressable>
       ) : null}
       <TextInput
+        ref={inputRef}
         accessibilityLabel={placeholder}
         placeholder={placeholder}
         placeholderTextColor={t.color.ink2}
@@ -1199,18 +1218,35 @@ function StepProgress({
           {steps.map((step, i) => {
             const current = step.state === 'current',
               done = step.state === 'done',
-              fg = current || done ? t.color.accentInk : t.color.ink2;
+              fg = meta
+                ? current || done
+                  ? t.color.accentInk
+                  : t.color.ink2
+                : current
+                ? b.onSecondaryContainer
+                : done
+                ? t.color.ink
+                : t.color.ink2;
             const circle = (
               <View
                 style={
                   StyleSheet.create({
                     root: {
-                      width: meta ? 46 : 22,
-                      height: meta ? 46 : 22,
+                      width: meta ? 46 : 20,
+                      height: meta ? 46 : 20,
                       borderRadius: 24,
                       alignItems: 'center',
                       justifyContent: 'center',
-                      backgroundColor: done
+                      borderWidth:
+                        !meta && !current && !done && step.state !== 'skipped'
+                          ? 1.5
+                          : 0,
+                      borderColor: fg,
+                      backgroundColor: !meta
+                        ? current
+                          ? b.accentFill
+                          : 'transparent'
+                        : done
                         ? b.accentFill
                         : current
                         ? t.color.accentBg
@@ -1222,8 +1258,10 @@ function StepProgress({
                 {done || step.state === 'skipped' ? (
                   <Icon
                     name={done ? 'check' : 'skip'}
-                    size={meta ? 23 : 15}
-                    color={done ? t.color.onAccent : fg}
+                    size={meta ? 23 : 18}
+                    color={
+                      done ? (meta ? t.color.onAccent : t.color.accent) : fg
+                    }
                   />
                 ) : (
                   <Text
@@ -1231,9 +1269,11 @@ function StepProgress({
                       StyleSheet.create({
                         root: {
                           ...t.type.label,
-                          fontSize: meta ? 17 : 13,
-                          fontWeight: '600',
-                          color: fg,
+                          fontSize: meta ? 17 : 12,
+                          lineHeight: meta ? t.type.label.lineHeight : 14,
+                          includeFontPadding: meta ? undefined : false,
+                          fontWeight: meta ? '600' : '500',
+                          color: !meta && current ? t.color.onAccent : fg,
                         },
                       }).root
                     }
@@ -1256,15 +1296,22 @@ function StepProgress({
                     root: {
                       flex: meta ? 1 : undefined,
                       minWidth: meta ? 76 : undefined,
+                      height: meta ? undefined : 32,
                       flexDirection: meta ? 'column' : 'row',
-                      gap: 5,
+                      gap: meta ? 5 : 8,
                       alignItems: 'center',
-                      padding: meta ? 2 : 8,
-                      borderWidth: meta ? 0 : 1,
-                      borderColor: current ? t.color.accent : t.color.line,
-                      borderRadius: meta ? 0 : 9,
+                      padding: meta ? 2 : 0,
+                      paddingLeft: meta ? undefined : 8,
+                      paddingRight: meta ? undefined : 12,
+                      borderWidth: meta || current || done ? 0 : 1,
+                      borderColor: t.color.line,
+                      borderRadius: meta ? 0 : 8,
                       backgroundColor:
-                        !meta && current ? b.secondaryContainer : 'transparent',
+                        !meta && current
+                          ? b.secondaryContainer
+                          : !meta && done
+                          ? t.color.surfaceAlt
+                          : 'transparent',
                     },
                   }).root
                 }
@@ -1310,9 +1357,14 @@ function StepProgress({
                       root: {
                         ...t.type.caption,
                         color: fg,
-                        fontWeight: current ? '600' : '400',
+                        fontWeight: meta ? (current ? '600' : '400') : '500',
                         maxWidth: meta ? 76 : 180,
-                        fontSize: meta ? 12 : 13,
+                        fontSize: meta ? 12 : 14,
+                        textDecorationLine:
+                          !meta && step.state === 'skipped'
+                            ? 'line-through'
+                            : undefined,
+                        textDecorationColor: t.color.ink3,
                       },
                     }).root
                   }

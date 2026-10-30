@@ -196,7 +196,7 @@ export const googleDark: Tokens = {
     continueStart: '#0842A0',
     continueMid: '#0842A0',
     continueEnd: '#0842A0',
-    continueOverlay: '#3D2A12',
+    continueOverlay: 'rgba(0,0,0,.25)',
     continueInk: '#D3E3FD',
     derive: '#7DD3EC',
     deriveBg: '#0F3540',

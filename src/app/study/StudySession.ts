@@ -214,8 +214,13 @@ export class StudySession implements StudySessionApi {
       !options.question &&
       !options.stuckId
     ) {
-      if (options.mode && options.mode !== this.state.mode)
+      if (options.mode && options.mode !== this.state.mode) {
+        if (options.mode === 'listen' && options.autoStart === false) {
+          this.set({ mode: 'listen' });
+          return this.checkpoint();
+        }
         return this.setMode(options.mode);
+      }
       return Promise.resolve();
     }
     this.opening = this.run(async () => {

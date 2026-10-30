@@ -3,11 +3,7 @@ import { useStore } from 'zustand';
 import { useContainer } from '@app/ContainerProvider';
 import { resolveStudyBlockImage } from '@app/bookImages';
 import { getStudySession } from '@app/study/registry';
-import type {
-  SectionDraft,
-  StudyOpenOptions,
-  StudySessionApi,
-} from '@app/study/types';
+import type { SectionDraft, StudySessionApi } from '@app/study/types';
 import {
   addStudyStuck,
   loadStudyBlock,
@@ -38,6 +34,7 @@ import type {
   Rect,
   ReaderScreenState,
   SectionDoneState,
+  StudyEntryOptions,
   StudyIntents,
   StudyOverlay,
   StudyState,
@@ -78,7 +75,7 @@ function guideText(text: string | null) {
 }
 export function useStudyVM(
   bookId: string,
-  options: StudyOpenOptions = {},
+  options: StudyEntryOptions = {},
   standalone = false,
 ) {
   const c = useContainer(),
@@ -89,6 +86,9 @@ export function useStudyVM(
   );
   const raw = useStore(session.store);
   const [text, setText] = useState(''),
+    [composerFocusRequest, setComposerFocusRequest] = useState<
+      number | undefined
+    >(),
     [overlay, setOverlay] = useState<StudyOverlay | null>(null),
     [toast, setToast] = useState<string | null>(null);
   const [loadedReader, setReader] = useState<ReaderData | null>(null),
@@ -127,6 +127,9 @@ export function useStudyVM(
     anchorTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingRefs = useRef(new Set<number>());
   const mode = standalone ? 'read' : raw.mode;
+  useEffect(() => {
+    if (mode === 'read') setComposerFocusRequest(undefined);
+  }, [mode]);
   const blockTarget =
     readerTarget?.bookId === bookId &&
     readerTarget.blockRef === options.blockRef
@@ -186,6 +189,7 @@ export function useStudyVM(
     sectionId,
     blockRef,
     question,
+    draftQuestion,
     stuckId,
     preserveMain,
     autoStart,
@@ -210,11 +214,16 @@ export function useStudyVM(
         mode: standalone ? 'read' : initialMode,
         sectionId: targetSection,
         blockRef,
-        question,
+        question: draftQuestion === undefined ? question : undefined,
         stuckId,
         preserveMain: standalone || preserveMain,
-        autoStart: standalone ? false : autoStart,
+        autoStart:
+          standalone || draftQuestion !== undefined ? false : autoStart,
       });
+      if (active && !standalone && draftQuestion !== undefined) {
+        setText(draftQuestion);
+        setComposerFocusRequest(request => (request ?? 0) + 1);
+      }
     };
     open().catch(error => {
       if (!active) return;
@@ -236,6 +245,7 @@ export function useStudyVM(
     sectionId,
     blockRef,
     question,
+    draftQuestion,
     stuckId,
     preserveMain,
     autoStart,
@@ -432,6 +442,7 @@ export function useStudyVM(
       quickActions: quickActions(raw),
       composer: {
         value: text,
+        focusRequest: composerFocusRequest,
         placeholder: active ? '在岔路里继续问，或说「回到主线」' : '不懂就问…',
         canSend: !!text.trim() && !raw.busy && !raw.loading,
         streaming: raw.busy,

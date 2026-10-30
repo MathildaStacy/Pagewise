@@ -1249,16 +1249,35 @@ export function BlockView({
 export function PinChip({ label, onPress }: KitProps['PinChip']) {
   const s = useStyles();
   const t = useTokens();
+  const meta = t.brand?.kind === 'meta';
+  const branded = meta || t.brand?.kind === 'google';
+  const content = (
+    <>
+      {meta ? (
+        <View style={s.pinIcon}>
+          <Icon name="pin" color="#4A3200" size={16} />
+        </View>
+      ) : (
+        <Icon name="pin" color={t.color.pin} size={branded ? 18 : 16} />
+      )}
+      <Text
+        numberOfLines={branded ? 1 : undefined}
+        style={[s.caption, s.pinLabel]}
+      >
+        {label}
+      </Text>
+    </>
+  );
   return (
     <Pressable
       onPress={onPress}
-      style={s.pin}
+      style={branded ? s.pinTarget : s.pin}
+      hitSlop={branded ? undefined : 9}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{}}
     >
-      <Icon name="pin" color={t.color.pin} size={16} />
-      <Text style={[s.caption, { color: t.color.pin }]}>{label}</Text>
+      {branded ? <View style={s.pin}>{content}</View> : content}
     </Pressable>
   );
 }
@@ -2045,6 +2064,61 @@ const useStyles = makeStyles(t => ({
     alignItems: 'center',
     alignSelf: 'flex-start',
     gap: 6,
+    ...(t.brand?.kind === 'meta'
+      ? {
+          maxWidth: '100%',
+          paddingVertical: 4,
+          paddingLeft: 4,
+          paddingRight: 14,
+          borderRadius: 18,
+          backgroundColor:
+            t.scheme === 'dark' ? t.color.surfaceAlt : t.color.surfaceFill,
+          gap: 8,
+        }
+      : t.brand?.kind === 'google'
+      ? {
+          maxWidth: '100%',
+          paddingVertical: 6,
+          paddingLeft: 8,
+          paddingRight: 12,
+          borderRadius: 8,
+          gap: 8,
+        }
+      : {}),
+  },
+  pinTarget: {
+    minHeight: 48,
+    minWidth: 48,
+    maxWidth: '100%',
+    alignSelf: 'flex-start',
+    alignItems: 'flex-start',
+    // Absorb the reader pin row's existing gap into the invisible target.
+    paddingBottom: t.space.gap,
+    marginBottom: -t.space.gap,
+  },
+  pinIcon: {
+    width: 28,
+    height: 28,
+    padding: 6,
+    borderRadius: 14,
+    backgroundColor: '#F7B928',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  pinLabel: {
+    color: t.brand?.kind === 'meta' ? t.color.ink : t.color.pin,
+    ...(t.brand?.kind === 'meta' || t.brand?.kind === 'google'
+      ? {
+          fontWeight: t.brand.kind === 'meta' ? '600' : '500',
+          lineHeight:
+            t.brand.kind === 'google'
+              ? t.type.caption.fontSize * (18 / 13)
+              : t.type.caption.lineHeight,
+          minWidth: 0,
+          flexShrink: 1,
+        }
+      : {}),
   },
   readEnd: {
     paddingTop: 22,

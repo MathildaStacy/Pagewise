@@ -1,4 +1,4 @@
-import type { StudyOpenOptions } from '@app/study/types';
+import type { StudyEntryOptions } from './types';
 import { useIsFocused } from '@react-navigation/native';
 import { useSkin } from '@ui/kit';
 import { SkinContext } from '@ui/kit/context';
@@ -10,7 +10,7 @@ import { useLearningActivity } from '@features/home/useHomeVM';
 export function StudyScreen({
   bookId,
   ...options
-}: { bookId: string } & StudyOpenOptions) {
+}: { bookId: string } & StudyEntryOptions) {
   const vm = useStudyVM(bookId, options);
   const skin = useSkin();
   const focused = useIsFocused();

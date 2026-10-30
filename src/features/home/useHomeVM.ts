@@ -424,9 +424,8 @@ export function useAskVM(): { state: AskState; intents: AskIntents } {
           nav.open({
             name: 'Study',
             bookId: hit.bookId,
-            sectionId: hit.sectionId,
             mode: 'listen',
-            question: state.asked,
+            draftQuestion: state.asked,
           });
       },
       save: () => {

@@ -15,6 +15,7 @@ export const iconNames = [
   'mic',
   'book',
   'bookOpen',
+  'listen',
   'teach',
   'derive',
   'spark',
@@ -160,6 +161,7 @@ export interface ComposerQuote {
 }
 export interface ComposerProps {
   value: string;
+  focusRequest?: number;
   onChange(value: string): void;
   placeholder: string;
   onSend(): void;

@@ -103,49 +103,65 @@ export function LearningStatsView({
             {Array.from({ length: offset }, (_, i) => (
               <View key={`pad${i}`} style={s.cellSlot} />
             ))}
-            {stats.month.map((minutes, i) => (
-              <View
-                key={i}
-                accessibilityLabel={`${date.getMonth() + 1} 月 ${
-                  i + 1
-                } 日 · ${minutes} 分钟`}
-                style={s.cellSlot}
-              >
-                <Gradient
-                  colors={
-                    t.brand?.heat
-                      ? t.brand.heat[
-                          minutes >= 30
-                            ? 3
-                            : minutes >= 18
-                            ? 2
-                            : minutes > 0
-                            ? 1
-                            : 0
-                        ]
-                      : minutes >= 30
-                      ? [t.color.brandEnd, t.brand?.ai[2] ?? t.color.detour]
-                      : [
-                          minutes >= 18
-                            ? t.color.detour
-                            : minutes > 0
-                            ? t.color.accentBg
-                            : t.color.line,
-                          minutes >= 18
-                            ? t.color.detour
-                            : minutes > 0
-                            ? t.color.accentBg
-                            : t.color.line,
-                        ]
-                  }
-                  style={[s.cell, i + 1 === date.getDate() && s.today]}
+            {stats.month.map((minutes, i) => {
+              const future =
+                t.brand?.kind === 'win11' && i + 1 > date.getDate();
+              return (
+                <View
+                  key={i}
+                  accessibilityLabel={`${date.getMonth() + 1} 月 ${
+                    i + 1
+                  } 日 · ${minutes} 分钟`}
+                  style={s.cellSlot}
                 >
-                  <Text style={[s.cellText, minutes >= 18 && s.cellTextOn]}>
-                    {i + 1}
-                  </Text>
-                </Gradient>
-              </View>
-            ))}
+                  <Gradient
+                    colors={
+                      future
+                        ? ['transparent', 'transparent']
+                        : t.brand?.heat
+                        ? t.brand.heat[
+                            minutes >= 30
+                              ? 3
+                              : minutes >= 18
+                              ? 2
+                              : minutes > 0
+                              ? 1
+                              : 0
+                          ]
+                        : minutes >= 30
+                        ? [t.color.brandEnd, t.brand?.ai[2] ?? t.color.detour]
+                        : [
+                            minutes >= 18
+                              ? t.color.detour
+                              : minutes > 0
+                              ? t.color.accentBg
+                              : t.color.line,
+                            minutes >= 18
+                              ? t.color.detour
+                              : minutes > 0
+                              ? t.color.accentBg
+                              : t.color.line,
+                          ]
+                    }
+                    style={[
+                      s.cell,
+                      future && s.futureCell,
+                      i + 1 === date.getDate() && s.today,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        s.cellText,
+                        !future && minutes >= 18 && s.cellTextOn,
+                        future && s.futureText,
+                      ]}
+                    >
+                      {i + 1}
+                    </Text>
+                  </Gradient>
+                </View>
+              );
+            })}
           </View>
           <View style={s.legend}>
             <Text style={s.legendText}>少</Text>
@@ -297,8 +313,10 @@ const useStyles = makeStyles(t => ({
     justifyContent: 'center',
   },
   today: { borderWidth: 2, borderColor: t.color.accent },
+  futureCell: { borderWidth: 1, borderColor: t.color.line },
   cellText: { ...t.type.caption, color: t.color.ink2 },
   cellTextOn: { color: t.color.onAccent },
+  futureText: { color: t.color.ink3 },
   legend: {
     flexDirection: 'row',
     alignItems: 'center',
