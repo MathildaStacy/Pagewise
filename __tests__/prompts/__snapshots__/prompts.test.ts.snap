@@ -143,7 +143,7 @@ exports[`teach prompt preserves citation, step, tool and preference contracts 1`
 
 exports[`translate prompt has parseable demo task response 1`] = `
 "<task name="translate">
-中英互译 input.block.text 指定的原文，术语与map中的书的地图保持一致，保留公式，不增添解释。answer 必须是非空字符串，仅包含译文。
+将 input.block.text 翻译为 input.target_language 指定的语言（未指定时中英互译），术语与map中的书的地图保持一致，保留段落、公式、代码和引用，不增添解释，不省略原文。answer 必须是非空字符串，仅包含译文。
 只输出一个合法JSON对象，必须包含schema列出的全部字段，字段类型严格匹配，不加代码围栏、前言、结语或额外字段。schema：{"answer":"…"}
 </task>
 <input>

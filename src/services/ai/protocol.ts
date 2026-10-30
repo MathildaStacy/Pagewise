@@ -482,6 +482,7 @@ export function buildRequest(input: RequestInput): BuiltRequest {
     // 有些接口完全不接收 function/tool 消息。切过去时保留可读内容，避免历史工具块导致 400。
     input = {
       ...input,
+      tools: [],
       history: input.history.map(m => ({
         ...m,
         raw: null,

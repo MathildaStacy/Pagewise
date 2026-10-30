@@ -33,6 +33,8 @@ import { SkinProvider } from '@ui/kit';
 import { StudyScreen } from '@features/study/StudyScreens';
 jest.mock('@react-navigation/native', () => ({
   useIsFocused: jest.fn(() => true),
+  useFocusEffect: (effect: () => void) =>
+    require('react').useEffect(effect, [effect]),
 }));
 let c: Container, renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 const nav: AppNav = {
@@ -97,6 +99,67 @@ it('opens the Win11 add menu, uses an existing stuck point, and switches to sour
   expect(vm().state.mode).toBe('read');
   expect(vm().state.toast).toBe('点一段原文，选「问 AI」');
 });
+
+it('starts a blank conversation from the independent reader without sending an automatic explanation', async () => {
+  const stream = jest.spyOn(c.ai, 'stream');
+  const vm = await mount(() => useReaderVM('aima', '3.4.2'));
+  await act(() => vm().intents.newConversation?.());
+  const conversation = getStudySession(c, 'aima').store.getState()
+    .conversation!;
+  expect(conversation.section_id).toBe('3.4.2');
+  expect(nav.replace).toHaveBeenLastCalledWith({
+    name: 'Study',
+    bookId: 'aima',
+    conversationId: conversation.id,
+    focusComposer: true,
+  });
+  expect(stream).not.toHaveBeenCalled();
+});
+
+it('uses the chosen model, reasoning effort and search for explanation and translation requests', async () => {
+  const complete = jest.spyOn(c.ai, 'complete');
+  const vm = await mount(() => useReaderVM('aima', '3.5.2'));
+  const model = vm().state.aiOptions!.models.find(item =>
+    /haiku/.test(item.model),
+  )!;
+  await act(() =>
+    vm().intents.setAiOptions?.({
+      providerId: model.providerId,
+      model: model.model,
+      effort: 'high',
+      search: true,
+    }),
+  );
+  const selected = vm().state.aiOptions!.config!;
+  expect(selected).toMatchObject({
+    model: model.model,
+    effort: 'high',
+    search: true,
+  });
+  const block = vm().state.read.items.find(
+    item => item.kind === 'block' && item.type === 'text',
+  )!;
+  if (block.kind !== 'block') throw new Error('missing block');
+  await act(() =>
+    vm().intents.pressBlock(block.ref, { x: 0, y: 0, w: 100, h: 100 }),
+  );
+  await act(() => vm().intents.menuAction('explain'));
+  expect(complete.mock.calls.at(-1)![1]).toMatchObject({
+    config: selected,
+    noTools: false,
+  });
+  await act(() => vm().intents.menuAction('translate'));
+  expect(complete.mock.calls.at(-1)![1]).toMatchObject({
+    config: selected,
+    noTools: false,
+  });
+  await act(() => vm().intents.setAiOptions?.({ search: false }));
+  await act(() => vm().intents.overlayAction('regenerate'));
+  expect(complete.mock.calls.at(-1)![1]).toMatchObject({
+    config: { ...selected, search: false },
+    noTools: true,
+  });
+});
 it.each([false, true])(
   'prefills and focuses a shelf question without sending or starting AI (warm session: %s)',
   async warm => {
@@ -144,7 +207,11 @@ it.each([false, true])(
     expect(focus).toHaveBeenCalledTimes(1);
     expect(stream).not.toHaveBeenCalled();
     expect(complete).not.toHaveBeenCalled();
-    expect(session.store.getState().messages).toEqual(before);
+    expect(
+      session.store
+        .getState()
+        .messages.map(({ conversation_id: _conversation, ...m }) => m),
+    ).toEqual(before.map(({ conversation_id: _conversation, ...m }) => m));
     expect(session.store.getState().main).toEqual({
       sectionId: previous.main_section,
       part: previous.main_part,

@@ -112,6 +112,30 @@ it('presents ready, studying, parsing and paused states using actual library rec
   expect(presented.continueCard?.stepLabel).toBe('第 2/4 步');
   expect(presented.continueCard?.recap).toContain('上次 3 天前');
 });
+
+it('shows all conversations on the shelf home with book/chapter ownership and opens the selected conversation', async () => {
+  const item = await c.repos.conversations.create(
+    'aima',
+    '3.5.2',
+    '重新理解 A*',
+  );
+  const vm = await mount(useShelfVM);
+  expect(vm().state.conversations).toMatchObject([
+    {
+      id: item.id,
+      title: '重新理解 A*',
+      subtitle: expect.stringContaining('人工智能：现代方法'),
+    },
+  ]);
+  expect(vm().state.conversations?.[0].subtitle).toContain('3.5.2');
+  vm().intents.openConversation(item.id);
+  expect(nav.open).toHaveBeenLastCalledWith({
+    name: 'Study',
+    bookId: 'aima',
+    sectionId: '3.5.2',
+    conversationId: item.id,
+  });
+});
 it('bounds the map check notice for a long book while retaining per-row flags', async () => {
   const record = await loadBookMap(c, 'aima');
   const section = record.sections.find(value => value.is_leaf)!;

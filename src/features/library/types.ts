@@ -18,6 +18,7 @@ export interface ShelfBook {
   progress?: number;
 }
 export interface ShelfState extends PageState {
+  conversations?: ConversationSummary[];
   demo: boolean;
   continueCard: null | {
     bookId: string;
@@ -51,6 +52,7 @@ export interface ShelfState extends PageState {
       };
 }
 export interface ShelfIntents {
+  openConversation?(id: number): void;
   refresh(): void;
   openContinue(): void;
   openBook(id: string): void;
@@ -60,6 +62,13 @@ export interface ShelfIntents {
   closeOverlay(): void;
   pickRecent(key: string): void;
   pickOther(): void;
+}
+export interface ConversationSummary {
+  id: number;
+  bookId: string;
+  sectionId: string;
+  title: string;
+  subtitle: string;
 }
 export interface MapNode {
   id: string;

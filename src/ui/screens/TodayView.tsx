@@ -1,4 +1,5 @@
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { ConversationList } from './ConversationList';
 import {
   AppBar,
   Button,
@@ -325,6 +326,10 @@ export function TodayView({
             </SettingsGroup>
           </>
         ) : null}
+        <ConversationList
+          items={state.conversations}
+          onOpen={intents.openConversation}
+        />
       </Screen>
       <ShelfOverlays {...library} />
       <ToastHost

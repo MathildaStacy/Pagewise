@@ -18,6 +18,8 @@ import {
 import { pageRangeLabel, parseBlockRef } from '@core/ids';
 import type { Block, Section } from '@core/types';
 import { useAppNav } from '@features/nav';
+import { useAiOptions } from '@features/settings/useAiOptions';
+import { openExternalSource } from '@app/usecases/aiOptions';
 import {
   blockDoc,
   blockPage,
@@ -86,6 +88,9 @@ export function useStudyVM(
     [c, bookId],
   );
   const raw = useStore(session.store);
+  const aiOptions = useAiOptions(raw.config);
+  const explanationController = useRef<AbortController | null>(null);
+  useEffect(() => () => explanationController.current?.abort(), []);
   const [text, setText] = useState(''),
     [composerFocusRequest, setComposerFocusRequest] = useState<
       number | undefined
@@ -195,6 +200,7 @@ export function useStudyVM(
     stuckId,
     preserveMain,
     autoStart,
+    conversationId,
   } = options;
   useEffect(() => {
     let active = true;
@@ -213,6 +219,7 @@ export function useStudyVM(
       }
       if (!active) return;
       await session.open({
+        conversationId,
         mode: standalone ? 'read' : initialMode,
         sectionId: targetSection,
         blockRef,
@@ -220,7 +227,10 @@ export function useStudyVM(
         stuckId,
         preserveMain: standalone || preserveMain,
         autoStart:
-          standalone || draftQuestion !== undefined || focusComposer
+          standalone ||
+          draftQuestion !== undefined ||
+          focusComposer ||
+          conversationId !== undefined
             ? false
             : autoStart,
       });
@@ -255,6 +265,7 @@ export function useStudyVM(
     stuckId,
     preserveMain,
     autoStart,
+    conversationId,
     fail,
   ]);
   const refreshReader = useCallback(() => {
@@ -409,6 +420,8 @@ export function useStudyVM(
     );
   })();
   const state: StudyState = {
+    aiOptions: aiOptions.state,
+    conversationTitle: raw.conversation?.title,
     header: {
       title:
         mode === 'read'
@@ -465,6 +478,7 @@ export function useStudyVM(
       busy: raw.busy,
     },
     read: {
+      canTranslate: Boolean(reader?.blocks.length),
       view: raw.readerView,
       hint:
         readSection?.status === 'done'
@@ -547,9 +561,110 @@ export function useStudyVM(
     return true;
   };
   const closeOverlay = () => {
+    explanationController.current?.abort();
     explainRequest.current++;
     setOverlay(null);
     setSelection(null);
+  };
+  const startTranslation = (refresh = false) => {
+    if (!readerId) return;
+    explanationController.current?.abort();
+    const controller = new AbortController();
+    explanationController.current = controller;
+    setOverlay({
+      kind: 'sectionTranslation',
+      sectionId: readerId,
+      answer: null,
+      streaming: true,
+      subtitle: sectionLabel(readSection) + ' · 简体中文',
+    });
+    session
+      .translateSection(
+        readerId,
+        controller.signal,
+        aiOptions.state.config ?? undefined,
+        refresh,
+      )
+      .then(answer => {
+        if (mounted.current && !controller.signal.aborted)
+          setOverlay(current =>
+            current?.kind === 'sectionTranslation' &&
+            current.sectionId === readerId
+              ? {
+                  ...current,
+                  streaming: false,
+                  answer: messageDoc(answer, [], new Map(), raw.book, readerId),
+                }
+              : current,
+          );
+      })
+      .catch(error => {
+        if (mounted.current && !controller.signal.aborted)
+          setOverlay(current =>
+            current?.kind === 'sectionTranslation'
+              ? { ...current, streaming: false, error: errorText(error) }
+              : current,
+          );
+      });
+  };
+  const openConversations = () => {
+    c.repos.conversations
+      .list(
+        bookId,
+        mode === 'read' ? readerId ?? raw.main.sectionId : raw.main.sectionId,
+      )
+      .then(items =>
+        setOverlay({
+          kind: 'menu',
+          title: '本节对话',
+          rows: [
+            {
+              key: 'newConversation',
+              title: '新增对话',
+              sub: '从本节开始一段独立对话',
+            },
+            ...items.map(item => ({
+              key: 'conversation:' + item.id,
+              title:
+                (item.id === raw.conversation?.id ? '当前 · ' : '') +
+                item.title,
+              sub: `${item.message_count} 条消息 · ${item.updated_at.slice(
+                0,
+                10,
+              )}`,
+            })),
+          ],
+        }),
+      )
+      .catch(fail);
+  };
+  const newConversation = () => {
+    if (!guard()) return;
+    closeOverlay();
+    run(
+      session
+        .newConversation(mode === 'read' ? readerId ?? undefined : undefined)
+        .then(() => {
+          const next = session.store.getState();
+          if (
+            next.error ||
+            !next.conversation ||
+            next.conversation.id === raw.conversation?.id
+          )
+            return;
+          setText('');
+          setExpanded(new Set());
+          setHistory(false);
+          setComposerFocusRequest(request => (request ?? 0) + 1);
+          if (standalone)
+            nav.replace({
+              name: 'Study',
+              bookId,
+              conversationId: next.conversation.id,
+              focusComposer: true,
+            });
+        }),
+    );
   };
   const finish = () => {
     if (!guard()) return;
@@ -649,7 +764,11 @@ export function useStudyVM(
     }
   };
   const menuAction = (key: string) => {
-    const seq = selection?.seq;
+    const seq =
+      selection?.seq ??
+      (overlay?.kind === 'explain' || overlay?.kind === 'translate'
+        ? overlay.seq
+        : undefined);
     if (seq === undefined) return;
     const block = blocks.get(seq);
     if (!block) return;
@@ -681,18 +800,30 @@ export function useStudyVM(
     }
     if (key !== 'explain' && key !== 'translate') return;
     const request = ++explainRequest.current;
+    explanationController.current?.abort();
+    const controller = new AbortController();
+    explanationController.current = controller;
     setOverlay({
       kind: key,
       seq,
       quote: blockDoc(block, raw.book),
       answer: null,
       streaming: true,
-      subtitle: `${blockPage(block, raw.book)} · 整理模型`,
+      subtitle: blockPage(block, raw.book),
     });
     session
-      .explainBlock(seq, key)
+      .explainBlock(
+        seq,
+        key,
+        controller.signal,
+        aiOptions.state.config ?? undefined,
+      )
       .then(answer => {
-        if (mounted.current && explainRequest.current === request)
+        if (
+          mounted.current &&
+          !controller.signal.aborted &&
+          explainRequest.current === request
+        )
           setOverlay(current =>
             current &&
             (current.kind === 'explain' || current.kind === 'translate')
@@ -711,7 +842,11 @@ export function useStudyVM(
           );
       })
       .catch(error => {
-        if (mounted.current && explainRequest.current === request)
+        if (
+          mounted.current &&
+          !controller.signal.aborted &&
+          explainRequest.current === request
+        )
           setOverlay(current =>
             current &&
             (current.kind === 'explain' || current.kind === 'translate')
@@ -765,6 +900,14 @@ export function useStudyVM(
       note: 'AI 只能引用本轮已读取的原文。你问到别的小节时，它会先读取，再回答。预计值与服务返回的实际用量可能不同。',
     });
   const intents: StudyIntents = {
+    openSource: url => run(openExternalSource(url)),
+    setAiOptions: patch => {
+      const config = aiOptions.patch(patch);
+      if (config) run(session.setConfig(config));
+    },
+    openConversations,
+    newConversation,
+    translateSection: startTranslation,
     back: () =>
       standalone ? nav.back() : nav.replace({ name: 'BookMap', bookId }),
     setMode,
@@ -794,6 +937,16 @@ export function useStudyVM(
       setOverlay({
         kind: 'menu',
         rows: [
+          {
+            key: 'conversations',
+            title: '本节对话',
+            sub: '查看和切换本节的独立对话',
+          },
+          {
+            key: 'newConversation',
+            title: '新增对话',
+            sub: '保留当前记录，开始新的对话',
+          },
           { key: 'map', title: '书的地图', sub: '全书目录、进度和每节状态' },
           { key: 'notes', title: '本节笔记', sub: '摘要、问答、卡点、高亮' },
           { key: 'context', title: 'AI 看到的内容', sub: '本轮上下文和 token' },
@@ -802,7 +955,21 @@ export function useStudyVM(
       }),
     menuSelect: key => {
       setOverlay(null);
-      if (key === 'map') nav.open({ name: 'BookMap', bookId });
+      if (key === 'conversations') openConversations();
+      else if (key === 'newConversation') newConversation();
+      else if (key.startsWith('conversation:')) {
+        if (!guard()) return;
+        const id = Number(key.slice('conversation:'.length));
+        run(
+          session.selectConversation(id).then(() => {
+            setText('');
+            setExpanded(new Set());
+            setHistory(false);
+            if (standalone)
+              nav.replace({ name: 'Study', bookId, conversationId: id });
+          }),
+        );
+      } else if (key === 'map') nav.open({ name: 'BookMap', bookId });
       else if (key === 'notes')
         nav.open({
           name: 'NoteDetail',
@@ -1005,6 +1172,12 @@ export function useStudyVM(
     overlayAction: key => {
       const shown = overlay;
       if (!shown) return;
+      if (key === 'regenerate') {
+        if (shown.kind === 'sectionTranslation') startTranslation(true);
+        else if (shown.kind === 'explain' || shown.kind === 'translate')
+          menuAction(shown.kind);
+        return;
+      }
       if (key === 'close') {
         closeOverlay();
         return;
@@ -1139,6 +1312,7 @@ export function useReaderVM(
 ) {
   const vm = useStudyVM(bookId, { sectionId, blockRef }, true);
   const state: ReaderScreenState = {
+    aiOptions: vm.state.aiOptions,
     header: vm.state.header,
     read: vm.state.read,
     overlay: vm.state.overlay,

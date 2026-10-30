@@ -10,6 +10,7 @@ import type { ParsedResponse } from '@services/ai/protocol';
 import type { Part } from '@services/ai/types';
 import { AiError } from '@services/ai/http';
 import { rateReviewCard } from '@app/usecases/review';
+import { loadHome } from '@app/usecases/home';
 
 let c: Container, session: StudySession;
 const demo = createDemoGateway({ delayMs: 0 });
@@ -63,6 +64,76 @@ const cards = () =>
   state()
     .messages.filter(m => m.kind === 'card')
     .map(m => ({ message: m, card: parseStudyCard(m.content) }));
+
+it('isolates chapter conversations, restores their progress and config, and reopens the selected conversation', async () => {
+  const ai = scripted([text('第一段对话的回答'), text('第二段对话的回答')]);
+  await setup(ai);
+  const first = state().conversation!.id;
+  const config = { ...state().config!, effort: 'high' as const, search: true };
+  await session.setConfig(config);
+  await session.send('第一段对话的独有问题');
+  const original = state().messages;
+  const originalPlan = state().plan;
+  await session.newConversation();
+  const second = state().conversation!.id;
+  expect(second).not.toBe(first);
+  expect(state().messages).toEqual([]);
+  expect(state().main.step).toBe(0);
+  expect(state().plan?.steps.map(step => step.status)).toEqual([
+    'current',
+    'todo',
+    'todo',
+    'todo',
+  ]);
+  expect(state().config?.search).toBe(false);
+  expect(ai.stream).toHaveBeenCalledTimes(1);
+  await session.send('第二段对话的独有问题');
+  const request = jest.mocked(ai.stream).mock.calls.at(-1)![1];
+  expect(JSON.stringify(request.history)).toContain('第二段对话的独有问题');
+  expect(JSON.stringify(request.history)).not.toContain('第一段对话的独有问题');
+  expect(JSON.stringify(request.history)).not.toContain('第一段对话的回答');
+  expect(state().messages.every(item => item.conversation_id === second)).toBe(
+    true,
+  );
+  expect(
+    await c.repos.messages.thread('aima', '3.5.2', { conversation_id: first }),
+  ).toEqual(original);
+  await session.selectConversation(first);
+  expect(state().messages).toEqual(original);
+  expect(state().main.step).toBe(1);
+  expect(state().plan).toEqual(originalPlan);
+  expect(state().config).toEqual(config);
+  expect(ai.stream).toHaveBeenCalledTimes(2);
+  await session.dispose();
+  session = new StudySession(c, 'aima');
+  await session.open({ autoStart: false });
+  expect(state().conversation?.id).toBe(first);
+  expect(state().messages).toEqual(original);
+  await session.open({ conversationId: second });
+  expect(state().conversation?.id).toBe(second);
+  expect(state().main.step).toBe(0);
+  expect(ai.stream).toHaveBeenCalledTimes(2);
+});
+
+it('lists conversations with their own book and chapter, and opens a conversation in its saved chapter', async () => {
+  await setup(scripted([]));
+  const original = state().conversation!.id;
+  await session.newConversation('3.4.2');
+  const other = state().conversation!.id;
+  expect(
+    (await c.repos.conversations.list('aima', '3.4.2')).map(item => item.id),
+  ).toEqual([other]);
+  const all = (await loadHome(c)).conversations;
+  expect(all.find(item => item.id === original)).toMatchObject({
+    book_id: 'aima',
+    section_id: '3.5.2',
+    book_title: '人工智能：现代方法（第4版）',
+    section_title: expect.stringContaining('A*'),
+  });
+  await session.open({ conversationId: original });
+  expect(state().main.sectionId).toBe('3.5.2');
+  expect(state().conversation?.id).toBe(original);
+});
 afterEach(async () => {
   if (session) await session.dispose();
   if (c) await c.close();
@@ -603,6 +674,7 @@ it('compresses old dialogue before teaching and keeps the current question exact
     step_no: 1,
     kind: 'assistant',
     content: '旧'.repeat(26000),
+    conversation_id: state().conversation!.id,
     created_at: c.clock.now().toISOString(),
   });
   await session.dispose();
@@ -691,7 +763,11 @@ it('persists a skipped final quiz without grading or moving the main pointer', a
 
 it('pairs an unanswered quiz before opening a review-card question in the same section', async () => {
   const ai = scripted([
-    call('show_quiz', { question: '选择', options: ['甲', '乙', '丙'], answer: 0 }),
+    call('show_quiz', {
+      question: '选择',
+      options: ['甲', '乙', '丙'],
+      answer: 0,
+    }),
     text('这张卡的解释'),
   ]);
   await setup(ai);
@@ -836,6 +912,7 @@ it('retries a failed context summary without appending the same question again',
     step_no: 1,
     kind: 'assistant',
     content: '旧'.repeat(26000),
+    conversation_id: state().conversation!.id,
     created_at: c.clock.now().toISOString(),
   });
   await session.dispose();

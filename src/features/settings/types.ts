@@ -1,4 +1,8 @@
 import type { ServiceForm, TeachPrefs } from '@app/usecases/settings';
+export type {
+  AiOptionsState,
+  ConversationConfig,
+} from '@app/usecases/aiOptions';
 export type { TeachPrefs } from '@app/usecases/settings';
 export interface SettingStatus {
   loading: boolean;

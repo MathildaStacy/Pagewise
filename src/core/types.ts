@@ -209,6 +209,7 @@ export interface DetourFrame {
 }
 export type StudyPhase = 'idle' | 'planning' | 'teaching' | 'quiz' | 'ready';
 export interface StudyState {
+  conversation_id?: number | null;
   book_id: string;
   main_section: string | null;
   main_part: number;
@@ -240,10 +241,27 @@ export interface Detour {
 export type DetourInsert = InsertRecord<Detour, 'id'>;
 
 export type MessageKind = 'user' | 'assistant' | 'tool' | 'card';
+export interface StudyConversation {
+  id: number;
+  book_id: string;
+  section_id: string;
+  title: string;
+  checkpoint: JsonValue | null;
+  config: JsonValue | null;
+  created_at: ISODateTime;
+  updated_at: ISODateTime;
+}
+export interface ConversationListItem extends StudyConversation {
+  book_title: string;
+  section_title: string;
+  message_count: number;
+  preview: string;
+}
 export interface Message {
   id: number;
   book_id: string;
   section_id: string;
+  conversation_id?: number | null;
   part_no: number | null;
   step_no: number | null;
   kind: MessageKind;

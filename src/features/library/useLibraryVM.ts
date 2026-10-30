@@ -8,6 +8,7 @@ import {
   loadParseProgress,
   loadSection,
   loadShelf,
+  loadLibraryConversations,
   openLibraryBook,
   searchBook,
   splitMapSection,
@@ -63,12 +64,19 @@ export function useShelfVM() {
   });
   const mounted = useRef(true);
   const refresh = useCallback(() => {
-    loadShelf(c)
-      .then(records => {
+    Promise.all([loadShelf(c), loadLibraryConversations(c)])
+      .then(([records, conversations]) => {
         if (mounted.current)
           setState(s => ({
             ...s,
             ...presentShelf(records, c.clock.now(), c.mode === 'demo'),
+            conversations: conversations.map(item => ({
+              id: item.id,
+              bookId: item.book_id,
+              sectionId: item.section_id,
+              title: item.title,
+              subtitle: `${item.book_title} · ${item.section_title} · ${item.message_count} 条消息`,
+            })),
             loading: false,
             error: null,
           }));
@@ -138,6 +146,18 @@ export function useShelfVM() {
   return {
     state,
     intents: {
+      openConversation: (id: number) => {
+        const item = state.conversations?.find(
+          conversation => conversation.id === id,
+        );
+        if (item)
+          nav.open({
+            name: 'Study',
+            bookId: item.bookId,
+            sectionId: item.sectionId,
+            conversationId: id,
+          });
+      },
       refresh,
       openBook,
       openContinue: () => {

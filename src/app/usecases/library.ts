@@ -42,6 +42,8 @@ export async function loadShelf(c: Container) {
   );
 }
 export type ShelfRecord = Awaited<ReturnType<typeof loadShelf>>[number];
+export const loadLibraryConversations = (c: Container) =>
+  c.repos.conversations.list();
 export async function openLibraryBook(c: Container, id: string) {
   const book = await c.repos.books.get(id);
   if (!book) throw new Error('这本书已经不在书架上了');

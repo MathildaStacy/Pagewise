@@ -13,6 +13,7 @@ import { createUsageRepo } from './usage';
 import { createSettingsRepo } from './settings';
 import { createMathRepo } from './math';
 import { createDraftsRepo } from './drafts';
+import { createConversationsRepo } from './conversations';
 
 /** Recreate this collection with the transaction Db inside an atomic use case. */
 export function createRepos(db: Db, now = () => new Date().toISOString()) {
@@ -24,6 +25,7 @@ export function createRepos(db: Db, now = () => new Date().toISOString()) {
     plans: createPlansRepo(db),
     study: createStudyRepo(db),
     messages: createMessagesRepo(db),
+    conversations: createConversationsRepo(db, now),
     detours: createDetoursRepo(db, now),
     notes: createNotesRepo(db, now),
     cards: createCardsRepo(db, now),

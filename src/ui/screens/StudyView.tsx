@@ -1,10 +1,5 @@
 import { memo, useEffect, useRef, useState } from 'react';
-import {
-  FlatList,
-  Pressable,
-  Text,
-  View,
-} from 'react-native';
+import { FlatList, Pressable, Text, View } from 'react-native';
 import {
   AiMessage,
   AppBar,
@@ -42,6 +37,7 @@ import type {
   ThreadItem,
 } from '@features/study/types';
 import { ReaderContent, StudyOverlays } from './ReaderView';
+import { AiOptionsControl } from './AiOptionsControl';
 export function StudyView({
   state,
   intents,
@@ -165,6 +161,31 @@ export function StudyView({
             ) : null}
           </View>
         ) : null}
+        <View style={s.conversations}>
+          <Button
+            variant="text"
+            onPress={() => intents.openConversations?.()}
+            label="本节对话"
+          />
+          <Text numberOfLines={1} style={s.conversationTitle}>
+            {state.conversationTitle}
+          </Text>
+          {state.mode === 'read' ? (
+            <Button
+              variant="text"
+              label="翻译本节"
+              disabled={!state.read.canTranslate}
+              onPress={() => intents.translateSection?.()}
+            />
+          ) : null}
+          <Button
+            variant="text"
+            icon="add"
+            onPress={() => intents.newConversation?.()}
+            disabled={state.listen.busy}
+            label="新对话"
+          />
+        </View>
         {state.mode === 'read' ? (
           <ReaderContent state={state.read} intents={intents} />
         ) : (
@@ -249,6 +270,11 @@ export function StudyView({
                 pointerEvents="box-none"
               >
                 {floatingChrome ? <BottomFade /> : null}
+                <AiOptionsControl
+                  state={state.aiOptions}
+                  onChange={intents.setAiOptions}
+                  disabled={state.listen.busy}
+                />
                 {state.listen.quickActions.length ? (
                   <QuickActions
                     items={state.listen.quickActions.map(item =>
@@ -288,7 +314,11 @@ export function StudyView({
           </>
         )}
       </View>
-      <StudyOverlays overlay={state.overlay} intents={intents} />
+      <StudyOverlays
+        overlay={state.overlay}
+        intents={intents}
+        aiOptions={state.aiOptions}
+      />
       <ToastHost toast={state.toast ? { message: state.toast } : null} />
     </Screen>
   );
@@ -334,13 +364,28 @@ function ThreadCard({
       );
     case 'ai':
       return (
-        <AiMessage
-          doc={item.doc}
-          streaming={item.streaming}
-          detour={item.detour && !inRun}
-          onCite={intents.pressCite}
-          onFigure={intents.pressFigure}
-        />
+        <View>
+          <AiMessage
+            doc={item.doc}
+            streaming={item.streaming}
+            detour={item.detour && !inRun}
+            onCite={intents.pressCite}
+            onFigure={intents.pressFigure}
+          />
+          {item.sources?.length ? (
+            <View style={s.sources}>
+              <Text style={s.hint}>互联网来源</Text>
+              {item.sources.map(source => (
+                <Button
+                  key={source.url}
+                  variant="text"
+                  label={source.title || source.url}
+                  onPress={() => intents.openSource?.(source.url)}
+                />
+              ))}
+            </View>
+          ) : null}
+        </View>
       );
     case 'tools':
       return <ToolSteps lines={item.lines} detour={item.detour} />;
@@ -447,6 +492,14 @@ function ThreadCard({
 }
 const ThreadRow = memo(ThreadCard);
 const useStyles = makeStyles(t => ({
+  sources: { gap: t.space.gap, paddingTop: t.space.gap },
+  conversations: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: t.space.gap,
+    gap: t.space.gap,
+  },
+  conversationTitle: { ...t.type.caption, color: t.color.ink2, flex: 1 },
   root: { flex: 1 },
   selectorRow: {
     flexDirection: 'row',

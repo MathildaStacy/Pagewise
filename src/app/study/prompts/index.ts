@@ -58,7 +58,7 @@ const tasks = {
     '{"answer":"…"}',
   ],
   translate: [
-    '中英互译 input.block.text 指定的原文，术语与map中的书的地图保持一致，保留公式，不增添解释。answer 必须是非空字符串，仅包含译文。',
+    '将 input.block.text 翻译为 input.target_language 指定的语言（未指定时中英互译），术语与map中的书的地图保持一致，保留段落、公式、代码和引用，不增添解释，不省略原文。answer 必须是非空字符串，仅包含译文。',
     '{"answer":"…"}',
   ],
   guide: [

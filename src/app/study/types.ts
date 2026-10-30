@@ -9,9 +9,11 @@ import type {
   Section,
   SectionPart,
   StudyPhase,
+  StudyConversation,
+  ConversationListItem,
 } from '@core/types';
 import type { LayerEstimate } from '@core/context';
-import type { Usage } from '@services/ai/types';
+import type { ConversationConfig, Usage } from '@services/ai/types';
 import type { TeachPrefs } from '../usecases/settings';
 
 export type QuickKey =
@@ -30,6 +32,7 @@ export type QuickKey =
   | 'reviewOk'
   | 'reviewAgain';
 export interface StudyOpenOptions {
+  conversationId?: number;
   mode?: 'read' | 'listen';
   sectionId?: string;
   blockRef?: string;
@@ -46,6 +49,9 @@ export interface StudyStreaming {
   detourId: number | null;
 }
 export interface StudyState {
+  conversation: StudyConversation | null;
+  conversations: ConversationListItem[];
+  config: ConversationConfig | null;
   bookId: string;
   book: Book | null;
   section: Section | null;
@@ -164,6 +170,9 @@ export interface FinishSectionInput {
 export interface StudySessionApi {
   store: StoreApi<StudyState>;
   open(options?: StudyOpenOptions): Promise<void>;
+  newConversation(sectionId?: string): Promise<void>;
+  selectConversation(id: number): Promise<void>;
+  setConfig(config: ConversationConfig): Promise<void>;
   act(key: QuickKey): Promise<void>;
   send(text: string): Promise<void>;
   retry(): Promise<void>;
@@ -184,6 +193,13 @@ export interface StudySessionApi {
     seq: number,
     kind: 'explain' | 'translate',
     signal?: AbortSignal,
+    config?: ConversationConfig,
+  ): Promise<string>;
+  translateSection(
+    sectionId: string,
+    signal?: AbortSignal,
+    config?: ConversationConfig,
+    refresh?: boolean,
   ): Promise<string>;
   generateGuide(): Promise<string>;
   clearNotice(): void;

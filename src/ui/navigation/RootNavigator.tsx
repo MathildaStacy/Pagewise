@@ -72,6 +72,7 @@ export type RootStackParams = {
   ParseProgress: { bookId: string };
   ImportSettings: { draftId: string };
   Study: {
+    conversationId?: number;
     bookId: string;
     mode?: 'read' | 'listen';
     sectionId?: string;

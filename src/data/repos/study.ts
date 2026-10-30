@@ -10,6 +10,7 @@ type StudyRow = Omit<StudyState, 'detours'> & { detours_json: string };
 const columns = [
   'book_id',
   'main_section',
+  'conversation_id',
   'main_part',
   'main_step',
   'phase',
@@ -37,6 +38,7 @@ export function createStudyRepo(db: Db) {
       const state: StudyState = {
         book_id: input.book_id,
         main_section: input.main_section ?? null,
+        conversation_id: input.conversation_id ?? null,
         main_part: input.main_part ?? 0,
         main_step: input.main_step ?? 0,
         phase: input.phase ?? 'idle',
@@ -49,10 +51,11 @@ export function createStudyRepo(db: Db) {
       };
       return db.transaction(async tx => {
         await tx.run(
-          'INSERT INTO study_state (book_id,main_section,main_part,main_step,phase,detours_json,mode,reader_view,read_anchor,resume_shown_at,last_active_at) VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(book_id) DO UPDATE SET main_section=excluded.main_section,main_part=excluded.main_part,main_step=excluded.main_step,phase=excluded.phase,detours_json=excluded.detours_json,mode=excluded.mode,reader_view=excluded.reader_view,read_anchor=excluded.read_anchor,resume_shown_at=excluded.resume_shown_at,last_active_at=excluded.last_active_at',
+          'INSERT INTO study_state (book_id,main_section,conversation_id,main_part,main_step,phase,detours_json,mode,reader_view,read_anchor,resume_shown_at,last_active_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(book_id) DO UPDATE SET main_section=excluded.main_section,conversation_id=excluded.conversation_id,main_part=excluded.main_part,main_step=excluded.main_step,phase=excluded.phase,detours_json=excluded.detours_json,mode=excluded.mode,reader_view=excluded.reader_view,read_anchor=excluded.read_anchor,resume_shown_at=excluded.resume_shown_at,last_active_at=excluded.last_active_at',
           [
             state.book_id,
             state.main_section,
+            state.conversation_id ?? null,
             state.main_part,
             state.main_step,
             state.phase,

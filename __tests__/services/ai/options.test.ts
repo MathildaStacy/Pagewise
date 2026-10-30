@@ -191,6 +191,13 @@ test('未知元数据不捏造能力，已知模型声明档位后仍保留原�
   ).toMatchObject({ thinking: ['low', 'high'], thinkingStyle: 'adaptive' });
 });
 
+test('关闭函数工具能力仍能独立使用模型内置搜索，不向无工具模型发送应用工具', () => {
+  const p = provider('openai', 'gpt-5.5', 'openai');
+  p.models[0].overrides = { tools: false };
+  const body = buildRequest(input(service(p, 'high', true))).body;
+  expect(body.tools).toEqual([{ type: 'web_search' }]);
+});
+
 test.each([
   ['chat', 'https://dashscope.aliyuncs.com/compatible-mode/v1', 'dashscope'],
   ['chat', 'https://api.deepseek.com/v1', 'deepseek'],

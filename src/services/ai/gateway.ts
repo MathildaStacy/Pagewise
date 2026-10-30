@@ -4,13 +4,19 @@ import {
   type RequestInput,
 } from './protocol';
 import { AiError, callModel, type FetchLike } from './http';
-import type { AiService, ModelProgress, Usage } from './types';
+import type {
+  AiService,
+  ConversationConfig,
+  ModelProgress,
+  Usage,
+} from './types';
+import { normaliseEffort, searchMethod } from './models';
 
 export type AiPurpose = 'teach' | 'tidy';
 export type GatewayRequest = Omit<
   RequestInput,
   'service' | 'cacheKey' | 'cache' | 'effort'
-> & { bookId?: string };
+> & { bookId?: string; config?: ConversationConfig };
 
 export interface ResolvedConnection {
   service: AiService;
@@ -75,6 +81,34 @@ export interface GatewayDependencies {
 export function createAiGateway(deps: GatewayDependencies): AiGateway {
   const unsupported = new Map<string, Set<'cache' | 'effort'>>();
   const now = deps.now ?? (() => new Date());
+
+  async function connectionFor(
+    purpose: AiPurpose,
+    config?: ConversationConfig,
+  ) {
+    if (!config) return deps.resolve(purpose);
+    const connection = await deps.resolveProvider(
+      config.providerId,
+      config.model,
+    );
+    const s = connection.service;
+    return {
+      ...connection,
+      service: {
+        ...s,
+        effort: s.capabilities
+          ? normaliseEffort(config.effort, s.capabilities)
+          : config.effort,
+        search:
+          config.search &&
+          s.capabilities?.search === true &&
+          !!searchMethod({
+            kind: s.providerKind ?? 'custom',
+            protocol: s.protocol,
+          }),
+      },
+    };
+  }
 
   async function execute(
     connection: ResolvedConnection,
@@ -163,19 +197,21 @@ export function createAiGateway(deps: GatewayDependencies): AiGateway {
         at: now().toISOString(),
         ...(req.bookId ? { bookId: req.bookId } : {}),
       });
+      result.parsed.raw.providerId = service.id;
+      if (result.parsed.search) result.parsed.raw.search = result.parsed.search;
       return result;
     }
   }
 
   return {
     async stream(purpose, req, handlers) {
-      const connection = await deps.resolve(purpose);
+      const connection = await connectionFor(purpose, req.config);
       return (
         await execute(connection, purpose, { ...req, stream: true }, handlers)
       ).parsed;
     },
     async complete(purpose, req, opts = {}) {
-      const connection = await deps.resolve(purpose);
+      const connection = await connectionFor(purpose, req.config);
       return (
         await execute(connection, purpose, { ...req, stream: false }, opts)
       ).parsed;

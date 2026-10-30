@@ -17,6 +17,7 @@ import {
 } from '@ui/kit';
 import type { AskState, AskIntents } from '@features/home/types';
 import { SettingsGroup, SettingsRow } from './MeView';
+import { AiOptionsControl } from './AiOptionsControl';
 
 const suggestions = [
   { q: 'A* 和 Dijkstra 是什么关系？', icon: 'branch' as const },
@@ -91,6 +92,11 @@ export function AskShelfView({
             </Gradient>
           </View>
         </Gradient>
+        <AiOptionsControl
+          state={state.aiOptions}
+          onChange={intents.setAiOptions}
+          disabled={state.busy}
+        />
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -175,7 +181,9 @@ export function AskShelfView({
               ) : null}
               <View style={s.pad}>
                 <Note tone="neutral" variant="ai" icon="info">
-                  跨书问答只读你书架上已解析的内容，回答里每个说法都带书名和页码。解析中的书只搜已就绪的部分。
+                  {state.aiOptions?.config?.search
+                    ? '搜索已开启。回答会区分书中内容与互联网补充信息。'
+                    : '跨书问答读取书架上已解析的内容，用书名和页码标明出处。可在模型设置中开启内置搜索。'}
                 </Note>
               </View>
             </>
@@ -199,6 +207,19 @@ export function AskShelfView({
                     streaming={state.busy}
                     onCite={ref => intents.openHit(ref - 1)}
                   />
+                  {state.sources?.length ? (
+                    <View>
+                      <Text style={s.sectionTitle}>互联网来源</Text>
+                      {state.sources.map(source => (
+                        <Button
+                          key={source.url}
+                          variant="text"
+                          label={source.title || source.url}
+                          onPress={() => intents.openSource?.(source.url)}
+                        />
+                      ))}
+                    </View>
+                  ) : null}
                 </>
               ) : state.busy ? (
                 <Text accessibilityLiveRegion="polite" style={s.small}>

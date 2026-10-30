@@ -1,6 +1,17 @@
 import type { ShelfState, ShelfIntents } from '../library/types';
 import type { RichDoc } from '@ui/kit';
+import type {
+  AiOptionsState,
+  ConversationConfig,
+} from '@features/settings/types';
 export interface HomeState {
+  conversations?: {
+    id: number;
+    bookId: string;
+    sectionId: string;
+    title: string;
+    subtitle: string;
+  }[];
   loading: boolean;
   error: string | null;
   demo: boolean;
@@ -36,6 +47,7 @@ export interface HomeState {
   };
 }
 export interface HomeIntents {
+  openConversation?(id: number): void;
   refresh(): void;
   ask(): void;
   me(): void;
@@ -61,6 +73,8 @@ export interface AskHit {
   text: string;
 }
 export interface AskState {
+  sources?: { url: string; title: string }[];
+  aiOptions?: AiOptionsState;
   query: string;
   scope: string;
   books: { id: string; title: string }[];
@@ -77,6 +91,8 @@ export interface AskState {
   doc: RichDoc;
 }
 export interface AskIntents {
+  openSource?(url: string): void;
+  setAiOptions?(patch: Partial<ConversationConfig>): void;
   back(): void;
   query(value: string): void;
   scope(value: string): void;

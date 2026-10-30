@@ -5,6 +5,9 @@ import type {
   Message,
   MessageInsert,
   Section,
+  LessonPlan,
+  DetourFrame,
+  StudyPhase,
 } from '@core/types';
 import {
   buildContext,
@@ -18,11 +21,18 @@ import { advanceCitationStreak, validateCitations } from '@core/citations';
 import { pageLabel, parseBlockRef } from '@core/ids';
 import { stableStringify, truncateText } from '@core/text';
 import type { GatewayRequest } from '@services/ai/gateway';
-import type { Part, RawOutput, StoredMessage, Usage } from '@services/ai/types';
+import type {
+  ConversationConfig,
+  Part,
+  RawOutput,
+  StoredMessage,
+  Usage,
+} from '@services/ai/types';
 import { TOOL_DEFS } from '@services/ai/tools';
 import type { Container } from '../container';
 import { toAppError } from '../errors';
 import { defaultPrefs, readPrefs } from '../usecases/settings';
+import { loadAiOptions, normalizeAiOptions } from '../usecases/aiOptions';
 import {
   buildTaskPrompt,
   buildTeachPrompt,
@@ -31,6 +41,7 @@ import {
 } from './prompts';
 import { finishSection } from './finishSection';
 import { deferQuizzes } from './quizSupport';
+import { translationChunks } from './translation';
 import { executeReadTool, jsonObject, parseToolArgs } from './toolExec';
 import {
   asJson,
@@ -65,6 +76,14 @@ type Round = {
   question?: string;
   calls: number;
   rounds: number;
+};
+type ConversationCheckpoint = {
+  part?: number;
+  step?: number;
+  phase?: StudyPhase;
+  detours?: DetourFrame[];
+  plan?: LessonPlan | null;
+  plans?: Record<number, LessonPlan>;
 };
 const textOf = (parts: readonly Part[]) =>
   parts
@@ -118,6 +137,9 @@ export class StudySession implements StudySessionApi {
 
   constructor(private readonly c: Container, private readonly bookId: string) {
     this.store = createStore<StudyState>(() => ({
+      conversation: null,
+      conversations: [],
+      config: null,
       bookId,
       book: null,
       section: null,
@@ -166,8 +188,38 @@ export class StudySession implements StudySessionApi {
   }
   private async checkpoint() {
     const s = this.state;
+    if (s.conversation?.section_id === s.main.sectionId) {
+      const previous = s.conversation
+        .checkpoint as ConversationCheckpoint | null;
+      const checkpoint = asJson({
+        part: s.main.part,
+        step: s.main.step,
+        phase: s.phase,
+        detours: s.detours,
+        plans: {
+          ...previous?.plans,
+          ...(s.plan ? { [s.plan.part_no]: s.plan } : {}),
+        },
+      });
+      await this.c.repos.conversations.update(s.conversation.id, {
+        checkpoint,
+        config: asJson(s.config),
+      });
+      this.set({
+        conversation: {
+          ...s.conversation,
+          checkpoint,
+          config: asJson(s.config),
+        },
+        conversations: await this.c.repos.conversations.list(
+          this.bookId,
+          s.main.sectionId,
+        ),
+      });
+    }
     await this.c.repos.study.put({
       book_id: this.bookId,
+      conversation_id: s.conversation?.id ?? null,
       main_section: s.main.sectionId || null,
       main_part: s.main.part,
       main_step: s.main.step,
@@ -211,6 +263,7 @@ export class StudySession implements StudySessionApi {
     if (
       this.initialized &&
       !options.sectionId &&
+      !options.conversationId &&
       !options.blockRef &&
       !options.question &&
       !options.stuckId
@@ -262,6 +315,19 @@ export class StudySession implements StudySessionApi {
         });
         this.initialized = true;
       }
+      if (options.conversationId !== undefined) {
+        const conversation = await this.c.repos.conversations.get(
+          options.conversationId,
+        );
+        if (!conversation || conversation.book_id !== this.bookId)
+          throw new Error('找不到本书的对话');
+        options = {
+          ...options,
+          sectionId: conversation.section_id,
+          mode: options.mode ?? 'listen',
+          autoStart: false,
+        };
+      }
       if (
         options.sectionId &&
         !options.preserveMain &&
@@ -269,6 +335,7 @@ export class StudySession implements StudySessionApi {
         !options.question
       ) {
         if (this.state.main.sectionId !== options.sectionId) {
+          await this.checkpoint();
           await this.foldDetours(false);
           this.set({
             main: { sectionId: options.sectionId, part: 0, step: 0 },
@@ -280,7 +347,15 @@ export class StudySession implements StudySessionApi {
       if (options.mode) this.set({ mode: options.mode });
       if (options.preserveMain && options.sectionId)
         this.set({ readerSectionId: options.sectionId });
-      await this.loadMain();
+      const lastConversation = previous?.conversation_id
+        ? await this.c.repos.conversations.get(previous.conversation_id)
+        : undefined;
+      await this.loadMain(
+        options.conversationId ??
+          (lastConversation?.section_id === this.state.main.sectionId
+            ? lastConversation.id
+            : undefined),
+      );
       if (!this.state.section) {
         await this.checkpoint();
         return;
@@ -377,7 +452,7 @@ export class StudySession implements StudySessionApi {
     });
     return this.opening;
   }
-  private async loadMain() {
+  private async loadMain(conversationId?: number, fresh = false) {
     const id = this.state.main.sectionId;
     if (!id) {
       this.set({
@@ -390,11 +465,53 @@ export class StudySession implements StudySessionApi {
       });
       return;
     }
+    const changed =
+      conversationId !== undefined ||
+      this.state.conversation?.section_id !== id;
+    const conversation =
+      conversationId !== undefined
+        ? await this.c.repos.conversations.get(conversationId)
+        : changed
+        ? await this.c.repos.conversations.ensure(this.bookId, id)
+        : this.state.conversation;
+    if (
+      !conversation ||
+      conversation.book_id !== this.bookId ||
+      conversation.section_id !== id
+    )
+      throw new Error('对话不属于当前书籍或章节');
+    if (changed) {
+      const saved = conversation.checkpoint as ConversationCheckpoint | null;
+      const options = await loadAiOptions(this.c, 'teach');
+      const config =
+        conversation.config as unknown as ConversationConfig | null;
+      this.set({
+        conversation,
+        main: {
+          sectionId: id,
+          part: saved?.part ?? (fresh ? 0 : this.state.main.part),
+          step: saved?.step ?? (fresh ? 0 : this.state.main.step),
+        },
+        phase: saved?.phase ?? (fresh ? 'idle' : this.state.phase),
+        detours: saved?.detours ?? (fresh ? [] : this.state.detours),
+        config: config
+          ? normalizeAiOptions(config, options.providers)
+          : options.config,
+        pendingQuote: null,
+        streamKeys: {},
+        tools: [],
+        error: null,
+        context: [],
+        draft: null,
+      });
+    }
     const [section, blocks, parts, messages] = await Promise.all([
       this.c.repos.sections.get(this.bookId, id),
       this.c.repos.blocks.bySection(this.bookId, id),
       this.c.repos.sections.parts(this.bookId, id),
-      this.c.repos.messages.thread(this.bookId, id),
+      this.c.repos.messages.thread(this.bookId, id, {
+        conversation_id: conversation.id,
+      }),
     ]);
     if (!section) throw new Error('小节不存在');
     const ranges = parts.length
@@ -414,7 +531,30 @@ export class StudySession implements StudySessionApi {
     const part =
       ranges.find(p => p.part_no === this.state.main.part) ?? ranges[0];
     const partNo = part?.part_no ?? 0;
-    const plan = await this.c.repos.plans.get(this.bookId, id, partNo);
+    let plan = await this.c.repos.plans.get(this.bookId, id, partNo);
+    const saved = conversation.checkpoint as ConversationCheckpoint | null;
+    const savedPlan =
+      saved?.plans?.[partNo] ??
+      (saved?.plan?.part_no === partNo ? saved.plan : undefined);
+    if (
+      plan &&
+      savedPlan?.part_no === partNo &&
+      savedPlan.steps.every(
+        item =>
+          part &&
+          item.block_from >= part.block_from &&
+          item.block_to <= part.block_to,
+      )
+    )
+      plan = await this.c.repos.plans.put(savedPlan);
+    else if (plan && (fresh || (saved && !savedPlan)))
+      plan = await this.c.repos.plans.put({
+        ...plan,
+        steps: plan.steps.map((item, i) => ({
+          ...item,
+          status: i === 0 ? 'current' : 'todo',
+        })),
+      });
     const step = Math.min(
       this.state.main.step,
       Math.max(0, (plan?.steps.length ?? 1) - 1),
@@ -428,8 +568,54 @@ export class StudySession implements StudySessionApi {
         : [],
       plan: plan ?? null,
       messages,
+      conversations: await this.c.repos.conversations.list(this.bookId, id),
       main: { sectionId: id, part: partNo, step },
     });
+  }
+  newConversation(sectionId = this.state.main.sectionId): Promise<void> {
+    return this.run(async () => {
+      await this.checkpoint();
+      if (!this.state.sections.some(s => s.id === sectionId && s.is_leaf))
+        throw new Error('请选择可阅读的章节');
+      const conversation = await this.c.repos.conversations.create(
+        this.bookId,
+        sectionId,
+      );
+      this.set({
+        main: { sectionId, part: 0, step: 0 },
+        detours: [],
+        phase: 'idle',
+        mode: 'listen',
+        readerSectionId: null,
+      });
+      await this.loadMain(conversation.id, true);
+      this.retryAction = null;
+      await this.checkpoint();
+    });
+  }
+  selectConversation(id: number): Promise<void> {
+    return this.run(async () => {
+      const conversation = await this.c.repos.conversations.get(id);
+      if (!conversation || conversation.book_id !== this.bookId)
+        throw new Error('找不到本书的对话');
+      await this.checkpoint();
+      this.set({
+        main: { sectionId: conversation.section_id, part: 0, step: 0 },
+        detours: [],
+        phase: 'idle',
+        mode: 'listen',
+        readerSectionId: null,
+      });
+      await this.loadMain(id);
+      this.retryAction = null;
+      await this.checkpoint();
+    });
+  }
+  async setConfig(config: ConversationConfig) {
+    if (this.state.busy) return;
+    const options = await loadAiOptions(this.c, 'teach');
+    this.set({ config: normalizeAiOptions(config, options.providers) });
+    await this.checkpoint();
   }
   private taskMessage(): StoredMessage {
     return {
@@ -448,6 +634,7 @@ export class StudySession implements StudySessionApi {
     input: unknown,
     signal = this.controller?.signal,
     purpose: 'teach' | 'tidy' = 'tidy',
+    config?: ConversationConfig,
   ): Promise<Record<string, JsonValue>> {
     const response = await this.c.ai.complete(
       purpose,
@@ -455,13 +642,16 @@ export class StudySession implements StudySessionApi {
         system: buildTaskPrompt(task, input),
         contextBlocks: [],
         tools: [],
-        noTools: true,
+        noTools: !config?.search,
         bookId: this.bookId,
+        config,
         history: [this.taskMessage()],
       },
       { signal },
     );
     if (signal?.aborted) throw new Error('已停止');
+    if (task === 'translate' && response.stop === 'max_tokens')
+      throw new Error('模型的译文未完整返回，请重试或切换模型');
     this.set({ lastUsage: response.usage });
     return jsonObject(parseTaskJson(textOf(response.parts))) ?? {};
   }
@@ -521,6 +711,7 @@ export class StudySession implements StudySessionApi {
     const message = await this.c.repos.messages.append({
       book_id: this.bookId,
       section_id: s.main.sectionId,
+      conversation_id: s.conversation?.id,
       part_no: s.main.part,
       step_no: s.main.step,
       kind,
@@ -533,6 +724,11 @@ export class StudySession implements StudySessionApi {
       messages: [...this.state.messages, message],
       ...state(message),
     });
+    if (kind === 'user' && s.conversation?.title === '新对话') {
+      const title = content.slice(0, 50);
+      await this.c.repos.conversations.update(s.conversation.id, { title });
+      this.set({ conversation: { ...s.conversation, title } });
+    }
     return message;
   }
   private async card(card: StudyCard, inContext = false) {
@@ -815,11 +1011,16 @@ export class StudySession implements StudySessionApi {
     ).filter((block): block is Block => !!block);
     const round: Round = {
       request: {
-        system: context.system,
+        system:
+          context.system +
+          (this.state.config?.search
+            ? '\n联网搜索已开启。将互联网补充信息与原书内容明确区分，提供来源网址；互联网内容不能冒充原书引用。'
+            : ''),
         contextBlocks: context.contextBlocks,
         history: context.history,
         tools: TOOL_DEFS,
         bookId: this.bookId,
+        config: this.state.config ?? undefined,
       },
       blocks: [...this.state.partBlocks, ...loadedBlocks],
       allowed: new Set(
@@ -1944,10 +2145,70 @@ export class StudySession implements StudySessionApi {
     });
     return next;
   }
+  async translateSection(
+    sectionId: string,
+    signal?: AbortSignal,
+    config?: ConversationConfig,
+    refresh = false,
+  ): Promise<string> {
+    if (signal?.aborted) throw new Error('已停止翻译');
+    const blocks = await this.c.repos.blocks.bySection(this.bookId, sectionId);
+    const chunks = translationChunks(blocks);
+    const source = chunks.map(chunk => chunk.source).join('\n\n');
+    if (!source.trim()) throw new Error('本节暂无可翻译的原文，请先完成解析');
+    const cached = await this.c.db.get<{
+      source_text: string;
+      content: string;
+    }>(
+      'SELECT source_text, content FROM section_translation WHERE book_id = ? AND section_id = ?',
+      [this.bookId, sectionId],
+    );
+    if (!refresh && cached?.source_text === source) return cached.content;
+    const controller = new AbortController();
+    this.extraControllers.add(controller);
+    const abort = () => controller.abort();
+    signal?.addEventListener('abort', abort, { once: true });
+    if (signal?.aborted) controller.abort();
+    try {
+      const answers: string[] = [];
+      for (const chunk of chunks) {
+        if (controller.signal.aborted) throw new Error('已停止翻译');
+        if (!chunk.translate) {
+          answers.push(chunk.source);
+          continue;
+        }
+        const data = await this.task(
+          'translate',
+          {
+            block: { text: chunk.source },
+            target_language: '简体中文',
+            map: this.state.sections.map(s => ({ id: s.id, title: s.title })),
+          },
+          controller.signal,
+          'tidy',
+          config,
+        );
+        const answer = stringValue(data.answer);
+        if (!answer.trim()) throw new Error('AI 未返回译文，请重试');
+        answers.push(answer);
+      }
+      if (controller.signal.aborted) throw new Error('已停止翻译');
+      const content = answers.join('\n\n');
+      await this.c.db.run(
+        'INSERT OR REPLACE INTO section_translation(book_id, section_id, source_text, content, updated_at) VALUES (?, ?, ?, ?, ?)',
+        [this.bookId, sectionId, source, content, this.now()],
+      );
+      return content;
+    } finally {
+      signal?.removeEventListener('abort', abort);
+      this.extraControllers.delete(controller);
+    }
+  }
   async explainBlock(
     seq: number,
     kind: 'explain' | 'translate',
     signal?: AbortSignal,
+    config?: ConversationConfig,
   ): Promise<string> {
     const block = await this.c.repos.blocks.get(this.bookId, seq);
     if (!block) throw new Error('找不到这段原文');
@@ -1962,6 +2223,7 @@ export class StudySession implements StudySessionApi {
         {
           seq,
           block,
+          ...(kind === 'translate' ? { target_language: '简体中文' } : {}),
           map: this.state.sections.map(section => ({
             id: section.id,
             title: section.title,
@@ -1969,6 +2231,7 @@ export class StudySession implements StudySessionApi {
         },
         controller.signal,
         kind === 'explain' ? 'teach' : 'tidy',
+        config,
       );
       const answer = stringValue(data.answer);
       if (!answer) throw new Error('AI 未返回内容，请重试');

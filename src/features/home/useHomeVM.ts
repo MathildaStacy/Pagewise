@@ -27,6 +27,9 @@ import { useAppNav } from '@features/nav';
 import { presentShelf, sectionName } from '@features/library/presenters';
 import { useShelfVM } from '@features/library/useLibraryVM';
 import type { RichDoc, RichInline } from '@ui/kit';
+import { useAiOptions } from '@features/settings/useAiOptions';
+import type { ConversationConfig } from '@features/settings/types';
+import { openExternalSource } from '@app/usecases/aiOptions';
 import type {
   AskState,
   AskIntents,
@@ -89,6 +92,13 @@ export function useHomeVM() {
         const hour = c.clock.now().getHours();
         setState({
           ...data,
+          conversations: data.conversations.map(item => ({
+            id: item.id,
+            bookId: item.book_id,
+            sectionId: item.section_id,
+            title: item.title,
+            subtitle: `${item.book_title} · ${item.section_title} · ${item.message_count} 条消息`,
+          })),
           loading: false,
           error: null,
           demo: c.mode === 'demo',
@@ -165,6 +175,16 @@ export function useHomeVM() {
     }, [refresh, refreshLibrary]),
   );
   const intents: HomeIntents = {
+    openConversation: id => {
+      const conversation = state.conversations?.find(item => item.id === id);
+      if (conversation)
+        nav.open({
+          name: 'Study',
+          bookId: conversation.bookId,
+          sectionId: conversation.sectionId,
+          conversationId: id,
+        });
+    },
     refresh,
     ask: () => nav.open({ name: 'AskShelf' }),
     me: () => nav.open({ name: 'Tabs', tab: 'Me' }),
@@ -239,6 +259,8 @@ const demoAnswer =
 export function useAskVM(): { state: AskState; intents: AskIntents } {
   const c = useContainer(),
     nav = useAppNav();
+  const [config, setConfig] = useState<ConversationConfig | null>(null);
+  const aiOptions = useAiOptions(config);
   const [state, setState] = useState<AskState>({
     query: '',
     scope: 'all',
@@ -288,6 +310,7 @@ export function useAskVM(): { state: AskState; intents: AskIntents } {
       answer: '',
       doc: [],
       hits: [],
+      sources: [],
       error: null,
       tools: [
         `在 ${
@@ -350,7 +373,18 @@ export function useAskVM(): { state: AskState; intents: AskIntents } {
           onText(answer.slice(0, i + 16));
           await new Promise(resolve => setTimeout(resolve, 16));
         }
-      } else await answerShelf(c, question, hits, current.signal, onText);
+      } else {
+        const response = await answerShelf(
+          c,
+          question,
+          hits,
+          current.signal,
+          onText,
+          aiOptions.state.config ?? undefined,
+        );
+        if (!current.signal.aborted)
+          setState(s => ({ ...s, sources: response?.search?.sources ?? [] }));
+      }
       if (current.signal.aborted) return;
       const recent = [
         question,
@@ -396,8 +430,15 @@ export function useAskVM(): { state: AskState; intents: AskIntents } {
     }),
   );
   return {
-    state: { ...state, doc },
+    state: { ...state, doc, aiOptions: aiOptions.state },
     intents: {
+      openSource: url =>
+        openExternalSource(url).catch(error =>
+          setState(s => ({ ...s, error: message(error) })),
+        ),
+      setAiOptions: patch => {
+        if (!state.busy) setConfig(aiOptions.patch(patch));
+      },
       back: nav.back,
       query: value => setState(s => ({ ...s, query: value })),
       scope: value => setState(s => ({ ...s, scope: value })),

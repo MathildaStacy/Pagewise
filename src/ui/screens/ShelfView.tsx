@@ -28,6 +28,7 @@ import {
   makeStyles,
 } from '@ui/kit';
 import type { ShelfIntents, ShelfState } from '@features/library/types';
+import { ConversationList } from './ConversationList';
 export function ShelfView({
   state,
   intents,
@@ -333,6 +334,10 @@ export function ShelfView({
             )}
           </View>
         ) : null}
+        <ConversationList
+          items={state.conversations}
+          onOpen={intents.openConversation}
+        />
         <View style={s.fabSpace} />
         <ShelfOverlays state={state} intents={intents} />
       </Screen>

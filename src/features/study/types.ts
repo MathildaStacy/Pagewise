@@ -1,5 +1,9 @@
 import type { ComposerQuote, PageOrigProps, RichDoc } from '@ui/kit';
 import type { StudyOpenOptions } from '@app/study/types';
+import type {
+  AiOptionsState,
+  ConversationConfig,
+} from '@features/settings/types';
 
 export interface StudyEntryOptions extends StudyOpenOptions {
   /** Fill the editable composer and wait for the user to send. */
@@ -53,6 +57,7 @@ export type ThreadItem =
   | { kind: 'user'; id: string; text: string; quote?: string; detour: boolean }
   | {
       kind: 'ai';
+      sources?: { url: string; title: string }[];
       id: string;
       doc: RichDoc;
       streaming: boolean;
@@ -125,6 +130,7 @@ export interface ReaderOriginalPage {
   blocks: (PageOrigProps['blocks'][number] & { pinId?: string })[];
 }
 export interface ReaderState {
+  canTranslate?: boolean;
   view: 'orig' | 'flow';
   hint: string;
   loading: boolean;
@@ -152,6 +158,14 @@ export interface ReaderState {
   };
 }
 export type StudyOverlay =
+  | {
+      kind: 'sectionTranslation';
+      sectionId: string;
+      answer: RichDoc | null;
+      streaming: boolean;
+      error?: string;
+      subtitle: string;
+    }
   | {
       kind: 'menu';
       title?: string;
@@ -216,6 +230,8 @@ export type StudyOverlay =
   | { kind: 'switchMain'; body: string; rebase?: boolean }
   | { kind: 'table'; rows: string[][]; caption: string };
 export interface StudyState {
+  aiOptions?: AiOptionsState;
+  conversationTitle?: string;
   header: {
     title: string;
     subtitle: string;
@@ -249,6 +265,11 @@ export interface StudyState {
   overlay: StudyOverlay | null;
 }
 export interface StudyIntents {
+  openSource?(url: string): void;
+  setAiOptions?(patch: Partial<ConversationConfig>): void;
+  openConversations?(): void;
+  newConversation?(): void;
+  translateSection?(): void;
   back(): void;
   setMode(mode: 'listen' | 'read'): void;
   openMenu(): void;
@@ -286,6 +307,7 @@ export interface StudyIntents {
   closeOverlay(): void;
 }
 export interface ReaderScreenState {
+  aiOptions?: AiOptionsState;
   header: StudyState['header'];
   read: ReaderState;
   overlay: StudyOverlay | null;

@@ -10,10 +10,10 @@ describe('SQLite schema migration', () => {
   afterEach(async () => db.close());
 
   it('installs T3 schema, keeps foreign keys enabled, and migration idempotent', async () => {
-    expect(migrations).toHaveLength(2);
-    expect(SCHEMA_VERSION).toBe(2);
-    expect(await migrate(db)).toEqual({ from: 0, to: 2 });
-    expect(await migrate(db)).toEqual({ from: 2, to: 2 });
+    expect(migrations).toHaveLength(3);
+    expect(SCHEMA_VERSION).toBe(3);
+    expect(await migrate(db)).toEqual({ from: 0, to: 3 });
+    expect(await migrate(db)).toEqual({ from: 3, to: 3 });
     expect(await db.get('PRAGMA foreign_keys')).toEqual({ foreign_keys: 1 });
     expect(
       await db.get(
@@ -67,16 +67,66 @@ describe('SQLite schema migration', () => {
   });
 
   it('rejects a newer database without downgrading it', async () => {
-    await db.run('PRAGMA user_version = 3');
+    await db.run('PRAGMA user_version = 4');
     await expect(migrate(db)).rejects.toThrow(
-      '数据库版本 3 比这个 App 支持的版本（2）新',
+      '数据库版本 4 比这个 App 支持的版本（3）新',
     );
-    expect(await db.get('PRAGMA user_version')).toEqual({ user_version: 3 });
+    expect(await db.get('PRAGMA user_version')).toEqual({ user_version: 4 });
   });
 
   it('treats an absent user_version result as zero', async () => {
     const spy = jest.spyOn(db, 'get').mockResolvedValueOnce(undefined);
-    expect(await migrate(db)).toEqual({ from: 0, to: 2 });
+    expect(await migrate(db)).toEqual({ from: 0, to: 3 });
     spy.mockRestore();
   });
+
+  it.each([1, 2])(
+    'upgrades v%s messages into independent chapter conversations without losing content',
+    async version => {
+      await migrate(db, migrations.slice(0, version));
+      for (const id of ['one', 'two']) {
+        await db.run(
+          "INSERT INTO book(id,sha256,title,format,size_bytes,cover_color,status,created_at) VALUES (?,?,?,'epub',1,'blue','ready','2026-10-29')",
+          [id, id, id],
+        );
+      }
+      for (const [book, chapter, content] of [
+        ['one', '1', 'first'],
+        ['one', '1', 'answer'],
+        ['one', '2', 'second'],
+        ['two', '1', 'another book'],
+      ]) {
+        await db.run(
+          "INSERT INTO message(book_id,section_id,kind,content,created_at) VALUES (?,?,'user',?,'2026-10-29')",
+          [book, chapter, content],
+        );
+      }
+      await migrate(db);
+      const rows = await db.all<{
+        content: string;
+        conversation_id: number;
+        book_id: string;
+        section_id: string;
+      }>(
+        'SELECT content,conversation_id,book_id,section_id FROM message ORDER BY id',
+      );
+      expect(rows.map(row => row.content)).toEqual([
+        'first',
+        'answer',
+        'second',
+        'another book',
+      ]);
+      expect(rows[0].conversation_id).toBe(rows[1].conversation_id);
+      expect(new Set(rows.map(row => row.conversation_id)).size).toBe(3);
+      expect(await db.all('SELECT id FROM study_conversation')).toHaveLength(3);
+      await db.run("DELETE FROM book WHERE id='one'");
+      expect(await db.all('SELECT content FROM message')).toEqual([
+        { content: 'another book' },
+      ]);
+      expect(await db.all('SELECT book_id FROM study_conversation')).toEqual([
+        { book_id: 'two' },
+      ]);
+      expect(await db.all('PRAGMA foreign_key_check')).toEqual([]);
+    },
+  );
 });

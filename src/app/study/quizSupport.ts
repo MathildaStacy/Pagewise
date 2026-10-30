@@ -37,6 +37,7 @@ export async function deferQuizzes(
           await repo.append({
             book_id: message.book_id,
             section_id: message.section_id,
+            conversation_id: message.conversation_id,
             part_no: message.part_no,
             step_no: message.step_no,
             detour_id: message.detour_id,

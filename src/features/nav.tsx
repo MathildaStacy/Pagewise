@@ -6,6 +6,7 @@ export type AppRoute =
   | { name: 'BookMap' | 'ParseProgress' | 'NotesBook'; bookId: string }
   | {
       name: 'Study';
+      conversationId?: number;
       bookId: string;
       mode?: 'read' | 'listen';
       sectionId?: string;

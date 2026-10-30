@@ -16,6 +16,7 @@ const columns = [
   'id',
   'book_id',
   'section_id',
+  'conversation_id',
   'part_no',
   'step_no',
   'kind',
@@ -51,6 +52,7 @@ function decode(row: MessageRow): Message {
 }
 const json = (value: unknown) => (value == null ? null : serializeJson(value));
 export interface MessageThreadOptions {
+  conversation_id?: number;
   limit?: number;
   before_id?: number;
   after_id?: number;
@@ -70,6 +72,10 @@ export function createMessagesRepo(db: Db) {
     ): Promise<Message[]> {
       const where = ['book_id = ?', 'section_id = ?'];
       const params: SqlValue[] = [bookId, sectionId];
+      if (opts.conversation_id !== undefined) {
+        where.push('conversation_id = ?');
+        params.push(opts.conversation_id);
+      }
       if (opts.before_id !== undefined) {
         where.push('id < ?');
         params.push(opts.before_id);

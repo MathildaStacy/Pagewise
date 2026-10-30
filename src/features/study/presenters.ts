@@ -237,6 +237,11 @@ function presentMessage(
         : {
             kind: 'ai',
             id: key,
+            sources: (
+              message.raw as unknown as {
+                search?: { sources: { url: string; title: string }[] };
+              } | null
+            )?.search?.sources,
             doc: messageDoc(
               message.content,
               message.allowed_refs ?? [],

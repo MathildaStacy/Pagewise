@@ -7,6 +7,7 @@ import {
 import { createRecordedFetch } from '../../../src/services/ai/fake';
 import { AiError, redact, type FetchLike } from '../../../src/services/ai/http';
 import type { AiService } from '../../../src/services/ai/types';
+import { inferCapabilities } from '../../../src/services/ai/models';
 import recorded from '../../../fixtures/ai/t1-teach.json';
 import { sse, aStart, aText, aDelta, aEnd } from './helpers/stream';
 
@@ -66,6 +67,130 @@ function deps(fetchImpl: FetchLike): GatewayDependencies {
     now: () => new Date('2026-10-29T01:02:03.000Z'),
   };
 }
+
+test.each(['anthropic', 'openai', 'chat'] as const)(
+  '会话配置真正应用到 %s 请求，关闭搜索后不再带联网参数',
+  async protocol => {
+    const bodies: any[] = [];
+    const config = deps(async (_url, init) => {
+      bodies.push(JSON.parse(init.body));
+      return protocol === 'anthropic'
+        ? answer()
+        : {
+            status: 200,
+            text: async () =>
+              JSON.stringify(
+                protocol === 'openai'
+                  ? {
+                      output: [
+                        {
+                          type: 'message',
+                          role: 'assistant',
+                          content: [{ type: 'output_text', text: '回答' }],
+                        },
+                      ],
+                    }
+                  : {
+                      choices: [
+                        {
+                          message: { role: 'assistant', content: '回答' },
+                          finish_reason: 'stop',
+                        },
+                      ],
+                    },
+              ),
+          };
+    });
+    config.resolveProvider = jest.fn((id, model) => ({
+      ...connection(id, model),
+      service: {
+        ...service(id, model),
+        protocol,
+        providerKind: 'custom',
+        capabilities: {
+          ...inferCapabilities('gpt-5.5'),
+          thinkingStyle: protocol === 'anthropic' ? 'adaptive' : 'reasoning',
+        },
+      },
+    }));
+    const gateway = createAiGateway(config);
+    const selected = {
+      providerId: 'chosen-provider',
+      model: 'chosen-model',
+      effort: 'high' as const,
+      search: true,
+    };
+    await gateway.complete('tidy', { ...req, config: selected });
+    await gateway.complete('teach', {
+      ...req,
+      config: { ...selected, effort: 'off', search: false },
+    });
+    expect(config.resolve).not.toHaveBeenCalled();
+    expect(config.resolveProvider).toHaveBeenCalledWith(
+      'chosen-provider',
+      'chosen-model',
+    );
+    expect(bodies.every(body => body.model === 'chosen-model')).toBe(true);
+    if (protocol === 'anthropic') {
+      expect(bodies[0].output_config).toEqual({ effort: 'high' });
+      expect(bodies[0].tools).toContainEqual(
+        expect.objectContaining({ name: 'web_search' }),
+      );
+      expect(bodies[1].thinking).toEqual({ type: 'disabled' });
+      expect(bodies[1].tools).toEqual([]);
+    } else if (protocol === 'openai') {
+      expect(bodies[0].reasoning.effort).toBe('high');
+      expect(bodies[0].tools).toEqual([{ type: 'web_search' }]);
+      expect(bodies[1].reasoning.effort).toBe('none');
+      expect(bodies[1].tools).toEqual([]);
+    } else {
+      expect(bodies[0].reasoning_effort).toBe('high');
+      expect(bodies[0].web_search_options).toEqual({});
+      expect(bodies[1].web_search_options).toBeUndefined();
+    }
+  },
+);
+
+test('不支持搜索或推理的模型会限制请求选项，流式调用也使用当前会话选择', async () => {
+  const fetchImpl = jest.fn<ReturnType<FetchLike>, Parameters<FetchLike>>(
+    createRecordedFetch([
+      {
+        status: 200,
+        chunks: [sse(aStart, aText, aDelta('当前模型的回答'), ...aEnd)],
+      },
+    ]),
+  );
+  const config = deps(fetchImpl);
+  config.resolveProvider = jest.fn((id, model) => ({
+    ...connection(id, model),
+    service: {
+      ...service(id, model),
+      capabilities: {
+        ...inferCapabilities('unknown'),
+        search: false,
+        thinking: [],
+      },
+    },
+  }));
+  await createAiGateway(config).stream(
+    'teach',
+    {
+      ...req,
+      config: {
+        providerId: 'selected',
+        model: 'no-search',
+        effort: 'max',
+        search: true,
+      },
+    },
+    { signal: new AbortController().signal, onText: jest.fn() },
+  );
+  const body = JSON.parse(fetchImpl.mock.calls[0][1].body);
+  expect(body.model).toBe('no-search');
+  expect(body.stream).toBe(true);
+  expect(body.thinking).toBeUndefined();
+  expect(body.tools).toEqual([]);
+});
 
 test('a heartbeat-only relay completion retries once with SSE and records one result', async () => {
   const fetchImpl = jest.fn<ReturnType<FetchLike>, Parameters<FetchLike>>(
