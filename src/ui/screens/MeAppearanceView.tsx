@@ -5,6 +5,7 @@ import {
   makeStyles,
   useTokens,
   usePresentation,
+  type SkinId,
 } from '@ui/kit';
 import type {
   AppearanceState,
@@ -17,12 +18,12 @@ import {
   SettingsSegmented,
   useSettingsStyles,
 } from './MeView';
-function SkinPreview({ glass }: { glass: boolean }) {
+function SkinPreview({ skinId }: { skinId: SkinId }) {
   const t = useTokens();
   return (
     <SkinProvider
-      skinId={glass ? 'glass' : 'paper'}
-      scheme={glass ? t.scheme : 'light'}
+      skinId={skinId}
+      scheme={skinId === 'paper' ? 'light' : t.scheme}
       reduceMotion
     >
       <PreviewContent />
@@ -81,10 +82,18 @@ export function MeAppearanceView({
                 },
               ]}
             >
-              <SkinPreview glass={option.key === 'glass'} />
+              <SkinPreview skinId={option.key as SkinId} />
               <Text style={s.skinName}>{option.label}</Text>
               <Text style={s.skinDescription}>
-                {option.key === 'glass' ? '毛玻璃 · 圆角' : '默认'}
+                {
+                  {
+                    paper: '默认',
+                    glass: '毛玻璃 · 圆角',
+                    meta: 'Messenger · Meta AI',
+                    google: 'Material 3 · Google Play',
+                    win11: 'Mica · Copilot',
+                  }[option.key]
+                }
               </Text>
             </Pressable>
           ))}
@@ -160,6 +169,16 @@ const usePreviewStyles = (g: boolean) =>
       backgroundImage: `linear-gradient(${g ? 140 : 135}deg, ${
         g ? t.color.brandStart : t.color.accent
       }, ${g ? t.color.brandEnd : t.color.accentEnd})`,
+      ...(t.brand
+        ? {
+            backgroundImage:
+              t.brand.kind === 'google'
+                ? undefined
+                : `linear-gradient(110deg, ${t.brand.ai.join(',')})`,
+            backgroundColor: t.color.accentBg,
+            borderRadius: t.shape.md,
+          }
+        : {}),
     },
     line: {
       marginTop: g ? 7 : 6,
@@ -181,6 +200,15 @@ const usePreviewStyles = (g: boolean) =>
       borderColor: t.color.line,
       ...(g ? t.elevation.pop : {}),
       boxShadow: g ? `inset 0 0 0 0.5px ${t.color.glassLine}` : undefined,
+      ...(t.brand
+        ? {
+            left: t.brand.kind === 'win11' ? 12 : 0,
+            right: t.brand.kind === 'win11' ? 12 : 0,
+            bottom: t.brand.kind === 'win11' ? 8 : 0,
+            borderRadius:
+              t.brand.kind === 'win11' ? t.shape.lg : t.shape.xs * 0,
+          }
+        : {}),
     },
   }))();
 const useStyles = (g: boolean) =>
@@ -191,9 +219,12 @@ const useStyles = (g: boolean) =>
       paddingTop: g ? 0 : 12,
       paddingBottom: g ? 7 : 6,
     },
-    grid: { flexDirection: 'row', gap: 12 },
+    grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
     skinCard: {
-      flex: 1,
+      flexGrow: 1,
+      flexBasis: '44%',
+      minWidth: 140,
+      maxWidth: '50%',
       backgroundColor: t.color.surface,
       borderRadius: t.shape.md,
       padding: 12,

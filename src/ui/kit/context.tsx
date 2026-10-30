@@ -21,6 +21,12 @@ export const useTokens = (): Tokens => useSkin().tokens;
 
 /** Semantic presentation differences owned by the design system. */
 export function usePresentation() {
-  const { tokens, reduceMotion } = useSkin();
-  return { ...tokens.layout, reduceMotion };
+  const { tokens, skin, reduceMotion } = useSkin();
+  return {
+    ...tokens.layout,
+    reduceMotion,
+    brand: tokens.brand,
+    isPaper: skin.id === 'paper',
+    floatingChrome: skin.id === 'glass' || skin.id === 'win11',
+  };
 }

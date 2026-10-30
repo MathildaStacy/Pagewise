@@ -8,8 +8,17 @@ export interface IconProps {
   size?: number;
   color?: string;
   label?: string;
+  filled?: boolean;
+  variant?: 'line' | 'color';
 }
-export function Icon({ name, size = 22, color, label }: IconProps) {
+export function Icon({
+  name,
+  size = 22,
+  color,
+  label,
+  filled,
+  variant,
+}: IconProps) {
   const { skin, tokens } = useSkin();
   return (
     <View
@@ -21,6 +30,8 @@ export function Icon({ name, size = 22, color, label }: IconProps) {
       {createElement(skin.icons[name], {
         size,
         color: color ?? tokens.color.ink2,
+        filled,
+        variant,
       })}
     </View>
   );

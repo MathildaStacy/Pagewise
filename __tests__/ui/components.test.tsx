@@ -14,6 +14,7 @@ import Svg from 'react-native-svg';
 import { SkinProvider } from '../../src/ui/kit/SkinProvider';
 import type { ComponentMap, KitProps } from '../../src/ui/kit/contracts';
 import * as Kit from '../../src/ui/kit/proxy';
+import type { SkinId } from '@ui/kit';
 import { makeComponentSamples } from './helpers/props';
 
 const components: ComponentMap = Kit;
@@ -22,6 +23,12 @@ const variants = [
   ['paper', 'dark'],
   ['glass', 'light'],
   ['glass', 'dark'],
+  ['meta', 'light'],
+  ['meta', 'dark'],
+  ['google', 'light'],
+  ['google', 'dark'],
+  ['win11', 'light'],
+  ['win11', 'dark'],
 ] as const;
 const names = Object.keys(makeComponentSamples()) as (keyof KitProps)[];
 const rendered = new Set<ReactTestRenderer.ReactTestRenderer>();
@@ -44,7 +51,7 @@ afterAll(() => jest.restoreAllMocks());
 
 async function mount(
   children: React.ReactNode,
-  skinId: 'paper' | 'glass' = 'paper',
+  skinId: SkinId = 'paper',
   scheme: 'light' | 'dark' = 'light',
 ) {
   let renderer!: ReactTestRenderer.ReactTestRenderer;
@@ -100,7 +107,7 @@ for (const [skin, scheme] of variants) {
   });
 }
 
-for (const skin of ['paper', 'glass'] as const) {
+for (const skin of ['paper', 'glass', 'meta', 'google', 'win11'] as const) {
   describe(`${skin} 交互契约`, () => {
     it('Button 转发禁用状态与动作', async () => {
       const props = makeComponentSamples().Button;
@@ -274,7 +281,7 @@ it('Note wraps adjacent text expressions and numbers in one native Text', async 
   expect(JSON.stringify(renderer.toJSON())).toContain('核对结果\\n演示内容3');
 });
 
-for (const skin of ['paper', 'glass'] as const) {
+for (const skin of ['paper', 'glass', 'meta', 'google', 'win11'] as const) {
   it(`${skin} 富文本段落可读且图片不拦截段落操作`, async () => {
     const onPress = jest.fn();
     const renderer = await mount(

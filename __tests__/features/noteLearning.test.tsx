@@ -10,7 +10,7 @@ import { useNoteDetailVM, useNotesVM } from '@features/notes/useNotesVM';
 import { noteDetailSamples, notesSamples } from '@features/notes/samples';
 import { NotesView } from '@ui/screens/NotesView';
 import { NoteDetailView } from '@ui/screens/NoteDetailView';
-import { SkinProvider } from '@ui/kit';
+import { AiMessage, Sheet, SkinProvider } from '@ui/kit';
 
 jest.mock('@app/ContainerProvider', () => ({ useContainer: jest.fn() }));
 jest.mock('@features/nav', () => ({ useAppNav: jest.fn() }));
@@ -201,9 +201,13 @@ it('keeps QA links, opens full rich conversation and follows citations to their 
   expect(current().state.conversation).toBeNull();
 });
 
-it.each(['paper', 'glass'] as const)(
-  'renders search and conversation affordances with %s tokens',
-  async skin => {
+it.each(
+  (['paper', 'glass', 'meta', 'google', 'win11'] as const).flatMap(skin =>
+    (['light', 'dark'] as const).map(scheme => [skin, scheme] as const),
+  ),
+)(
+  'renders search and conversation affordances with %s/%s tokens',
+  async (skin, scheme) => {
     jest
       .spyOn(AccessibilityInfo, 'isReduceMotionEnabled')
       .mockResolvedValue(true);
@@ -212,10 +216,12 @@ it.each(['paper', 'glass'] as const)(
       .mockResolvedValue(true);
     const setSearchQuery = jest.fn(),
       openSearchResult = jest.fn(),
-      openConversation = jest.fn();
+      openConversation = jest.fn(),
+      openConversationSource = jest.fn(),
+      closeConversation = jest.fn();
     await act(async () => {
       renderer = TestRenderer.create(
-        <SkinProvider skinId={skin} scheme="light" reduceMotion>
+        <SkinProvider skinId={skin} scheme={scheme} reduceMotion>
           <NotesView
             state={{
               ...notesSamples.normal,
@@ -258,7 +264,7 @@ it.each(['paper', 'glass'] as const)(
     await act(async () => renderer!.unmount());
     await act(async () => {
       renderer = TestRenderer.create(
-        <SkinProvider skinId={skin} scheme="dark" reduceMotion>
+        <SkinProvider skinId={skin} scheme={scheme} reduceMotion>
           <NoteDetailView
             state={{
               ...noteDetailSamples.normal,
@@ -283,6 +289,8 @@ it.each(['paper', 'glass'] as const)(
               setUserText: jest.fn(),
               retry: jest.fn(),
               openConversation,
+              openConversationSource,
+              closeConversation,
             }}
           />
         </SkinProvider>,
@@ -295,6 +303,10 @@ it.each(['paper', 'glass'] as const)(
     )[0];
     button.props.onPress();
     expect(openConversation).toHaveBeenCalledWith('qa');
+    renderer!.root.findByType(AiMessage).props.onCite(103001);
+    expect(openConversationSource).toHaveBeenCalledWith(103001);
+    renderer!.root.findByType(Sheet).props.onClose();
+    expect(closeConversation).toHaveBeenCalledTimes(1);
     expect(renderer!.toJSON()).toBeTruthy();
   },
 );

@@ -1,4 +1,5 @@
 import type { Block, Book, Message, Section } from '@core/types';
+import { sectionName } from '@features/sectionName';
 import {
   parse,
   stableStreamText,
@@ -15,9 +16,7 @@ import type { RichDoc, RichInline } from '@ui/kit';
 import type { QuickKey, ReaderItem, ThreadItem } from './types';
 
 export function sectionLabel(section: Section | null | undefined) {
-  return section
-    ? [section.no, section.title].filter(Boolean).join(' ')
-    : '正在读取';
+  return section ? sectionName(section) : '正在读取';
 }
 export function blockPage(
   block: Pick<Block, 'page' | 'loc'> | undefined,

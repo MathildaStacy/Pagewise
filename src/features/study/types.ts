@@ -1,4 +1,12 @@
 import type { ComposerQuote, PageOrigProps, RichDoc } from '@ui/kit';
+import type { StudyOpenOptions } from '@app/study/types';
+
+export interface StudyEntryOptions extends StudyOpenOptions {
+  /** Fill the editable composer and wait for the user to send. */
+  draftQuestion?: string;
+  /** Focus the current draft after returning from a quoted source. */
+  focusComposer?: boolean;
+}
 
 export type QuickKey =
   | 'next'
@@ -144,7 +152,11 @@ export interface ReaderState {
   };
 }
 export type StudyOverlay =
-  | { kind: 'menu'; rows: { key: string; title: string; sub: string }[] }
+  | {
+      kind: 'menu';
+      title?: string;
+      rows: { key: string; title: string; sub: string }[];
+    }
   | {
       kind: 'roadmap';
       title: string;
@@ -225,6 +237,7 @@ export interface StudyState {
     }[];
     composer: {
       value: string;
+      focusRequest?: number;
       placeholder: string;
       canSend: boolean;
       streaming: boolean;
@@ -239,6 +252,7 @@ export interface StudyIntents {
   back(): void;
   setMode(mode: 'listen' | 'read'): void;
   openMenu(): void;
+  openAdd?(): void;
   menuSelect(key: string): void;
   quick(key: string): void;
   setText(text: string): void;

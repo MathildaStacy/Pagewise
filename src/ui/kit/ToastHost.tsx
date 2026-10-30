@@ -22,6 +22,7 @@ const useStyles = makeStyles(t => ({
     position: 'absolute',
     left: t.space.pageX,
     right: t.space.pageX,
-    top: t.space.gap,
+    top: t.brand ? undefined : t.space.gap,
+    bottom: t.brand ? 100 : undefined,
   },
 }));

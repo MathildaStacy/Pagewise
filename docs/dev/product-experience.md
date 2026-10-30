@@ -1,6 +1,6 @@
 # 产品体验改善与并行开发验证
 
-体验分支：`codex/feature-product-experience`。独立工作目录：`/Users/boren.fang/.codex/worktrees/product-experience/Pagewise`。从 `bd9366bfe661f0657fdd8705350aa10098389eb1` 创建，功能提交 `414f56a6e665017f1084ffc1b70a2fd8c9a45b2e`。未合入 main，未修改其他会话的工作目录。
+体验分支：`codex/feature-product-experience`。独立工作目录：`/Users/boren.fang/.codex/worktrees/product-experience/Pagewise`。从 `bd9366bfe661f0657fdd8705350aa10098389eb1` 创建，功能提交 `414f56a6e665017f1084ffc1b70a2fd8c9a45b2e`。以下首先记录初次交付与三分支兼容实验，最新 main 合入结果见文末。
 
 ## 改善的取舍
 
@@ -51,7 +51,7 @@
 
 原生抽查覆盖了五套皮肤：纸感浅色的完整路径、苹果风深色（系统字号 1.3 与大正文）的管理页、Meta 深色的编辑/保存、新谷歌浅色的搜索/完整问答/引用、Win11 浅色的暂停/恢复与 PDF 原版页面。整合后的原文页已成功渲染，日志未见 AndroidRuntime / ReactNativeJS 错误。
 
-本机整合验证包：[pagewise-integration-review.apk](/Users/boren.fang/.codex/worktrees/product-experience-integration/Pagewise/android/app/build/outputs/apk/release/pagewise-integration-review.apk)。SHA-256：`d911991a1d0812624b7e0ed0c2a335f066568fc756c10fe1cf5e8c258bb0a5c2`。
+首次三分支兼容实验的 v0.0.6 验证包：[pagewise-integration-review.apk](/Users/boren.fang/.codex/worktrees/product-experience-integration/Pagewise/android/app/build/outputs/apk/release/pagewise-integration-review.apk)。SHA-256：`d911991a1d0812624b7e0ed0c2a335f066568fc756c10fe1cf5e8c258bb0a5c2`。最新 main 验证包见文末。
 
 ## 原生截图
 
@@ -68,3 +68,24 @@
 - [整合：新谷歌浅色问答](evidence/product-experience/integration-google-full-qa-light.png)
 - [整合：Win11 浅色卡片管理](evidence/product-experience/integration-win11-cards-light.png)
 - [整合：Win11 原文页面](evidence/product-experience/integration-win11-source-light.png)
+
+## main 合入与适配（2026-10-30）
+
+按用户要求，将体验功能分支合入 main。合入基线为 `9e571fdbf4a0b90941668eda493e358924f2f6e1`，保留该版本的五套皮肤、导航实例隔离、标题/导读去重与 Android v0.0.7。先在体验 worktree 合并并验证 main，再在 main 创建合并提交，其他会话的工作目录保持独立。
+
+两处冲突位于 `features/library/presenters.ts` 和 `features/notes/presenters.ts`：页码继续使用 `pageRangeLabel`，章节名称使用 main 的 `sectionName`，使前言物理页码与导入标题去重同时生效。对比合入基线，kit、skins、ReaderView、导航隔离实现、依赖版本与 Android 版本号均未被替换。
+
+本次 main 的范围是体验功能与 main 已有 UI。架构新提交 `d6c28be` 由 `codex/feature-learning-harness` 独立维护；上文三分支记录是单独的兼容实验。
+
+验证结果：
+
+- ESLint、TypeScript 通过；全量 Jest 为 96 套、1,842 项测试、15 份快照通过，保留已有的 1 套/2 项私有 fixture 跳过。
+- 五套皮肤 × 浅深色的闪卡、笔记、设置交互回归通过，main 新增的导航隔离与标题去重回归也通过。
+- Android `:app:assembleRelease` 完整构建与签名校验通过，安装元数据为 versionCode 7 / versionName 0.0.7。
+- 独立只读模拟器复核了书架续学提示、复习 1/5、编辑/取消、返回笔记后搜索本机摘要与个人笔记；AndroidRuntime / ReactNativeJS 未报错。
+
+最新 main 对应的本机验证包：[app-release.apk](/Users/boren.fang/.codex/worktrees/product-experience/Pagewise/android/app/build/outputs/apk/release/app-release.apk)。
+
+- [main：继续学习](evidence/product-experience/main-v007/continuation.png)
+- [main：闪卡编辑](evidence/product-experience/main-v007/card-editor.png)
+- [main：笔记搜索](evidence/product-experience/main-v007/note-search.png)

@@ -3,7 +3,7 @@ import type { Db } from '@data/db';
 import { createSettingsRepo, type SettingsRepo } from '@data/repos/settings';
 
 export interface Appearance {
-  skin: 'paper' | 'glass';
+  skin: 'paper' | 'glass' | 'meta' | 'google' | 'win11';
   scheme: 'system' | 'light' | 'dark';
   readingSize: 's' | 'm' | 'l';
 }
@@ -24,7 +24,13 @@ function skin(
   value: unknown,
   fallback: Appearance['skin'],
 ): Appearance['skin'] {
-  return value === 'paper' || value === 'glass' ? value : fallback;
+  return value === 'paper' ||
+    value === 'glass' ||
+    value === 'meta' ||
+    value === 'google' ||
+    value === 'win11'
+    ? value
+    : fallback;
 }
 function scheme(
   value: unknown,

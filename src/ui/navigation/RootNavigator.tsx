@@ -12,7 +12,7 @@ import {
   DefaultTheme,
   NavigationContainer,
   StackActions,
-  createNavigationContainerRef,
+  useNavigationContainerRef,
   useIsFocused,
   type RouteProp,
 } from '@react-navigation/native';
@@ -57,6 +57,13 @@ import {
 } from '@features/study/StudyScreens';
 import { AppearanceScreen } from '@features/appearance/AppearanceScreen';
 import { GalleryScreen } from '@features/gallery/GalleryScreen';
+import {
+  TodayScreen,
+  AskShelfScreen,
+  LearningStatsScreen,
+  WelcomeScreen,
+  Win11SetupGate,
+} from '@features/home/HomeScreens';
 import { Button, Empty, Screen, TabBar, useSkin, useTokens } from '@ui/kit';
 
 export type RootStackParams = {
@@ -70,6 +77,8 @@ export type RootStackParams = {
     sectionId?: string;
     blockRef?: string;
     question?: string;
+    draftQuestion?: string;
+    focusComposer?: boolean;
     stuckId?: number;
   };
   Reader: { bookId: string; sectionId?: string; blockRef?: string };
@@ -85,10 +94,12 @@ export type RootStackParams = {
   MeStorage: undefined;
   About: undefined;
   SkinGallery: undefined;
+  AskShelf: undefined;
+  LearningStats: undefined;
+  Welcome: undefined;
 };
 const Stack = createNativeStackNavigator<RootStackParams>();
 const Tabs = createBottomTabNavigator<Record<TabName, undefined>>();
-const navRef = createNavigationContainerRef<RootStackParams>();
 const tabItems = [
   { key: 'Shelf', label: '书架', icon: 'shelf' as const },
   { key: 'Review', label: '复习', icon: 'cards' as const },
@@ -127,6 +138,13 @@ function ShelfTab() {
     </ScreenBoundary>
   );
 }
+function TodayTab() {
+  return (
+    <ScreenBoundary>
+      <TodayScreen />
+    </ScreenBoundary>
+  );
+}
 function ReviewTab() {
   return (
     <ScreenBoundary>
@@ -151,6 +169,14 @@ function MeTab() {
 function MainTabBar({ state, navigation, insets }: BottomTabBarProps) {
   const t = useTokens();
   const due = useReviewBadge();
+  const items =
+    t.brand?.kind === 'win11'
+      ? [{ key: 'Today', label: '今天', icon: 'home' as const }, ...tabItems]
+      : tabItems;
+  useEffect(() => {
+    if (t.brand?.kind !== 'win11' && state.routes[state.index].name === 'Today')
+      navigation.navigate('Shelf');
+  }, [navigation, state, t.brand?.kind]);
   return (
     <View
       style={
@@ -162,7 +188,7 @@ function MainTabBar({ state, navigation, insets }: BottomTabBarProps) {
       }
     >
       <TabBar
-        items={tabItems.map(item =>
+        items={items.map(item =>
           item.key === 'Review' && due > 0 ? { ...item, badge: due } : item,
         )}
         active={state.routes[state.index].name}
@@ -187,12 +213,14 @@ function MainTabs() {
   const focused = useIsFocused();
   return (
     <Tabs.Navigator
+      initialRouteName={t.brand?.kind === 'win11' ? 'Today' : 'Shelf'}
       screenOptions={{
         headerShown: false,
         sceneStyle: { backgroundColor: t.color.bg },
       }}
       tabBar={focused ? renderTabBar : hiddenTabBar}
     >
+      <Tabs.Screen name="Today" component={TodayTab} />
       <Tabs.Screen name="Shelf" component={ShelfTab} />
       <Tabs.Screen name="Review" component={ReviewTab} />
       <Tabs.Screen name="Notes" component={NotesTab} />
@@ -213,6 +241,12 @@ function Page({
   switch (route.name) {
     case 'BookMap':
       return <BookMapScreen bookId={route.params.bookId} />;
+    case 'AskShelf':
+      return <AskShelfScreen />;
+    case 'LearningStats':
+      return <LearningStatsScreen />;
+    case 'Welcome':
+      return <WelcomeScreen />;
     case 'ParseProgress':
       return <ParseProgressScreen bookId={route.params.bookId} />;
     case 'ImportSettings':
@@ -278,6 +312,9 @@ const screens = [
   'MeStorage',
   'About',
   'SkinGallery',
+  'AskShelf',
+  'LearningStats',
+  'Welcome',
 ] as const;
 export function RootNavigator({
   enterDemo,
@@ -297,6 +334,7 @@ export function RootNavigator({
       | { kind: 'duplicate'; bookId: string };
   } | null;
 }) {
+  const navRef = useNavigationContainerRef<RootStackParams>();
   const [ready, setReady] = useState(false);
   const appliedImport = useRef<number | null>(null);
   useEffect(() => {
@@ -316,7 +354,7 @@ export function RootNavigator({
           : { bookId: selection.bookId },
       ),
     );
-  }, [ready, incomingImport]);
+  }, [ready, incomingImport, navRef]);
   const { skin, tokens } = useSkin();
   const navigation = useMemo<AppNav>(
     () => ({
@@ -350,11 +388,12 @@ export function RootNavigator({
       enterDemo,
       exitDemo,
     }),
-    [enterDemo, exitDemo],
+    [enterDemo, exitDemo, navRef],
   );
   const theme = { ...DefaultTheme, ...skin.navigationTheme(tokens) };
   return (
     <AppNavProvider value={navigation}>
+      <Win11SetupGate ready={ready} />
       <NavigationContainer
         ref={navRef}
         theme={theme}

@@ -56,11 +56,14 @@ export function GlassSurface({
     blurEnabled !== false &&
     skin.blurEnabled !== false &&
     (Platform.OS === 'android' || Platform.OS === 'ios');
-  const fill = material
-    ? strength === 'strong'
-      ? tokens.color.glassStrong
-      : tokens.color.glass
-    : tokens.color.surface;
+  const fill =
+    material && tokens.brand?.kind === 'win11' && !enabled
+      ? tokens.brand.acrylicSolid
+      : material
+      ? strength === 'strong'
+        ? tokens.color.glassStrong
+        : tokens.color.glass
+      : tokens.color.surface;
   const surfaceStyle = StyleSheet.create({
     root: {
       overflow: 'hidden',
@@ -108,7 +111,7 @@ function SheetBackground({ style }: BottomSheetBackgroundProps) {
   }).root;
   return (
     <GlassSurface
-      material={inset}
+      material={inset || tokens.brand?.kind === 'win11'}
       strength="strong"
       style={[style, sheetBackgroundStyle]}
     />
@@ -121,7 +124,8 @@ function SheetHeader({
   onClose,
 }: Pick<SheetProps, 'title' | 'subtitle' | 'onClose'>) {
   const t = useTokens(),
-    inset = t.layout.groupedLists;
+    inset = t.layout.groupedLists && !t.brand;
+  const centered = inset || t.brand?.kind === 'meta';
   const s = StyleSheet.create({
     grab: {
       width: 36,
@@ -143,7 +147,7 @@ function SheetHeader({
       fontWeight: '600',
       lineHeight: inset ? 22.1 : 24,
       color: t.color.ink,
-      textAlign: inset ? 'center' : 'left',
+      textAlign: centered ? 'center' : 'left',
     },
     subtitle: {
       ...t.type.caption,
@@ -151,7 +155,7 @@ function SheetHeader({
       lineHeight: inset ? 17.4 : 18,
       fontWeight: '400',
       color: inset ? t.color.ink2 : t.color.ink3,
-      textAlign: inset ? 'center' : 'left',
+      textAlign: centered ? 'center' : 'left',
       marginTop: inset ? 2 : 0,
     },
     close: {
@@ -175,7 +179,7 @@ function SheetHeader({
           {title}
         </Text>
         {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
-        {inset ? (
+        {inset || t.brand ? (
           <Pressable
             testID="sheet-close"
             accessibilityRole="button"
@@ -198,15 +202,20 @@ function SheetActions({
   actions: NonNullable<SheetProps['actions']>;
 }) {
   const t = useTokens(),
-    inset = t.layout.groupedLists;
-  const ordered = inset
+    inset = t.layout.groupedLists && !t.brand;
+  const vertical = inset || t.brand?.kind === 'meta';
+  const ordered = vertical
     ? [...actions].sort(
         (a, b) => Number(b.kind === 'primary') - Number(a.kind === 'primary'),
+      )
+    : t.brand?.kind === 'google'
+    ? [...actions].sort(
+        (a, b) => Number(a.kind === 'primary') - Number(b.kind === 'primary'),
       )
     : actions;
   const s = StyleSheet.create({
     footer: {
-      flexDirection: inset ? 'column' : 'row',
+      flexDirection: vertical ? 'column' : 'row',
       flexShrink: 0,
       gap: 8,
       paddingTop: inset ? 12 : 8,
@@ -221,7 +230,7 @@ function SheetActions({
       {ordered.map((action, index) => (
         <View
           key={`${action.label}-${index}`}
-          style={inset ? undefined : s.cell}
+          style={vertical ? undefined : s.cell}
         >
           <Button
             variant={action.kind}
@@ -298,7 +307,7 @@ export function Sheet({
 }: SheetProps) {
   const tokens = useTokens(),
     { reduceMotion } = useSkin();
-  const inset = tokens.layout.groupedLists;
+  const inset = tokens.layout.groupedLists && !tokens.brand;
   const safe = useSafeAreaInsets(),
     { height } = useWindowDimensions();
   const snapPoints = useMemo(

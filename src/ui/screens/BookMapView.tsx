@@ -386,9 +386,13 @@ const useStyles = makeStyles(t => ({
     gap: t.layout.groupedLists ? 11 : 10,
     alignItems: 'center',
     backgroundColor: t.color.surface,
+    ...(t.brand ? { backgroundColor: undefined, minHeight: 48 } : {}),
   },
   nodeLevel3: { paddingLeft: t.layout.groupedLists ? 50 : 52 },
-  nodeCurrent: { backgroundColor: t.color.accentBg },
+  nodeCurrent: {
+    backgroundColor: t.color.accentBg,
+    ...(t.brand ? { backgroundColor: t.brand.secondaryContainer } : {}),
+  },
   nodeFlagged: { backgroundColor: t.color.mapFlagBg },
   rowPressed: { backgroundColor: t.color.pressed },
   nodeTrailing: { flexDirection: 'row', alignItems: 'center', gap: 3 },
@@ -428,6 +432,13 @@ const useStyles = makeStyles(t => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: t.layout.groupedLists ? 12 : 10,
+    ...(t.brand
+      ? {
+          borderRadius: t.shape.md,
+          backgroundColor:
+            t.brand.kind === 'google' ? t.color.surfaceFill : t.color.surface,
+        }
+      : {}),
   },
   checkContent: { flex: 1 },
   checkTitle: {
@@ -449,6 +460,7 @@ const useStyles = makeStyles(t => ({
     alignItems: 'center',
     gap: t.space.gap,
     backgroundColor: t.color.surface,
+    ...(t.brand ? { backgroundColor: undefined } : {}),
   },
   children: {
     borderTopWidth: t.layout.groupedLists ? 0.5 : 0,

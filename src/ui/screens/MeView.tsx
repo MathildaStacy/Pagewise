@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import {
   AppBar,
+  Gradient,
   Screen,
   Segmented,
   Note,
@@ -135,7 +136,7 @@ export function SettingsRow({
         {children}
       </View>
       {right}
-      {chevron ? (
+      {chevron && t.brand?.kind !== 'google' ? (
         groupedLists ? (
           <Icon name="chev" size={15} color={t.color.ink3} />
         ) : (
@@ -427,6 +428,8 @@ const icons: Record<
   MeAppearance: { name: 'appearance', token: 'appearance' },
   MeStorage: { name: 'drive', token: 'storage' },
   About: { name: 'info', token: 'about' },
+  LearningStats: { name: 'chart', token: 'ai' },
+  Welcome: { name: 'rocket', token: 'appearance' },
 };
 export function MeView({
   state,
@@ -440,10 +443,80 @@ export function MeView({
     { groupedLists } = usePresentation();
   return (
     <Screen scroll edges={['top', 'left', 'right']}>
-      <AppBar title="我的" variant="root" />
+      <AppBar
+        title="我的"
+        subtitle={t.brand?.kind === 'win11' ? 'Pagewise · 本地优先' : undefined}
+        variant="root"
+      />
       <SettingsFeedback state={state} />
+      {t.brand?.kind === 'win11' && state.overview ? (
+        <View style={s.winHero}>
+          <View style={s.winHeroTop}>
+            <Icon name="book" variant="color" size={40} />
+            <View style={s.grow}>
+              <Text style={s.winHeroTitle}>书和学习记录只存在这台手机上</Text>
+              <Text style={s.rowSubtitle}>
+                没有账号、没有后端。上传给 MinerU 和发给 AI 的内容，都在「AI
+                看到的内容」里看得到。
+              </Text>
+            </View>
+          </View>
+          <View style={s.winStorage}>
+            <Text style={s.rowSubtitle}>本机存储</Text>
+            <Text style={s.rowSubtitle}>{state.overview.storage}</Text>
+          </View>
+          <Gradient colors={t.brand.ai} style={s.winStorageBar} />
+          <View style={s.winQuick}>
+            {[
+              {
+                key: 'dark' as const,
+                label: '深色',
+                icon: 'moon' as const,
+                on: t.scheme === 'dark',
+              },
+              {
+                key: 'intuition' as const,
+                label: '先讲直觉',
+                icon: 'teach' as const,
+                on: state.overview.intuition,
+              },
+              {
+                key: 'quiz' as const,
+                label: '一节一测',
+                icon: 'help' as const,
+                on: state.overview.quiz,
+              },
+            ].map(item => (
+              <Pressable
+                key={item.key}
+                accessibilityRole="button"
+                accessibilityState={{ selected: item.on }}
+                onPress={() => intents.quick?.(item.key)}
+                style={[s.winQuickButton, item.on && s.winQuickOn]}
+              >
+                <Icon
+                  name={item.icon}
+                  size={16}
+                  color={item.on ? t.color.accentInk : t.color.ink2}
+                />
+                <Text style={s.winQuickLabel}>{item.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ) : null}
       {state.groups.map((group, index) => (
-        <SettingsGroup key={index} icons>
+        <SettingsGroup
+          key={index}
+          icons
+          title={
+            t.brand?.kind === 'win11'
+              ? index === 0
+                ? '学习'
+                : '应用'
+              : undefined
+          }
+        >
           {group.map(row => {
             const glyph = icons[row.key];
             return (
@@ -457,18 +530,38 @@ export function MeView({
                 onPress={() => intents.open(row.key)}
                 icon={
                   groupedLists && glyph ? (
-                    <View
-                      style={[
-                        s.settingsIcon,
-                        { backgroundColor: t.settingsIcons[glyph.token] },
-                      ]}
-                    >
+                    t.brand?.kind === 'win11' ? (
                       <Icon
-                        name={glyph.name}
-                        size={18}
-                        color={t.color.continueInk}
+                        name={row.key === 'MeMineru' ? 'key' : glyph.name}
+                        variant="color"
+                        size={40}
                       />
-                    </View>
+                    ) : (
+                      <View
+                        style={[
+                          s.settingsIcon,
+                          !t.brand && {
+                            backgroundColor: t.settingsIcons[glyph.token],
+                          },
+                        ]}
+                      >
+                        <Icon
+                          name={glyph.name}
+                          size={
+                            t.brand?.kind === 'google'
+                              ? 24
+                              : t.brand?.kind === 'meta'
+                              ? 20
+                              : 18
+                          }
+                          color={
+                            t.brand
+                              ? t.settingsIcons[glyph.token]
+                              : t.color.continueInk
+                          }
+                        />
+                      </View>
+                    )
                   ) : undefined
                 }
               />
@@ -493,7 +586,44 @@ export const useSettingsStyles = () => {
 const useStyles = (g: boolean) =>
   makeStyles(t => ({
     grow: { flex: 1, minWidth: 0 },
-    group: { marginHorizontal: g ? 16 : 0, marginBottom: g ? 24 : 8 },
+    winHero: {
+      marginHorizontal: 16,
+      marginBottom: 20,
+      padding: 16,
+      borderRadius: t.shape.lg,
+      backgroundColor: t.brand?.card ?? t.color.glass,
+    },
+    winHeroTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+    winHeroTitle: { ...t.type.label, color: t.color.ink },
+    winStorage: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: 16,
+      marginBottom: 8,
+    },
+    winStorageBar: { height: 6, borderRadius: t.shape.pill, marginBottom: 16 },
+    winQuick: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+    winQuickButton: {
+      minHeight: 32,
+      flexDirection: 'row',
+      gap: 5,
+      paddingHorizontal: 10,
+      alignItems: 'center',
+      borderRadius: t.shape.pill,
+      backgroundColor: t.color.surfaceAlt,
+    },
+    winQuickOn: { backgroundColor: t.color.accentBg },
+    winQuickLabel: { ...t.type.caption, color: t.color.ink2 },
+    group: {
+      marginHorizontal: g ? 16 : 0,
+      marginBottom: g ? 24 : 8,
+      ...(t.brand
+        ? {
+            marginHorizontal: t.brand.kind === 'google' ? 0 : t.space.pageX,
+            marginBottom: t.space.sectionGap,
+          }
+        : {}),
+    },
     groupHeading: {
       flexDirection: 'row',
       alignItems: 'baseline',
@@ -503,6 +633,9 @@ const useStyles = (g: boolean) =>
       paddingTop: g ? 0 : 12,
       paddingBottom: g ? 7 : 6,
       backgroundColor: g ? undefined : t.color.surface,
+      ...(t.brand
+        ? { paddingHorizontal: t.brand.kind === 'google' ? 24 : 4 }
+        : {}),
     },
     groupTitle: {
       ...t.type.caption,
@@ -510,12 +643,37 @@ const useStyles = (g: boolean) =>
       lineHeight: g ? 18.85 : 22.5,
       fontWeight: g ? '400' : '600',
       color: g ? t.color.ink2 : t.color.ink,
+      ...(t.brand
+        ? {
+            fontSize:
+              t.brand.kind === 'meta'
+                ? t.type.body.fontSize
+                : t.type.label.fontSize,
+            fontWeight: t.brand.kind === 'meta' ? '700' : '500',
+            color: t.brand.kind === 'google' ? t.color.accent : t.color.ink,
+          }
+        : {}),
     },
     groupMeta: { ...t.type.caption, color: t.color.ink3, fontWeight: '400' },
     groupBody: {
       backgroundColor: t.color.surface,
       borderRadius: g ? t.shape.md : undefined,
       overflow: 'hidden',
+      ...(t.brand
+        ? {
+            backgroundColor:
+              t.brand.kind === 'google'
+                ? 'transparent'
+                : t.brand.kind === 'win11'
+                ? t.brand.card ?? t.color.glass
+                : t.color.surface,
+            borderRadius:
+              t.brand.kind === 'google' ? t.shape.xs * 0 : t.shape.md,
+            borderWidth: t.brand.kind === 'win11' ? 1 : 0,
+            borderColor: t.brand.stroke ?? t.color.glassLine,
+            ...(t.brand.kind === 'win11' ? t.elevation.card : {}),
+          }
+        : {}),
     },
     groupFoot: {
       ...t.type.caption,
@@ -533,8 +691,15 @@ const useStyles = (g: boolean) =>
       height: g ? 0.5 : 1,
       backgroundColor: t.color.line,
       zIndex: 1,
+      ...(t.brand
+        ? {
+            height: t.brand.kind === 'google' ? 0 : 1,
+            left: t.brand.kind === 'meta' ? 16 : 0,
+            right: 16,
+          }
+        : {}),
     },
-    iconSeparator: { left: 58 },
+    iconSeparator: { left: 58, ...(t.brand ? { left: 64 } : {}) },
     row: {
       minHeight: g ? 50 : 45,
       flexDirection: 'row',
@@ -543,12 +708,25 @@ const useStyles = (g: boolean) =>
       paddingHorizontal: g ? 16 : 14,
       paddingVertical: g ? 11 : 12,
       backgroundColor: t.color.surface,
+      ...(t.brand
+        ? {
+            minHeight: t.brand.kind === 'google' ? 56 : 52,
+            paddingHorizontal: t.brand.kind === 'google' ? 24 : 16,
+            backgroundColor: undefined,
+          }
+        : {}),
     },
     rowTitle: {
       ...t.type.body,
       lineHeight: g ? 22.1 : 21,
       fontWeight: '400',
       color: t.color.ink,
+      ...(t.brand
+        ? {
+            fontSize: t.type.bookTitle.fontSize,
+            fontWeight: t.brand.kind === 'meta' ? '600' : '400',
+          }
+        : {}),
     },
     rowBold: { fontWeight: '500' },
     rowSubtitle: {
@@ -615,27 +793,45 @@ const useStyles = (g: boolean) =>
       alignItems: 'center',
       justifyContent: 'center',
       alignSelf: 'flex-start',
+      ...(t.brand
+        ? {
+            borderRadius: t.brand.kind === 'meta' ? t.shape.sm : t.shape.pill,
+            minHeight: 44,
+          }
+        : {}),
     },
     smallButton: {
       minHeight: g ? 34 : 30,
       paddingHorizontal: g ? 14 : 12,
       borderRadius: t.shape.pill,
+      ...(t.brand
+        ? { borderRadius: t.brand.kind === 'meta' ? t.shape.sm : t.shape.pill }
+        : {}),
     },
     buttonLabel: { ...t.type.body, fontWeight: g ? '600' : '500' },
     smallButtonLabel: {
       ...t.type.label,
       fontWeight: g ? '600' : '500',
     },
-    primary: { backgroundColor: t.color.accent },
+    primary: {
+      backgroundColor: t.color.accent,
+      ...(t.brand ? { backgroundColor: t.brand.accentFill } : {}),
+    },
     secondary: { backgroundColor: t.color.surfaceAlt },
     ghost: {
       backgroundColor: g ? t.color.surfaceAlt : t.color.surface,
       borderWidth: g ? 0 : 1,
       borderColor: t.color.line,
     },
-    onPrimary: { color: t.color.onAccent },
+    onPrimary: {
+      color: t.color.onAccent,
+      ...(t.brand ? { color: t.color.onAccent } : {}),
+    },
     ghostText: { color: g ? t.color.accent : t.color.ink },
-    secondaryText: { color: g ? t.color.accent : t.color.ink },
+    secondaryText: {
+      color: g ? t.color.accent : t.color.ink,
+      ...(t.brand ? { color: t.color.ink } : {}),
+    },
     dangerText: { color: t.color.bad },
     buttonPressed: { transform: [{ scale: 0.97 }] },
     disabled: { opacity: g ? 0.4 : 0.45 },
@@ -645,6 +841,12 @@ const useStyles = (g: boolean) =>
       paddingTop: 10,
       paddingBottom: g ? 11 : 10,
       backgroundColor: t.color.surface,
+      ...(t.brand
+        ? {
+            backgroundColor: undefined,
+            paddingHorizontal: t.brand.kind === 'google' ? 24 : 16,
+          }
+        : {}),
     },
     fieldLabel: {
       ...t.type.caption,
@@ -662,6 +864,17 @@ const useStyles = (g: boolean) =>
       borderRadius: g ? undefined : t.shape.sm,
       minHeight: g ? 25 : 39,
       textAlignVertical: 'top',
+      ...(t.brand
+        ? {
+            paddingHorizontal: 10,
+            paddingVertical: 8,
+            minHeight: 44,
+            borderWidth: 1,
+            borderColor: t.color.fieldBorder,
+            borderRadius: t.shape.sm,
+            backgroundColor: t.color.surfaceFill,
+          }
+        : {}),
     },
     multiline: { minHeight: g ? 84 : 90, lineHeight: g ? 25.5 : 22.4 },
     disabledText: { color: t.color.ink3 },
@@ -709,5 +922,28 @@ const useStyles = (g: boolean) =>
       borderRadius: g ? t.shape.sm - 2 : t.shape.sm,
       alignItems: 'center',
       justifyContent: 'center',
+      ...(t.brand
+        ? {
+            width:
+              t.brand.kind === 'google'
+                ? 24
+                : t.brand.kind === 'meta'
+                ? 36
+                : 40,
+            height:
+              t.brand.kind === 'google'
+                ? 24
+                : t.brand.kind === 'meta'
+                ? 36
+                : 40,
+            borderRadius: t.brand.kind === 'meta' ? t.shape.pill : t.shape.sm,
+            backgroundColor:
+              t.brand.kind === 'meta'
+                ? t.color.surfaceAlt
+                : t.brand.kind === 'google'
+                ? 'transparent'
+                : t.color.accentBg,
+          }
+        : {}),
     },
   }))();

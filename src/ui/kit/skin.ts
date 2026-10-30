@@ -6,10 +6,13 @@ export interface IconGlyphProps {
   size?: number;
   color?: string;
   strokeWidth?: number;
+  filled?: boolean;
+  variant?: 'line' | 'color';
 }
 export type IconMap = Record<IconName, ComponentType<IconGlyphProps>>;
+export type SkinId = 'paper' | 'glass' | 'meta' | 'google' | 'win11';
 export interface Skin {
-  id: 'paper' | 'glass';
+  id: SkinId;
   name: string;
   tokens: Record<Scheme, Tokens>;
   icons: IconMap;

@@ -5,9 +5,10 @@ import { baseComponents } from './base';
 import { SkinContext } from './context';
 import type { ComponentMap } from './contracts';
 import type { Scheme, Tokens, TypeStyle } from './tokens';
+import type { SkinId } from './skin';
 
 export interface SkinProviderProps {
-  skinId: 'paper' | 'glass';
+  skinId: SkinId;
   scheme: 'system' | Scheme;
   readingSize?: 's' | 'm' | 'l';
   fontScale?: number;

@@ -2,20 +2,25 @@ import { useState } from 'react';
 import Renderer, { act, type ReactTestInstance } from 'react-test-renderer';
 import {
   FlatList,
+  Dimensions,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  View,
 } from 'react-native';
 import {
   AppBar,
   Button,
   Dialog,
+  GuideBar,
   IconButton,
   ReadEnd,
   RichView,
   Sheet,
+  Segmented,
   SkinProvider,
+  type SkinId,
 } from '@ui/kit';
 import {
   ReaderContent,
@@ -80,7 +85,7 @@ afterEach(async () => {
   jest.restoreAllMocks();
 });
 async function render(
-  skin: 'paper' | 'glass',
+  skin: SkinId,
   state = readerSamples.normal.read,
   actions = intents,
 ) {
@@ -188,6 +193,85 @@ it('does not persist a coarse jump and respects a user drag before the target mo
   expect(toOffset).not.toHaveBeenCalled();
 });
 
+it.each([400, 600])(
+  'remeasures a reflow target after returning from original mode with a taller guide in a %idp viewport',
+  async height => {
+    const state = { ...readerSamples.normal.read, scrollTo: undefined };
+    await render('google', state);
+    await act(async () =>
+      renderer.root.findByType(FlatList).props.onLayout(layout(0, 400)),
+    );
+    await measure('b3', 900, 80);
+    const tree = (read: ReaderState) => (
+      <SkinProvider skinId="google" scheme="light" reduceMotion>
+        <ReaderContent state={read} intents={intents} />
+      </SkinProvider>
+    );
+    await act(async () =>
+      renderer.update(
+        tree({
+          ...state,
+          view: 'orig',
+          original: { available: true, loading: false, pages: [] },
+        }),
+      ),
+    );
+    await act(async () =>
+      renderer.update(
+        tree({
+          ...state,
+          guide: { ...state.guide!, expanded: true },
+          scrollTo: { ref: 'b3', token: 2, flash: true },
+        }),
+      ),
+    );
+    expect(toOffset).not.toHaveBeenCalled();
+    await measure('b3', 1100, 80);
+    expect(toOffset).not.toHaveBeenCalled();
+    await act(async () =>
+      renderer.root.findByType(FlatList).props.onLayout(layout(0, height)),
+    );
+    expect(toOffset).toHaveBeenLastCalledWith({
+      offset: 1100 - height * 0.3,
+      animated: false,
+    });
+  },
+);
+
+it('includes the original page label when aligning a PDF block to the viewport', async () => {
+  jest.useFakeTimers();
+  try {
+    const root = await render('google', {
+      ...readerSamples.normal.read,
+      view: 'orig',
+      scrollTo: { ref: 'b3', token: 1, flash: true },
+      original: {
+        available: true,
+        loading: false,
+        pages: [
+          {
+            page: 103,
+            label: 'p.103',
+            size: { w: 600, h: 800 },
+            image: null,
+            blocks: [{ ref: 3, x0: 0, y0: 0.4, x1: 1, y1: 0.5 }],
+          },
+        ],
+      },
+    });
+    await act(async () =>
+      root.findByType(FlatList).parent!.props.onLayout({
+        nativeEvent: { layout: { x: 0, y: 0, width: 392, height: 600 } },
+      }),
+    );
+    await act(async () => jest.advanceTimersByTime(60));
+    // A 360×480 page begins after the 20dp label; .4*480+20-.3*600=32.
+    expect(toOffset).toHaveBeenLastCalledWith({ offset: 32, animated: false });
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
 it.each(['paper', 'glass'] as const)(
   'uses %s page boundaries without splitting the Apple reading article',
   async skin => {
@@ -236,6 +320,46 @@ it.each(['paper', 'glass'] as const)(
   },
 );
 
+it('keeps Google reflow as one continuous article with the prototype padding and corners', async () => {
+  const block = readerSamples.normal.read.items.find(
+    item => item.kind === 'block',
+  )!;
+  const root = await render('google', {
+    ...readerSamples.normal.read,
+    items: [
+      ...readerSamples.normal.read.items,
+      { kind: 'pageBreak', id: 'p104', page: 'p.104' },
+      { ...block, ref: 'b4', seq: 4 },
+    ],
+  });
+  const list = root.findByType(FlatList);
+  const rows = list.props.data;
+  const first = rows[0];
+  const boundary = rows.find(
+    (row: { label?: string }) => row.label === 'p.103',
+  );
+  const secondPage = rows.find((row: { id: string }) => row.id === 'b4');
+  const last = rows[rows.length - 1];
+  expect(first.start).toBe(true);
+  expect(boundary.end).toBe(false);
+  expect(secondPage.start).toBe(false);
+  expect(last.end).toBe(true);
+  const rowStyle = (item: unknown) =>
+    StyleSheet.flatten(list.props.renderItem({ item }).props.style);
+  expect(rowStyle(first)).toMatchObject({
+    marginHorizontal: 16,
+    paddingHorizontal: 22,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  });
+  expect(rowStyle(secondPage)).toMatchObject({ paddingHorizontal: 22 });
+  expect(rowStyle(secondPage).borderTopLeftRadius).toBeUndefined();
+  expect(rowStyle(last)).toMatchObject({
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+  });
+});
+
 it.each(['paper', 'glass'] as const)(
   'gives %s reader titles their prototype heading hierarchy',
   async skin => {
@@ -282,32 +406,175 @@ it.each(['flow', 'orig'] as const)(
   },
 );
 
-it('includes measured guide height in original-page offsets', async () => {
-  const root = await render('glass', {
-    ...readerSamples.normal.read,
-    view: 'orig',
-    original: {
-      available: true,
-      loading: false,
-      pages: [
-        {
-          page: 103,
-          label: 'p.103',
-          size: { w: 600, h: 800 },
-          image: null,
-          blocks: [],
+const groupedReaderSkins = ['glass', 'meta', 'google', 'win11'] as const;
+it.each(
+  groupedReaderSkins.flatMap(skin =>
+    [false, true].map(expanded => ({ skin, expanded })),
+  ),
+)(
+  'shows the default $skin guide label once when expanded=$expanded',
+  async ({ skin, expanded }) => {
+    const toggleGuide = jest.fn();
+    const root = await render(
+      skin,
+      {
+        ...readerSamples.normal.read,
+        guide: { oneLine: '本节导读', expanded, loading: false },
+      },
+      { ...intents, toggleGuide },
+    );
+    const guide = root.findByProps({ accessibilityLabel: '本节导读' });
+    expect(guide.findAllByType(Text).map(node => node.props.children)).toEqual([
+      '本节导读',
+    ]);
+    expect(guide.props.accessibilityRole).toBe('button');
+    expect(guide.props.accessibilityState).toEqual({ expanded });
+    await act(async () => guide.props.onPress());
+    expect(toggleGuide).toHaveBeenCalledTimes(1);
+  },
+);
+
+it.each(
+  ['', ' \n ', ' 本节导读 \n'].flatMap(oneLine =>
+    [false, true].map(expanded => ({ oneLine, expanded })),
+  ),
+)(
+  'omits empty or placeholder guide copy ($oneLine) when expanded=$expanded',
+  async ({ oneLine, expanded }) => {
+    const root = await render('google', {
+      ...readerSamples.normal.read,
+      guide: { oneLine, full: ' \n ', expanded, loading: false },
+    });
+    expect(
+      root
+        .findByProps({ accessibilityLabel: '本节导读' })
+        .findAllByType(Text)
+        .map(node => node.props.children),
+    ).toEqual(['本节导读']);
+  },
+);
+
+it.each(groupedReaderSkins)(
+  'keeps the expanded %s guide generation message and toggle intent',
+  async skin => {
+    const toggleGuide = jest.fn();
+    const root = await render(
+      skin,
+      {
+        ...readerSamples.normal.read,
+        guide: {
+          oneLine: '本节导读',
+          expanded: true,
+          loading: true,
         },
-      ],
-    },
+      },
+      { ...intents, toggleGuide },
+    );
+    const guide = root.findByProps({ accessibilityLabel: '本节导读' });
+    expect(guide.findAllByType(Text).map(node => node.props.children)).toEqual([
+      '本节导读',
+      '正在生成导读…',
+    ]);
+    await act(async () => guide.props.onPress());
+    expect(toggleGuide).toHaveBeenCalledTimes(1);
+  },
+);
+
+it.each(
+  groupedReaderSkins.flatMap(skin =>
+    [false, true].map(expanded => ({ skin, expanded })),
+  ),
+)(
+  'preserves generated $skin guide content when expanded=$expanded',
+  async ({ skin, expanded }) => {
+    const oneLine = ' 先理解代价，再选择节点。 ';
+    const full = ' 结合已走代价和剩余路程的估计，理解最优路径。 ';
+    const root = await render(skin, {
+      ...readerSamples.normal.read,
+      guide: { oneLine, full, expanded, loading: false },
+    });
+    const text = root
+      .findByProps({ accessibilityLabel: '本节导读' })
+      .findAllByType(Text);
+    expect(text.map(node => node.props.children)).toEqual([
+      '本节导读',
+      expanded ? full : oneLine,
+    ]);
+    if (!expanded) expect(text[1].props.numberOfLines).toBe(1);
+  },
+);
+
+it('uses the generated summary when the expanded guide has no body', async () => {
+  const oneLine = '用已走的代价和对剩余路程的估计，选择下一个节点';
+  const root = await render('win11', {
+    ...readerSamples.normal.read,
+    guide: { oneLine, full: ' \n ', expanded: true, loading: false },
   });
-  const list = root.findByType(FlatList);
-  await act(async () =>
-    list.props.ListHeaderComponent.props.onLayout(layout(0, 70)),
-  );
   expect(
-    root.findByType(FlatList).props.getItemLayout(undefined, 0).offset,
-  ).toBe(70);
+    root
+      .findByProps({ accessibilityLabel: '本节导读' })
+      .findAllByType(Text)
+      .map(node => node.props.children),
+  ).toEqual(['本节导读', oneLine]);
 });
+
+it.each([false, true])(
+  'preserves the paper GuideBar default title when expanded=%s',
+  async expanded => {
+    const toggleGuide = jest.fn();
+    const root = await render(
+      'paper',
+      {
+        ...readerSamples.normal.read,
+        guide: { oneLine: '本节导读', expanded, loading: false },
+      },
+      { ...intents, toggleGuide },
+    );
+    expect(root.findByType(GuideBar).props).toMatchObject({
+      title: '本节导读',
+      body: undefined,
+      expanded,
+      onToggle: toggleGuide,
+    });
+  },
+);
+
+it.each([
+  { name: 'generated', guide: readerSamples.normal.read.guide! },
+  {
+    name: 'default',
+    guide: { oneLine: '本节导读', expanded: true, loading: false },
+  },
+])(
+  'includes measured $name guide height in original-page offsets',
+  async ({ guide }) => {
+    const root = await render('glass', {
+      ...readerSamples.normal.read,
+      guide,
+      view: 'orig',
+      original: {
+        available: true,
+        loading: false,
+        pages: [
+          {
+            page: 103,
+            label: 'p.103',
+            size: { w: 600, h: 800 },
+            image: null,
+            blocks: [],
+          },
+        ],
+      },
+    });
+    const list = root.findByType(FlatList);
+    await act(async () =>
+      list.props.ListHeaderComponent.props.onLayout(layout(0, 70)),
+    );
+    expect(
+      root.findByType(FlatList).props.getItemLayout(undefined, 0).offset,
+    ).toBe(70);
+  },
+);
 
 it.each(['paper', 'glass'] as const)(
   'keeps the standalone Reader header from the %s prototype',
@@ -642,5 +909,77 @@ it.each(['paper', 'glass'] as const)(
     expect(overlayAction).toHaveBeenCalledWith('save');
     await act(async () => dialog().props.onCancel());
     expect(closeOverlay).toHaveBeenCalledTimes(1);
+  },
+);
+
+it.each(['light', 'dark'] as const)(
+  'keeps one Google/%s article backdrop across virtualized rows and excludes guide/footer',
+  async scheme => {
+    await act(async () => {
+      renderer = Renderer.create(
+        <SkinProvider skinId="google" scheme={scheme} reduceMotion>
+          <ReaderContent state={readerSamples.normal.read} intents={intents} />
+        </SkinProvider>,
+      );
+    });
+    const list = renderer.root.findByType(FlatList);
+    expect(list.props.removeClippedSubviews).toBe(false);
+    await act(async () => {
+      list.props.onContentSizeChange(360, 2040);
+      list.props.ListHeaderComponent.props.onLayout(layout(0, 140));
+      list.props.ListFooterComponent.props.onLayout(layout(0, 100));
+    });
+    const backdrop = renderer.root
+      .findAllByType(View)
+      .filter(node => node.props.testID === 'google-reader-article');
+    expect(backdrop).toHaveLength(1);
+    expect(backdrop[0].props.pointerEvents).toBe('none');
+    expect(StyleSheet.flatten(backdrop[0].props.style)).toMatchObject({
+      top: '100%',
+      height: 1800,
+      left: 16,
+      right: 16,
+      borderRadius: 16,
+      boxShadow:
+        scheme === 'light'
+          ? '0 1px 2px rgba(0,0,0,.30), 0 1px 3px 1px rgba(0,0,0,.15)'
+          : undefined,
+    });
+    await act(async () => {
+      list.props.onContentSizeChange(360, 2200);
+      list.props.ListHeaderComponent.props.onLayout(layout(0, 300));
+    });
+    expect(StyleSheet.flatten(backdrop[0].props.style).height).toBe(1800);
+    // Native clipping is disabled for the extended header only; paragraph data
+    // and the cell renderer still belong to the virtualized FlatList.
+    expect(list.props.data.length).toBeGreaterThan(1);
+    expect(list.props.CellRendererComponent).toBeDefined();
+  },
+);
+
+it.each([1, 2])(
+  'keeps reader mode labels on one line at system font scale %s',
+  async fontScale => {
+    jest.spyOn(Dimensions, 'get').mockReturnValue({
+      width: 360,
+      height: 800,
+      scale: 3,
+      fontScale,
+    });
+    const root = await render('google');
+    const segment = root.findByType(Segmented);
+    expect(StyleSheet.flatten(segment.parent!.props.style).width).toBe(
+      140 * fontScale,
+    );
+    expect(
+      root.findAllByType(View).some(node => {
+        const style = StyleSheet.flatten(node.props.style);
+        return style?.flexDirection === 'row' && style.flexWrap === 'wrap';
+      }),
+    ).toBe(true);
+    const hint = root
+      .findAllByType(Text)
+      .find(node => node.props.children === readerSamples.normal.read.hint)!;
+    expect(StyleSheet.flatten(hint.props.style).minWidth).toBe(100);
   },
 );

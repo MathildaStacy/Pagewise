@@ -26,7 +26,7 @@ import {
   deleteService,
   assignModel,
 } from '@app/usecases/settings';
-import { SkinProvider, CheckRow } from '@ui/kit';
+import { SkinProvider, CheckRow, Sheet } from '@ui/kit';
 import { MeView } from '@ui/screens/MeView';
 import { MeMineruView } from '@ui/screens/MeMineruView';
 import { MeAIView } from '@ui/screens/MeAIView';
@@ -508,7 +508,7 @@ it('storage reads real book sizes and About switches demo mode and exports redac
   expect(formatBytes(1024 * 1024)).toBe('1.0 MB');
 });
 
-it('renders all seven settings pages in both skins and schemes', async () => {
+it('renders all seven settings pages in five skins and both schemes', async () => {
   const me = await mountVM(useMeVM),
     mineru = await mountVM(useMineruVM),
     ai = await mountVM(useAIVM),
@@ -516,7 +516,7 @@ it('renders all seven settings pages in both skins and schemes', async () => {
     prefs = await mountVM(usePrefsVM),
     storage = await mountVM(useStorageVM),
     about = await mountVM(useAboutVM);
-  for (const skinId of ['paper', 'glass'] as const)
+  for (const skinId of ['paper', 'glass', 'meta', 'google', 'win11'] as const)
     for (const scheme of ['light', 'dark'] as const) {
       await act(async () => {
         const r = Renderer.create(
@@ -544,6 +544,65 @@ it('renders all seven settings pages in both skins and schemes', async () => {
       expect(JSON.stringify(renderers.at(-1)!.toJSON())).toContain('Pagewise');
     }
 });
+
+it.each(
+  (['paper', 'glass', 'meta', 'google', 'win11'] as const).flatMap(skin =>
+    (['light', 'dark'] as const).map(scheme => [skin, scheme] as const),
+  ),
+)(
+  '%s/%s retains backup status, selected-file preview and restore controls',
+  async (skin, scheme) => {
+    const confirmRestore = jest.fn(),
+      closeOverlay = jest.fn();
+    const lastBackup = '上次备份：2026-10-29 12:00',
+      restorePreview = '2 本书 · 含 1 本原文件';
+    let r!: Renderer.ReactTestRenderer;
+    await act(async () => {
+      r = Renderer.create(
+        <SkinProvider skinId={skin} scheme={scheme} reduceMotion>
+          <MeStorageView
+            state={{
+              ...storageSamples.normal,
+              confirmRestore: true,
+              lastBackup,
+              restorePreview,
+            }}
+            intents={{
+              back: jest.fn(),
+              clean: jest.fn(),
+              reparse: jest.fn(),
+              exportBackup: jest.fn(),
+              restoreBackup: jest.fn(),
+              refresh: jest.fn(),
+              setIncludeOriginals: jest.fn(),
+              confirmClean: jest.fn(),
+              confirmReparse: jest.fn(),
+              confirmRestore,
+              closeOverlay,
+            }}
+          />
+        </SkinProvider>,
+      );
+      renderers.push(r);
+    });
+    expect(JSON.stringify(r.toJSON())).toContain(lastBackup);
+    expect(JSON.stringify(r.toJSON())).toContain(restorePreview);
+    const sheet = r.root
+      .findAllByType(Sheet)
+      .find(item => item.props.title === '从备份恢复？')!;
+    expect(sheet.props.visible).toBe(true);
+    const restore = sheet.findAll(
+      item =>
+        item.props.accessibilityRole === 'button' &&
+        item.props.accessibilityLabel === '恢复这份备份',
+    )[0];
+    expect(restore).toBeDefined();
+    restore.props.onPress();
+    expect(confirmRestore).toHaveBeenCalledTimes(1);
+    sheet.props.onClose();
+    expect(closeOverlay).toHaveBeenCalledTimes(1);
+  },
+);
 
 it('reads models, selects one and tests the unsaved editor before saving', async () => {
   const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({

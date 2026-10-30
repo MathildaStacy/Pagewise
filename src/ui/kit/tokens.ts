@@ -116,6 +116,7 @@ export type ShadowStyle = Pick<
   | 'shadowOpacity'
   | 'shadowRadius'
   | 'elevation'
+  | 'boxShadow'
 >;
 
 export interface ElevationTokens {
@@ -149,6 +150,41 @@ export interface MotionTokens {
 }
 
 export interface Tokens {
+  /** Values specific to the three committed brand prototypes. */
+  brand?: {
+    kind: 'meta' | 'google' | 'win11';
+    accentFill: string;
+    detourFill: string;
+    onDetour: string;
+    secondaryContainer: string;
+    onSecondaryContainer: string;
+    toastBg: string;
+    toastInk: string;
+    menuBg: string;
+    menuInk: string;
+    ai: string[];
+    aiSoft: string[];
+    heroSpots?: {
+      x: number;
+      y: number;
+      rx: number;
+      ry: number;
+      color: string;
+    }[];
+    fire?: string[];
+    days?: string[];
+    heat?: string[][];
+    mica: string[];
+    card?: string;
+    cardHi?: string;
+    cardLo?: string;
+    stroke?: string;
+    accentShadow?: ShadowStyle;
+    detourShadow?: ShadowStyle;
+    aiGlow?: ShadowStyle;
+    cardSolid: string;
+    acrylicSolid: string;
+  };
   settingsIcons: {
     parser: string;
     ai: string;

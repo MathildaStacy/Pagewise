@@ -1,5 +1,6 @@
 import type { Book, BookPart, Section } from '@core/types';
 import { pageLabel, pageRangeLabel, type PageLabelBook } from '@core/ids';
+import { sectionName } from '@features/sectionName';
 import type { MapRecord, ShelfRecord } from '@app/usecases/library';
 import type {
   BookMapState,
@@ -16,8 +17,7 @@ export const pageRange = (
   section.page_from === null
     ? 'EPUB · 章节位置'
     : pageRangeLabel(book, section.page_from, section.page_to);
-export const sectionName = (s: Pick<Section, 'no' | 'title'>) =>
-  `${s.no ? s.no + ' ' : ''}${s.title}`;
+export { sectionName };
 const stageLabels = ['上传', '排队', '解析', '下载结果', '建地图'];
 export function parsePart(part: BookPart): ParseProgressState['parts'][number] {
   const stageIndex: Record<BookPart['stage'], number> = {
@@ -145,7 +145,7 @@ export function presentShelf(
   now: Date,
   demo: boolean,
 ): Pick<ShelfState, 'books' | 'continueCard' | 'empty' | 'demo'> {
-  const books = records.map(record => ({
+  const books: ShelfBook[] = records.map(record => ({
     id: record.book.id,
     title: record.book.title,
     author: record.book.author,
@@ -158,6 +158,24 @@ export function presentShelf(
       color: record.book.cover_color,
     },
     status: shelfStatus(record),
+    category: ['parsing', 'importing', 'paused', 'failed'].includes(
+      record.book.status,
+    )
+      ? 'parsing'
+      : record.study?.main_section
+      ? 'learning'
+      : 'new',
+    progress: ['parsing', 'importing', 'paused', 'failed'].includes(
+      record.book.status,
+    )
+      ? record.parts.length
+        ? record.parts.reduce((n, p) => n + parsePart(p).progress, 0) /
+          record.parts.length
+        : 0
+      : record.sections.filter(s => s.is_leaf).length
+      ? record.sections.filter(s => s.is_leaf && s.status === 'done').length /
+        record.sections.filter(s => s.is_leaf).length
+      : 0,
   }));
   const current = [...records]
     .filter(r => r.study?.main_section)
@@ -233,6 +251,9 @@ export function presentShelf(
             current.plan.steps.length
           } 步`
         : '新的一节',
+      stepTitle:
+        current.plan?.steps[Math.min(step, current.plan.steps.length - 1)]
+          ?.title,
     },
   };
 }

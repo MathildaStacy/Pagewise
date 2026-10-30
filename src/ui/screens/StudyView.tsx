@@ -15,6 +15,7 @@ import {
   DoneCard,
   Empty,
   FoldCard,
+  Icon,
   IconButton,
   ModeSwitch,
   Note,
@@ -49,17 +50,35 @@ export function StudyView({
   state: StudyState;
   intents: StudyIntents;
 }) {
-  const { groupedLists } = usePresentation();
+  const { groupedLists, floatingChrome, brand } = usePresentation();
   const [dockHeight, setDockHeight] = useState(0);
+  const [previousOpen, setPreviousOpen] = useState(false);
   const s = useStyles(),
     list = useRef<FlatList<ThreadItem>>(null),
     lastScroll = useRef<number | undefined>(undefined),
     // Stable identity lets unchanged rows skip rendering while text streams in.
     rowIntents = useStableHandlers(intents);
+  const resumeIndex = brand
+    ? state.listen.thread.findIndex(item => item.kind === 'resume')
+    : -1;
+  const previous =
+    resumeIndex > 0 ? state.listen.thread.slice(0, resumeIndex) : [];
+  const thread: ThreadItem[] = previous.length
+    ? [
+        {
+          kind: 'history',
+          id: 'resume-history',
+          label: `更早的学习记录 · ${previous.length} 条消息`,
+          expanded:
+            previousOpen ||
+            previous.some(item => item.id === state.listen.scroll.toItemId),
+          items: previous,
+        },
+        ...state.listen.thread.slice(resumeIndex),
+      ]
+    : state.listen.thread;
   const index = state.listen.scroll.toItemId
-    ? state.listen.thread.findIndex(
-        item => item.id === state.listen.scroll.toItemId,
-      )
+    ? thread.findIndex(item => item.id === state.listen.scroll.toItemId)
     : -1;
   const stick = useStickToBottom(list, {
     resumeWhen: state.listen.composer.streaming,
@@ -108,7 +127,9 @@ export function StudyView({
           backLabel={paperReader ? '返回' : state.header.backLabel}
           right={
             <View style={s.headerActions}>
-              <ModeSwitch value={state.mode} onChange={intents.setMode} />
+              {brand?.kind !== 'win11' ? (
+                <ModeSwitch value={state.mode} onChange={intents.setMode} />
+              ) : null}
               {paperReader ? (
                 <View
                   testID="reader-header-spacer"
@@ -124,6 +145,27 @@ export function StudyView({
             </View>
           }
         />
+        {brand?.kind === 'win11' ? (
+          <View style={s.selectorRow}>
+            <ModeSwitch value={state.mode} onChange={intents.setMode} />
+            {state.mode === 'listen' ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="AI 看到的内容"
+                hitSlop={6}
+                onPress={intents.openContext}
+                style={({ pressed }) => [
+                  s.winContext,
+                  pressed && s.winContextPressed,
+                ]}
+              >
+                <View style={s.contextDot} />
+                <Text style={s.winContextLabel}>AI 看到的内容</Text>
+                <Icon name="chev" size={13} color={s.winContextLabel.color} />
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
         {state.mode === 'read' ? (
           <ReaderContent state={state.read} intents={intents} />
         ) : (
@@ -138,15 +180,17 @@ export function StudyView({
               onPressStep={intents.pressStep}
               onPressBar={intents.openRoadmap}
               right={
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="AI 看到的内容"
-                  hitSlop={12}
-                  onPress={intents.openContext}
-                  style={s.context}
-                >
-                  <Text style={s.contextLabel}>AI 看到的内容 ›</Text>
-                </Pressable>
+                brand?.kind !== 'win11' ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="AI 看到的内容"
+                    hitSlop={12}
+                    onPress={intents.openContext}
+                    style={s.context}
+                  >
+                    <Text style={s.contextLabel}>AI 看到的内容 ›</Text>
+                  </Pressable>
+                ) : undefined
               }
             />
             {state.listen.detour ? (
@@ -161,14 +205,25 @@ export function StudyView({
                 style={s.root}
                 contentContainerStyle={[
                   s.thread,
-                  groupedLists
+                  floatingChrome
                     ? { paddingBottom: dockHeight + 8 + 24 }
                     : undefined,
                 ]}
-                data={state.listen.thread}
+                data={thread}
                 keyExtractor={item => item.id}
                 renderItem={({ item }) => (
-                  <ThreadRow item={item} intents={rowIntents} />
+                  <ThreadRow
+                    item={item}
+                    intents={
+                      item.id === 'resume-history'
+                        ? {
+                            ...rowIntents,
+                            toggleHistory: () =>
+                              setPreviousOpen(value => !value),
+                          }
+                        : rowIntents
+                    }
+                  />
                 )}
                 ListEmptyComponent={
                   <Empty
@@ -194,7 +249,7 @@ export function StudyView({
                 style={s.dock}
                 pointerEvents="box-none"
               >
-                {groupedLists ? <BottomFade /> : null}
+                {floatingChrome ? <BottomFade /> : null}
                 {state.listen.quickActions.length ? (
                   <QuickActions
                     items={state.listen.quickActions.map(item =>
@@ -210,9 +265,15 @@ export function StudyView({
                 ) : null}
                 <Composer
                   value={comp.value}
+                  focusRequest={comp.focusRequest}
                   onChange={intents.setText}
-                  placeholder={comp.placeholder}
+                  placeholder={
+                    brand?.kind === 'win11' && !state.listen.detour
+                      ? '问点什么，或说「讲慢一点」'
+                      : comp.placeholder
+                  }
                   onSend={intents.send}
+                  onAdd={intents.openAdd}
                   sendDisabled={!comp.canSend}
                   micAvailable={false}
                   busy={comp.streaming}
@@ -388,13 +449,47 @@ function ThreadCard({
 const ThreadRow = memo(ThreadCard);
 const useStyles = makeStyles(t => ({
   root: { flex: 1 },
+  selectorRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 8,
+  },
+  winContext: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    minHeight: 30,
+    paddingLeft: 10,
+    paddingRight: 8,
+    borderRadius: t.shape.pill,
+    backgroundColor: t.brand?.cardLo,
+    borderWidth: 1,
+    borderColor: t.brand?.stroke,
+  },
+  winContextPressed: { backgroundColor: t.brand?.cardHi },
+  winContextLabel: { ...t.type.caption, color: t.color.ink2 },
+  contextDot: {
+    width: 8,
+    height: 8,
+    borderRadius: t.shape.xs,
+    backgroundColor: t.color.ok,
+  },
   listenArea: { flex: 1 },
   dock: {
-    position: t.layout.groupedLists ? 'absolute' : 'relative',
+    position:
+      t.layout.groupedLists && (!t.brand || t.brand.kind === 'win11')
+        ? 'absolute'
+        : 'relative',
     left: 0,
     right: 0,
     bottom: 0,
-    paddingTop: t.layout.groupedLists ? 26 : 0,
+    paddingTop:
+      t.layout.groupedLists && (!t.brand || t.brand.kind === 'win11') ? 26 : 0,
+    backgroundColor: t.brand?.kind === 'meta' ? t.color.surface : undefined,
   },
   context: {
     paddingHorizontal: t.layout.groupedLists ? 0 : 8,
@@ -419,7 +514,7 @@ const useStyles = makeStyles(t => ({
   },
   readerHeaderSpacer: { width: 40, flexShrink: 0 },
   thread: {
-    paddingHorizontal: t.layout.groupedLists ? 20 : 14,
+    paddingHorizontal: t.brand ? 16 : t.layout.groupedLists ? 20 : 14,
     paddingTop: t.layout.groupedLists ? 4 : 12,
     paddingBottom: t.layout.groupedLists ? 24 : 18,
     gap: 12,

@@ -21,6 +21,11 @@ const nav = {
   exitDemo: jest.fn(),
 };
 const settle = () => new Promise(resolve => setImmediate(resolve));
+const appearances = (
+  ['paper', 'glass', 'meta', 'google', 'win11'] as const
+).flatMap(skin =>
+  (['light', 'dark'] as const).map(scheme => [skin, scheme] as const),
+);
 beforeEach(async () => {
   c = await createTestDemoContainer();
   jest.mocked(useContainer).mockReturnValue(c);
@@ -41,12 +46,7 @@ async function press(label: string) {
     await settle();
   });
 }
-it.each([
-  ['paper', 'light'],
-  ['paper', 'dark'],
-  ['glass', 'light'],
-  ['glass', 'dark'],
-] as const)(
+it.each(appearances)(
   '%s/%s keeps management, editing, suspension and recovery reachable',
   async (skin, scheme) => {
     await act(async () => {
@@ -56,6 +56,11 @@ it.each([
         </SkinProvider>,
       );
       await settle();
+    });
+    await press('先复习 5 张');
+    expect(nav.open).toHaveBeenLastCalledWith({
+      name: 'ReviewSession',
+      limit: 5,
     });
     await press('管理闪卡');
     const card = (await c.repos.cards.list())[0];
@@ -97,21 +102,24 @@ it.each([
     expect(await c.db.all('SELECT * FROM review_log')).toEqual([]);
   },
 );
-it('the session exposes editing and an undo action before the first flip and on the finished view', async () => {
-  const card = (await c.repos.cards.due(c.clock.today(), 1))[0];
-  await act(async () => {
-    renderer = Renderer.create(
-      <SkinProvider skinId="paper" scheme="light" reduceMotion>
-        <ReviewSessionScreen limit={1} />
-      </SkinProvider>,
-    );
-    await settle();
-  });
-  await press('编辑卡片');
-  await press('取消');
-  await press('暂停这张卡');
-  expect((await c.repos.cards.get(card.id))?.suspended).toBe(true);
-  await press('撤回暂停');
-  expect((await c.repos.cards.get(card.id))?.suspended).toBe(false);
-  expect(await c.db.all('SELECT * FROM review_log')).toEqual([]);
-});
+it.each(appearances)(
+  '%s/%s session exposes editing and undo before the first flip and on the finished view',
+  async (skin, scheme) => {
+    const card = (await c.repos.cards.due(c.clock.today(), 1))[0];
+    await act(async () => {
+      renderer = Renderer.create(
+        <SkinProvider skinId={skin} scheme={scheme} reduceMotion>
+          <ReviewSessionScreen limit={1} />
+        </SkinProvider>,
+      );
+      await settle();
+    });
+    await press('编辑卡片');
+    await press('取消');
+    await press('暂停这张卡');
+    expect((await c.repos.cards.get(card.id))?.suspended).toBe(true);
+    await press('撤回暂停');
+    expect((await c.repos.cards.get(card.id))?.suspended).toBe(false);
+    expect(await c.db.all('SELECT * FROM review_log')).toEqual([]);
+  },
+);

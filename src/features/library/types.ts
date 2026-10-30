@@ -14,6 +14,8 @@ export interface ShelfBook {
   meta: string;
   cover: Cover;
   status: { tone: 'accent' | 'stuck' | 'bad' | 'muted'; text: string };
+  category?: 'learning' | 'parsing' | 'new';
+  progress?: number;
 }
 export interface ShelfState extends PageState {
   demo: boolean;
@@ -23,6 +25,7 @@ export interface ShelfState extends PageState {
     title: string;
     meta: string;
     recap?: string;
+    stepTitle?: string;
     steps: { done: boolean }[];
     stepLabel: string;
   };

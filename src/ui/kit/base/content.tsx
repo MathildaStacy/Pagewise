@@ -1249,16 +1249,35 @@ export function BlockView({
 export function PinChip({ label, onPress }: KitProps['PinChip']) {
   const s = useStyles();
   const t = useTokens();
+  const meta = t.brand?.kind === 'meta';
+  const branded = meta || t.brand?.kind === 'google';
+  const content = (
+    <>
+      {meta ? (
+        <View style={s.pinIcon}>
+          <Icon name="pin" color="#4A3200" size={16} />
+        </View>
+      ) : (
+        <Icon name="pin" color={t.color.pin} size={branded ? 18 : 16} />
+      )}
+      <Text
+        numberOfLines={branded ? 1 : undefined}
+        style={[s.caption, s.pinLabel]}
+      >
+        {label}
+      </Text>
+    </>
+  );
   return (
     <Pressable
       onPress={onPress}
-      style={s.pin}
+      style={branded ? s.pinTarget : s.pin}
+      hitSlop={branded ? undefined : 9}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{}}
     >
-      <Icon name="pin" color={t.color.pin} size={16} />
-      <Text style={[s.caption, { color: t.color.pin }]}>{label}</Text>
+      {branded ? <View style={s.pin}>{content}</View> : content}
     </Pressable>
   );
 }
@@ -1646,6 +1665,7 @@ const useStyles = makeStyles(t => ({
     paddingBottom: t.layout.groupedLists ? 14 : 10,
     paddingHorizontal: t.layout.groupedLists ? 16 : 12,
     backgroundColor: t.layout.groupedLists ? t.color.stuckBg : t.color.surface,
+    ...(t.brand ? { borderRadius: t.shape.md } : {}),
   },
   proposalLabel: {
     color: t.layout.groupedLists ? t.color.stuckInk : t.color.accent,
@@ -1747,6 +1767,20 @@ const useStyles = makeStyles(t => ({
     borderWidth: t.layout.groupedLists ? 0 : 1,
     borderColor: t.color.line,
     backgroundColor: t.color.surface,
+    ...(t.brand
+      ? {
+          borderRadius: t.brand.kind === 'google' ? 20 : t.shape.md,
+          borderWidth: t.brand.kind === 'meta' ? 1 : 0,
+          backgroundColor:
+            t.brand.kind === 'google'
+              ? t.brand.secondaryContainer
+              : t.color.surface,
+          backgroundImage:
+            t.brand.kind === 'win11'
+              ? `linear-gradient(120deg, ${t.brand.aiSoft.join(',')})`
+              : undefined,
+        }
+      : {}),
   },
   resumeLabel: {
     ...studyType(
@@ -1775,6 +1809,7 @@ const useStyles = makeStyles(t => ({
     paddingTop: t.layout.groupedLists ? 13 : 10,
     paddingBottom: t.layout.groupedLists ? 14 : 10,
     paddingHorizontal: t.layout.groupedLists ? 16 : 12,
+    ...(t.brand ? { borderRadius: t.shape.md } : {}),
   },
   sourceText: {
     ...studyType(
@@ -1790,6 +1825,7 @@ const useStyles = makeStyles(t => ({
     paddingTop: 12,
     paddingBottom: t.layout.groupedLists ? 13 : 12,
     paddingHorizontal: t.layout.groupedLists ? 16 : 14,
+    ...(t.brand ? { borderRadius: t.shape.md } : {}),
   },
   auxText: {
     ...studyType(t, 16, t.layout.groupedLists ? 25.92 : 28.48),
@@ -1823,6 +1859,7 @@ const useStyles = makeStyles(t => ({
     borderWidth: t.layout.groupedLists ? 0 : 1,
     borderColor: t.color.line,
     overflow: 'hidden',
+    ...(t.brand ? { borderRadius: t.shape.md } : {}),
   },
   foldHeader: {
     minHeight: t.layout.groupedLists ? 52 : 44,
@@ -1881,6 +1918,13 @@ const useStyles = makeStyles(t => ({
     backgroundColor: t.color.surface,
     borderWidth: t.layout.groupedLists ? 0 : 1,
     borderColor: t.color.line,
+    ...(t.brand
+      ? {
+          borderRadius: t.brand.kind === 'meta' ? 20 : 8,
+          backgroundColor:
+            t.brand.kind === 'meta' ? t.color.surfaceAlt : 'transparent',
+        }
+      : {}),
   },
   historyLabel: {
     ...studyType(
@@ -2020,6 +2064,61 @@ const useStyles = makeStyles(t => ({
     alignItems: 'center',
     alignSelf: 'flex-start',
     gap: 6,
+    ...(t.brand?.kind === 'meta'
+      ? {
+          maxWidth: '100%',
+          paddingVertical: 4,
+          paddingLeft: 4,
+          paddingRight: 14,
+          borderRadius: 18,
+          backgroundColor:
+            t.scheme === 'dark' ? t.color.surfaceAlt : t.color.surfaceFill,
+          gap: 8,
+        }
+      : t.brand?.kind === 'google'
+      ? {
+          maxWidth: '100%',
+          paddingVertical: 6,
+          paddingLeft: 8,
+          paddingRight: 12,
+          borderRadius: 8,
+          gap: 8,
+        }
+      : {}),
+  },
+  pinTarget: {
+    minHeight: 48,
+    minWidth: 48,
+    maxWidth: '100%',
+    alignSelf: 'flex-start',
+    alignItems: 'flex-start',
+    // Absorb the reader pin row's existing gap into the invisible target.
+    paddingBottom: t.space.gap,
+    marginBottom: -t.space.gap,
+  },
+  pinIcon: {
+    width: 28,
+    height: 28,
+    padding: 6,
+    borderRadius: 14,
+    backgroundColor: '#F7B928',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  pinLabel: {
+    color: t.brand?.kind === 'meta' ? t.color.ink : t.color.pin,
+    ...(t.brand?.kind === 'meta' || t.brand?.kind === 'google'
+      ? {
+          fontWeight: t.brand.kind === 'meta' ? '600' : '500',
+          lineHeight:
+            t.brand.kind === 'google'
+              ? t.type.caption.fontSize * (18 / 13)
+              : t.type.caption.lineHeight,
+          minWidth: 0,
+          flexShrink: 1,
+        }
+      : {}),
   },
   readEnd: {
     paddingTop: 22,

@@ -1,5 +1,5 @@
 import ReactTestRenderer from 'react-test-renderer';
-import { AccessibilityInfo } from 'react-native';
+import { AccessibilityInfo, TextInput } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { createTestDemoContainer } from '@app/testing';
 import type { Container } from '@app/container';
@@ -83,6 +83,256 @@ async function act(action: () => void | Promise<void>) {
     await action();
   });
 }
+it('opens the Win11 add menu, uses an existing stuck point, and switches to source reading', async () => {
+  const vm = await mount(() => useStudyVM('aima', { autoStart: false }));
+  await act(() => vm().intents.openAdd!());
+  expect(vm().state.overlay).toMatchObject({
+    kind: 'menu',
+    title: '添加到问题',
+  });
+  await act(() => vm().intents.menuSelect('addStuck'));
+  expect(vm().state.listen.composer.value).toContain('结合我的卡点');
+  await act(() => vm().intents.openAdd!());
+  await act(() => vm().intents.menuSelect('addRead'));
+  expect(vm().state.mode).toBe('read');
+  expect(vm().state.toast).toBe('点一段原文，选「问 AI」');
+});
+it.each([false, true])(
+  'prefills and focuses a shelf question without sending or starting AI (warm session: %s)',
+  async warm => {
+    const question = 'A* 和 Dijkstra 是什么关系？';
+    const session = getStudySession(c, 'aima');
+    if (warm) {
+      await session.open({ mode: 'read', autoStart: false });
+      session.reportAnchor(session.store.getState().plan!.steps[3].block_from);
+    } else {
+      await c.repos.study.patch('aima', {
+        main_section: '3.4.2',
+        main_part: 0,
+        main_step: 0,
+        phase: 'idle',
+      });
+      expect(await c.repos.plans.get('aima', '3.4.2', 0)).toBeUndefined();
+    }
+    const previous = (await c.repos.study.get('aima'))!;
+    const before = await c.repos.messages.thread(
+      'aima',
+      previous.main_section!,
+    );
+    const stream = jest.spyOn(c.ai, 'stream');
+    const complete = jest.spyOn(c.ai, 'complete');
+    const focus = jest.spyOn(TextInput.prototype, 'focus');
+    let vm!: ReturnType<typeof useStudyVM>;
+    function Probe() {
+      vm = useStudyVM('aima', { mode: 'listen', draftQuestion: question });
+      return <StudyView {...vm} />;
+    }
+    await act(() => {
+      renderer = ReactTestRenderer.create(
+        <ContainerProvider value={c}>
+          <AppNavProvider value={nav}>
+            <SkinProvider skinId="win11" scheme="light" reduceMotion>
+              <Probe />
+            </SkinProvider>
+          </AppNavProvider>
+        </ContainerProvider>,
+      );
+    });
+    expect(vm.state.mode).toBe('listen');
+    expect(vm.state.listen.composer.value).toBe(question);
+    expect(vm.state.listen.composer.canSend).toBe(true);
+    expect(focus).toHaveBeenCalledTimes(1);
+    expect(stream).not.toHaveBeenCalled();
+    expect(complete).not.toHaveBeenCalled();
+    expect(session.store.getState().messages).toEqual(before);
+    expect(session.store.getState().main).toEqual({
+      sectionId: previous.main_section,
+      part: previous.main_part,
+      step: previous.main_step,
+    });
+    const input = renderer!.root.findByType(TextInput);
+    expect(input.props.editable).not.toBe(false);
+    await act(() => input.props.onChangeText('改成我的后续问题'));
+    expect(vm.state.listen.composer.value).toBe('改成我的后续问题');
+    expect(stream).not.toHaveBeenCalled();
+    expect(complete).not.toHaveBeenCalled();
+    expect(focus).toHaveBeenCalledTimes(1);
+    await act(() => vm.intents.send());
+    expect(stream).toHaveBeenCalled();
+    const sent = session.store
+      .getState()
+      .messages.filter(m => m.kind === 'user');
+    expect(sent.at(-1)?.content).toBe('改成我的后续问题');
+    expect(sent.filter(m => m.content === '改成我的后续问题')).toHaveLength(1);
+    stream.mockRestore();
+    complete.mockRestore();
+    focus.mockRestore();
+  },
+);
+
+it('keeps explicit question navigation as an immediate Study request', async () => {
+  const stream = jest.spyOn(c.ai, 'stream');
+  await mount(() =>
+    useStudyVM('aima', { question: '从复习卡继续提问', autoStart: false }),
+  );
+  expect(stream).toHaveBeenCalledTimes(1);
+  expect(
+    getStudySession(c, 'aima')
+      .store.getState()
+      .messages.filter(m => m.kind === 'user')
+      .at(-1)?.content,
+  ).toBe('从复习卡继续提问');
+  stream.mockRestore();
+});
+it.each(['selector', 'source'] as const)(
+  'does not replay shelf-draft focus after reading through %s and returning to listen',
+  async entry => {
+    const question = '保留这条未发送的问题';
+    const stream = jest.spyOn(c.ai, 'stream');
+    const complete = jest.spyOn(c.ai, 'complete');
+    const focus = jest.spyOn(TextInput.prototype, 'focus');
+    let vm!: ReturnType<typeof useStudyVM>;
+    function Probe() {
+      vm = useStudyVM('aima', { mode: 'listen', draftQuestion: question });
+      return <StudyView {...vm} />;
+    }
+    await act(() => {
+      renderer = ReactTestRenderer.create(
+        <ContainerProvider value={c}>
+          <AppNavProvider value={nav}>
+            <SkinProvider skinId="win11" scheme="light" reduceMotion>
+              <Probe />
+            </SkinProvider>
+          </AppNavProvider>
+        </ContainerProvider>,
+      );
+    });
+    expect(focus).toHaveBeenCalledTimes(1);
+    await act(() =>
+      entry === 'selector'
+        ? vm.intents.setMode('read')
+        : vm.intents.quick('source'),
+    );
+    expect(vm.state.mode).toBe('read');
+    expect(renderer!.root.findAllByType(TextInput)).toHaveLength(0);
+    await act(() => vm.intents.setMode('listen'));
+    expect(vm.state.mode).toBe('listen');
+    expect(vm.state.listen.composer.value).toBe(question);
+    expect(focus).toHaveBeenCalledTimes(1);
+    const input = renderer!.root.findByType(TextInput);
+    await act(() => input.props.onChangeText('继续编辑这条草稿'));
+    expect(vm.state.listen.composer.value).toBe('继续编辑这条草稿');
+    expect(stream).not.toHaveBeenCalled();
+    expect(complete).not.toHaveBeenCalled();
+    stream.mockRestore();
+    complete.mockRestore();
+    focus.mockRestore();
+  },
+);
+it.each([
+  ['meta', false],
+  ['google', false],
+  ['win11', false],
+  ['meta', true],
+  ['google', true],
+  ['win11', true],
+] as const)(
+  '%s focuses the quoted-source composer once from a pin without prefilling its question (standalone: %s)',
+  async (skin, standalone) => {
+    const stream = jest.spyOn(c.ai, 'stream');
+    const complete = jest.spyOn(c.ai, 'complete');
+    const focus = jest.spyOn(TextInput.prototype, 'focus');
+    const session = getStudySession(c, 'aima');
+    let study!: ReturnType<typeof useStudyVM>;
+    let reading!: ReturnType<typeof useReaderVM>;
+    function StudyProbe() {
+      study = useStudyVM('aima', { autoStart: false });
+      return <StudyView {...study} />;
+    }
+    function ReaderProbe() {
+      reading = useReaderVM('aima', '3.5.2');
+      return <ReaderView {...reading} />;
+    }
+    const tree = (screen: React.ReactNode) => (
+      <ContainerProvider value={c}>
+        <AppNavProvider value={nav}>
+          <SkinProvider skinId={skin} scheme="light" reduceMotion>
+            {screen}
+          </SkinProvider>
+        </AppNavProvider>
+      </ContainerProvider>
+    );
+    await act(() => {
+      renderer = ReactTestRenderer.create(
+        tree(standalone ? <ReaderProbe /> : <StudyProbe />),
+      );
+    });
+    if (!standalone) {
+      await act(() => study.intents.setText('保留原来没有发送的草稿'));
+      await act(() => study.intents.setMode('read'));
+    }
+    const current = () => (standalone ? reading : study);
+    const main = { ...session.store.getState().main };
+    const messages = [...session.store.getState().messages];
+    const pin = current().state.read.items.find(
+      item => item.kind === 'block' && item.pin,
+    );
+    if (pin?.kind !== 'block' || !pin.pin) throw new Error('missing pin');
+    await act(() => current().intents.pressPin(pin.pin!.id));
+    expect(current().state.overlay?.kind).toBe('pin');
+    await act(() => current().intents.overlayAction('ask'));
+    if (standalone) {
+      const route = jest.mocked(nav.replace).mock.calls.at(-1)![0];
+      expect(route).toEqual({
+        name: 'Study',
+        bookId: 'aima',
+        mode: 'listen',
+        focusComposer: true,
+      });
+      if (route.name !== 'Study') throw new Error('missing Study route');
+      await act(() =>
+        renderer!.update(
+          tree(
+            <StudyScreen
+              bookId={route.bookId}
+              mode={route.mode}
+              focusComposer={route.focusComposer}
+            />,
+          ),
+        ),
+      );
+    }
+    const shown = () =>
+      renderer!.root.findByType(StudyView).props as ReturnType<
+        typeof useStudyVM
+      >;
+    expect(shown().state.mode).toBe('listen');
+    expect(shown().state.listen.composer.value).toBe(
+      standalone ? '' : '保留原来没有发送的草稿',
+    );
+    expect(shown().state.listen.composer.value).not.toBe(pin.pin.label);
+    expect(shown().state.listen.composer.quote?.excerpt).not.toBe('原文');
+    expect(session.store.getState().pendingQuote).toBe(pin.seq);
+    expect(session.store.getState().main).toEqual(main);
+    expect(session.store.getState().messages).toEqual(messages);
+    expect(stream).not.toHaveBeenCalled();
+    expect(complete).not.toHaveBeenCalled();
+    expect(focus).toHaveBeenCalledTimes(1);
+    const input = renderer!.root.findByType(TextInput);
+    await act(() => input.props.onChangeText('引用这段继续问'));
+    expect(shown().state.listen.composer.value).toBe('引用这段继续问');
+    await act(() => shown().intents.quick('source'));
+    await act(() => shown().intents.setMode('listen'));
+    expect(shown().state.listen.composer.value).toBe('引用这段继续问');
+    expect(session.store.getState().pendingQuote).toBe(pin.seq);
+    expect(focus).toHaveBeenCalledTimes(1);
+    expect(stream).not.toHaveBeenCalled();
+    expect(complete).not.toHaveBeenCalled();
+    stream.mockRestore();
+    complete.mockRestore();
+    focus.mockRestore();
+  },
+);
 it('calculates exact quick actions at last step, quiz, ready, detour and resume', async () => {
   const session = getStudySession(c, 'aima');
   await session.open({ autoStart: false });
@@ -212,7 +462,12 @@ it('reader excludes titles from selection and preserves main when asking about a
   await act(() => vm().intents.menuAction('ask'));
   expect(session.store.getState().pendingQuote).toBe(block.seq);
   expect(session.store.getState().main).toEqual(initial);
-  expect(nav.replace).toHaveBeenCalledWith({ name: 'Study', bookId: 'aima' });
+  expect(nav.replace).toHaveBeenCalledWith({
+    name: 'Study',
+    bookId: 'aima',
+    mode: 'listen',
+    focusComposer: true,
+  });
 });
 it.each([false, true])(
   'opens a full-text result in its own section and at its block without moving the main lesson (warm session: %s)',
