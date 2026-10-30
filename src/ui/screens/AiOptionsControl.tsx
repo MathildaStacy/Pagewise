@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
-import { Sheet, Row, makeStyles } from '@ui/kit';
+import { Pressable, Text } from 'react-native';
+import { Icon, Sheet, Row, makeStyles } from '@ui/kit';
 import type {
   AiOptionsState,
   ConversationConfig,
@@ -27,7 +27,7 @@ export function AiOptionsControl({
   const selected = state.models.find(m => m.key === state.selected);
   const effort = state.efforts.find(e => e.key === state.config?.effort)?.label;
   const body = (
-    <View>
+    <>
       <SettingsSelect
         label="模型"
         value={state.selected}
@@ -69,7 +69,7 @@ export function AiOptionsControl({
           />
         }
       />
-    </View>
+    </>
   );
   if (inline) return <SettingsGroup>{body}</SettingsGroup>;
   return (
@@ -77,16 +77,17 @@ export function AiOptionsControl({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="模型与推理设置"
-        accessibilityState={{ disabled }}
+        accessibilityState={{ disabled, expanded: open }}
         disabled={disabled}
         onPress={() => setOpen(true)}
-        style={s.control}
+        style={({ pressed }) => [s.control, pressed && s.pressed]}
       >
         <Text numberOfLines={2} style={s.label}>
           {selected?.label ?? '选择 AI 模型'}
           {effort ? ' · 推理' + effort : ''} · 搜索
-          {state.config?.search ? '开' : '关'} ▾
+          {state.config?.search ? '开' : '关'}
         </Text>
+        <Icon name="arrowDown" size={16} />
       </Pressable>
       <Sheet
         visible={open}
@@ -101,8 +102,11 @@ export function AiOptionsControl({
 const useStyles = makeStyles(t => ({
   control: {
     minHeight: 48,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: t.space.gap,
     paddingHorizontal: t.space.pageX,
   },
-  label: { ...t.type.caption, color: t.color.ink2 },
+  label: { ...t.type.caption, color: t.color.ink2, flexShrink: 1 },
+  pressed: { backgroundColor: t.color.pressed },
 }));

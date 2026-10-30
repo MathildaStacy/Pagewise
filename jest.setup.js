@@ -1,5 +1,10 @@
 const { jest } = require('@jest/globals');
 
+jest.mock('@react-native-clipboard/clipboard', () => ({
+  __esModule: true,
+  default: { setString: jest.fn() },
+}));
+
 jest.mock('react-native/Libraries/Utilities/DevSettings', () => ({
   __esModule: true,
   default: { addMenuItem: jest.fn(), reload: jest.fn() },

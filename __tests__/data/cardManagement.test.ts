@@ -36,7 +36,7 @@ it('upgrades a v1 database or backup with default-active cards and preserves its
     'INSERT INTO review_log (card_id,rated,box_from,box_to,at) VALUES (?,?,?,?,?)',
     [41, 'good', 2, 3, at],
   );
-  await expect(migrate(db)).resolves.toEqual({ from: 1, to: 2 });
+  await expect(migrate(db)).resolves.toEqual({ from: 1, to: 3 });
   const cards = createCardsRepo(db);
   expect(await cards.get(41)).toMatchObject({
     suspended: false,

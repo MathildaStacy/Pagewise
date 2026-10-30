@@ -304,6 +304,7 @@ export interface EmptyProps {
 export type RichInline =
   /** fade: 0 刚吐出（模糊）→ 1 已清晰；缺省即清晰。仅由逐字呈现产生。 */
   | { t: 'text'; v: string; fade?: number }
+  | { t: 'code'; v: string }
   | { t: 'b'; c: RichInline[] }
   | { t: 'math'; tex: string }
   | {
@@ -328,7 +329,7 @@ export type RichBlock =
     }
   | { t: 'aux'; kind: 'derive' | 'example'; body: RichBlock[]; open: boolean }
   | { t: 'check'; c: RichInline[] }
-  | { t: 'code'; text: string };
+  | { t: 'code'; text: string; language?: string };
 export type RichDoc = RichBlock[];
 export interface RichViewProps {
   doc: RichDoc;

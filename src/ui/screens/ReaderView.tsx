@@ -504,7 +504,7 @@ function ReaderGuide({
 function titleText(nodes: RichInline[]): string {
   return nodes
     .map(node =>
-      node.t === 'text'
+      node.t === 'text' || node.t === 'code'
         ? node.v
         : node.t === 'b'
         ? titleText(node.c)

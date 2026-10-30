@@ -1,5 +1,12 @@
 import { blockRef, isBlockRef, parseBlockRef } from '@core/ids';
-import { parse, parseInline, type Inline, type RichDoc } from '@core/markup';
+import {
+  parse,
+  parseInline,
+  parseSourceCode,
+  stableStreamText,
+  type Inline,
+  type RichDoc,
+} from '@core/markup';
 import { exploreSource } from '@app/demo/source';
 import { remapDemoCitations } from '@app/demo/seed';
 
@@ -8,7 +15,7 @@ const paragraph = (v: string) => ({ t: 'p', c: [text(v)] });
 function inlineText(nodes: Inline[]): string {
   return nodes
     .map(n =>
-      n.t === 'text'
+      n.t === 'text' || n.t === 'code'
         ? n.v
         : n.t === 'b'
         ? inlineText(n.c)
@@ -195,7 +202,7 @@ it('keeps code fences literal, including markup syntax and unfinished fences', (
     parse('开头\n```ts\nconst x = "[[b:1]] $$x$$ **bold**";\n```\n结束'),
   ).toEqual([
     paragraph('开头'),
-    { t: 'code', text: 'const x = "[[b:1]] $$x$$ **bold**";' },
+    { t: 'code', text: 'const x = "[[b:1]] $$x$$ **bold**";', language: 'ts' },
     paragraph('结束'),
   ]);
   expect(parse('~~~\na\n~~~\n')).toEqual([{ t: 'code', text: 'a' }]);
@@ -203,12 +210,39 @@ it('keeps code fences literal, including markup syntax and unfinished fences', (
     { t: 'code', text: '```\ncode' },
   ]);
   expect(parse('```js\nunfinished', { streaming: true })).toEqual([
-    { t: 'code', text: 'unfinished' },
+    { t: 'code', text: 'unfinished', language: 'js' },
   ]);
   expect(parse('```')).toEqual([{ t: 'code', text: '' }]);
   expect(parse('```\ncode\nnot a closing fence')).toEqual([
     { t: 'code', text: 'code\nnot a closing fence' },
   ]);
+});
+it('retains language, indentation and blank lines in imported fenced code', () => {
+  const code =
+    '#include <iostream>\n\nint main() {\n\tstd::cout << "你好";\n}\n';
+  expect(
+    parseSourceCode('```cpp\r\n' + code.replace(/\n/g, '\r\n') + '```'),
+  ).toEqual({
+    t: 'code',
+    language: 'cpp',
+    text: code.slice(0, -1),
+  });
+  expect(parseSourceCode(code)).toEqual({ t: 'code', text: code });
+  expect(parse('~~~python title="sample"\n  return 2\n~~~')).toEqual([
+    { t: 'code', language: 'python', text: '  return 2' },
+  ]);
+});
+it('treats inline code as literal text, including formulas, citations and auxiliary tags', () => {
+  const code = '[[derive]] $x$ **raw** [[b:1]]';
+  const source = `调用 \`${code}\`。`;
+  expect(parse(source)).toEqual([
+    { t: 'p', c: [text('调用 '), { t: 'code', v: code }, text('。')] },
+  ]);
+  expect(parseInline('`` a ` b ``')).toEqual([{ t: 'code', v: 'a ` b' }]);
+  expect(parseInline('`not closed')).toEqual([text('`not closed')]);
+  expect(parseInline(String.raw`\`literal\``)).toEqual([text('`literal`')]);
+  expect(stableStreamText(source)).toBe(source);
+  expect(stableStreamText('调用 `尚未完成')).toBe('调用 ');
 });
 it('preserves escaped syntax, including escaped math delimiters', () => {
   expect(parse(String.raw`\$5 \**bold\** \[[b:1]] \\end`)).toEqual([

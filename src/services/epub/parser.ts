@@ -488,6 +488,14 @@ export function createEpubParser(io: EpubIo): EpubParser {
         if (name(node) === 'br') return '\n';
         if (name(node) === 'img') return attr(node, 'alt');
         if (name(node) === 'math') return `$${mathText(node)}$`;
+        if (name(node) === 'code') {
+          const value = plain(node);
+          const ticks = '`'.repeat(
+            Math.max(0, ...(value.match(/`+/g) ?? []).map(run => run.length)) +
+              1,
+          );
+          return `${ticks} ${value} ${ticks}`;
+        }
         const text = children(node).map(inline).join('');
         return ['strong', 'b'].includes(name(node)) && text.trim()
           ? `**${text}**`
@@ -559,7 +567,21 @@ export function createEpubParser(io: EpubIo): EpubParser {
           return;
         }
         if (tag === 'pre') {
-          emit(node, 'code', plain(node).replace(/^\n|\n$/g, ''));
+          const code = all(node, 'code')[0] ?? node;
+          const language =
+            attr(code, 'data-language') ||
+            /(?:^|\s)(?:language|lang)-([\w+#.-]+)/.exec(
+              `${attr(node, 'class')} ${attr(code, 'class')}`,
+            )?.[1];
+          let text = plain(node).replace(/^\n|\n$/g, '');
+          if (language) {
+            const fence = '`'.repeat(
+              Math.max(2, ...(text.match(/`+/g) ?? []).map(run => run.length)) +
+                1,
+            );
+            text = `${fence}${language}\n${text}\n${fence}`;
+          }
+          emit(node, 'code', text);
           return;
         }
         if (tag === 'ul' || tag === 'ol') {

@@ -1,6 +1,7 @@
 /** Skin-independent AST from docs/dev/05-engine-ai.md §2. */
 export type Inline =
   | { t: 'text'; v: string }
+  | { t: 'code'; v: string }
   | { t: 'b'; c: Inline[] }
   | { t: 'math'; tex: string }
   | { t: 'cite'; ref: number; verified: boolean; detour: boolean }
@@ -12,7 +13,7 @@ export type Block =
   | { t: 'quote' | 'figure'; ref: number; verified: boolean }
   | { t: 'aux'; kind: 'derive' | 'example'; body: Block[]; open: boolean }
   | { t: 'check'; c: Inline[] }
-  | { t: 'code'; text: string };
+  | { t: 'code'; text: string; language?: string };
 export type RichDoc = Block[];
 export interface ParseOptions {
   streaming?: boolean;
@@ -47,6 +48,25 @@ function addText(nodes: Inline[], text: string) {
   if (last?.t === 'text') last.v += text;
   else nodes.push({ t: 'text', v: text });
 }
+/** Backticks inside code are literal; a span closes only on an equally long run. */
+function codeSpan(text: string, from: number) {
+  let count = 1;
+  while (text[from + count] === '`') count++;
+  let at = from + count;
+  while (at < text.length) {
+    at = text.indexOf('`', at);
+    if (at < 0) break;
+    let length = 1;
+    while (text[at + length] === '`') length++;
+    if (length === count) {
+      let v = text.slice(from + count, at).replace(/\n/g, ' ');
+      if (v.startsWith(' ') && v.endsWith(' ') && v.trim()) v = v.slice(1, -1);
+      return { v, end: at + count };
+    }
+    at += length;
+  }
+  return null;
+}
 /** Only incomplete prefixes of supported tags are hidden; ordinary brackets remain text. */
 function pendingTag(tail: string): boolean {
   const literal = [
@@ -78,10 +98,22 @@ export function parseInline(
     if (
       text[i] === '\\' &&
       i + 1 < text.length &&
-      /[\\*$[\]]/.test(text[i + 1])
+      /[\\*`$[\]]/.test(text[i + 1])
     ) {
       plain += text[i + 1];
       i += 2;
+      continue;
+    }
+    if (text[i] === '`') {
+      const span = codeSpan(text, i);
+      if (span) {
+        flush();
+        nodes.push({ t: 'code', v: span.v });
+        i = span.end;
+        continue;
+      }
+      // An unmatched delimiter remains literal, including longer backtick runs.
+      while (text[i] === '`') plain += text[i++];
       continue;
     }
     if (text.startsWith('[[', i)) {
@@ -221,7 +253,7 @@ function blocks(
     if ((i === 0 || text[i - 1] === '\n') && !escaped(text, i)) {
       const lineEnd = text.indexOf('\n', i);
       const end = lineEnd < 0 ? text.length : lineEnd;
-      const fence = /^ {0,3}(`{3,}|~{3,})[^\n]*$/.exec(text.slice(i, end));
+      const fence = /^ {0,3}(`{3,}|~{3,})([^\n]*)$/.exec(text.slice(i, end));
       if (fence) {
         flush(i);
         const bodyStart = lineEnd < 0 ? text.length : lineEnd + 1;
@@ -246,11 +278,21 @@ function blocks(
         const body = text
           .slice(bodyStart, close < 0 ? text.length : close)
           .replace(/\n$/, '');
-        doc.push({ t: 'code', text: body });
+        const language = fence[2].trim().split(/\s+/)[0];
+        doc.push({ t: 'code', text: body, ...(language ? { language } : {}) });
         i = after;
         start = i;
         continue;
       }
+    }
+    if (text[i] === '`' && !escaped(text, i)) {
+      const span = codeSpan(text, i);
+      if (span) {
+        i = span.end;
+        continue;
+      }
+      while (text[i] === '`') i++;
+      continue;
     }
     if (!escaped(text, i) && text.startsWith('$$', i)) {
       const end = endMarker(text, '$$', i + 2);
@@ -310,6 +352,14 @@ function blocks(
 export function parse(text: string, options: ParseOptions = {}): RichDoc {
   return blocks(text.replace(/\r\n?/g, '\n'), 0, options).doc;
 }
+/** MinerU may store a complete fence in code_body. Also works for already imported books. */
+export function parseSourceCode(text: string): Extract<Block, { t: 'code' }> {
+  if (/^\s*(?:`{3,}|~{3,})/.test(text)) {
+    const doc = parse(text);
+    if (doc.length === 1 && doc[0].t === 'code') return doc[0];
+  }
+  return { t: 'code', text };
+}
 const fenceLine = /^ {0,3}(`{3,}|~{3,})/;
 /** A lone list, heading or fence marker that the next characters will turn into structure. */
 const markerLine = /^\s*(?:-|\d+\.?|#{1,6}|`{1,2}|~{1,2})\s*$/;
@@ -354,8 +404,14 @@ export function stableStreamText(source: string): string {
   // List items and headings close inline markup within their own line.
   if (/^\s*(?:-|\d+\.|#{1,6})\s/.test(lastLine)) start = lineStart;
   for (let i = start; i < text.length; ) {
-    if (text[i] === '\\' && /[\\*$[\]]/.test(text[i + 1] ?? '')) {
+    if (text[i] === '\\' && /[\\*`$[\]]/.test(text[i + 1] ?? '')) {
       i += 2;
+      continue;
+    }
+    if (text[i] === '`') {
+      const span = codeSpan(text, i);
+      if (!span) return text.slice(0, i);
+      i = span.end;
       continue;
     }
     if (text.startsWith('**', i)) {

@@ -13,7 +13,7 @@ function inlineLength(nodes: readonly RichInline[]): number {
   let length = 0;
   for (const node of nodes)
     length +=
-      node.t === 'text'
+      node.t === 'text' || node.t === 'code'
         ? node.v.length
         : node.t === 'b'
         ? inlineLength(node.c)
@@ -110,6 +110,14 @@ function cutInline(nodes: RichInline[], c: Cursor): RichInline[] {
         same = false;
         out.push(...runs);
       }
+    } else if (node.t === 'code') {
+      const take = safeEnd(node.v, Math.min(node.v.length, c.left));
+      out.push(
+        take === node.v.length ? node : { ...node, v: node.v.slice(0, take) },
+      );
+      if (take !== node.v.length) same = false;
+      c.at += take;
+      c.left -= take;
     } else if (node.t === 'b') {
       const inner = cutInline(node.c, c);
       if (inner === node.c) out.push(node);

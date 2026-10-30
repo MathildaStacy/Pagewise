@@ -36,7 +36,7 @@ function hasReference(nodes: readonly Inline[]): boolean {
 function visibleText(nodes: readonly Inline[]): string {
   return nodes
     .map(node =>
-      node.t === 'text'
+      node.t === 'text' || node.t === 'code'
         ? node.v
         : node.t === 'b'
         ? visibleText(node.c)
@@ -114,7 +114,7 @@ export function validateCitations(
           addText(output, node.v.slice(from));
         } else {
           output.push({ ...node });
-          if (node.t === 'math') {
+          if (node.t === 'math' || node.t === 'code') {
             state.lastChar = 'x';
             state.lastBoundaryMarked = false;
           }

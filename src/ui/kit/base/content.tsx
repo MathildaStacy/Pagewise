@@ -23,6 +23,7 @@ import type { KitProps, RichInline, Tone } from '../contracts';
 import { useSkin, useTokens } from '../context';
 import { Icon } from '../Icon';
 import { makeStyles } from '../makeStyles';
+import { CodeBlock, codeFontFamily } from '../code/CodeBlock';
 import * as Kit from '../proxy';
 import { useMathRenderer, type FormulaRender } from '../MathProvider';
 import {
@@ -85,6 +86,18 @@ function Inline({
                 style={{ fontWeight: t.type.headline.fontWeight }}
               >
                 <Inline nodes={node.c} onCite={onCite} />
+              </Text>
+            );
+          case 'code':
+            return (
+              <Text
+                key={index}
+                style={{
+                  fontFamily: codeFontFamily,
+                  backgroundColor: t.color.surfaceAlt,
+                }}
+              >
+                {node.v}
               </Text>
             );
           case 'math':
@@ -186,13 +199,7 @@ const RichBlockView = memo(function RichBlock({
         </RevealFadeIn>
       );
     case 'code':
-      return (
-        <ScrollView horizontal style={s.code}>
-          <Text selectable style={s.codeText}>
-            {block.text}
-          </Text>
-        </ScrollView>
-      );
+      return <CodeBlock text={block.text} language={block.language} />;
     case 'list':
       return (
         <View style={s.list}>
@@ -1131,6 +1138,7 @@ function accessibleDocText(doc: KitProps['RichView']['doc']): string {
       .map(node => {
         switch (node.t) {
           case 'text':
+          case 'code':
             return node.v;
           case 'b':
             return inline(node.c);
@@ -1573,12 +1581,6 @@ const useStyles = makeStyles(t => ({
     ...t.type.caption,
     fontFamily: t.type.serifFamily,
     color: t.color.ink2,
-  },
-  codeText: { ...t.type.body, ...t.type.num, color: t.color.ink },
-  code: {
-    padding: 10,
-    backgroundColor: t.color.surfaceAlt,
-    borderRadius: t.shape.sm,
   },
   list: { gap: 4 },
   listItem: {

@@ -598,6 +598,7 @@ describe('study', () => {
     expect(await study.get('a')).toBeUndefined();
     expect(await study.put({ book_id: 'a' })).toEqual({
       book_id: 'a',
+      conversation_id: null,
       main_section: null,
       main_part: 0,
       main_step: 0,
@@ -611,6 +612,7 @@ describe('study', () => {
     });
     const state = {
       book_id: 'a',
+      conversation_id: null,
       main_section: '3.5.2',
       main_part: 1,
       main_step: 2,

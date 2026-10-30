@@ -495,11 +495,17 @@ const useStyles = makeStyles(t => ({
   sources: { gap: t.space.gap, paddingTop: t.space.gap },
   conversations: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     paddingHorizontal: t.space.gap,
     gap: t.space.gap,
   },
-  conversationTitle: { ...t.type.caption, color: t.color.ink2, flex: 1 },
+  conversationTitle: {
+    ...t.type.caption,
+    color: t.color.ink2,
+    flex: 1,
+    minWidth: t.type.caption.fontSize * 3,
+  },
   root: { flex: 1 },
   selectorRow: {
     flexDirection: 'row',

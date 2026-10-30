@@ -10,6 +10,7 @@ import {
 import path from 'node:path';
 import os from 'node:os';
 import { createEpubParser, resolveEpubPath, type EpubIo } from '@services/epub';
+import { parse, parseSourceCode } from '@core/markup';
 const fixture = path.resolve(__dirname, '../../../fixtures/epub-synthetic');
 let temp: string;
 beforeEach(async () => {
@@ -144,6 +145,36 @@ it('builds bookmark sections from nav anchor ranges, keeps short TOC sections an
       .every(block => block.loc?.startsWith('1.2 Details ·')),
   ).toBe(true);
   expect(book.warnings).toEqual([]);
+});
+it('preserves EPUB code language, indentation and inline code without parsing its markup', async () => {
+  const files = io();
+  files.readText = async file => {
+    const text = await readFile(file, 'utf8');
+    return file.endsWith('a.xhtml')
+      ? text
+          .replace('<pre id="code">', '<pre id="code" class="language-js">')
+          .replace('<strong>bold</strong>', '<code>[[b:2]] &lt;x&gt;</code>')
+      : text;
+  };
+  const book = await createEpubParser(files).parse('book.epub', temp, 'book');
+  expect(
+    parseSourceCode(book.blocks.find(block => block.type === 'code')!.text ?? ''),
+  ).toEqual({
+    t: 'code',
+    language: 'js',
+    text: 'const value = 2;\n  return value;',
+  });
+  const prose = book.blocks.find(block => block.text?.includes('[[b:2]]'))!;
+  expect(parse(prose.text ?? '')).toEqual([
+    {
+      t: 'p',
+      c: [
+        { t: 'text', v: 'A ' },
+        { t: 'code', v: '[[b:2]] <x>' },
+        { t: 'text', v: ' idea & an example.' },
+      ],
+    },
+  ]);
 });
 it('uses EPUB 2 NCX and preserves spine order, nested links, non-linear text and MathML fallback', async () => {
   const files = io('epub2'),

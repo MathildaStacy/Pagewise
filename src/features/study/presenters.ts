@@ -2,6 +2,7 @@ import type { Block, Book, Message, Section } from '@core/types';
 import { sectionName } from '@features/sectionName';
 import {
   parse,
+  parseSourceCode,
   stableStreamText,
   type Inline,
   type RichDoc as CoreDoc,
@@ -93,7 +94,7 @@ export function blockDoc(block: Block, book: Book | null): RichDoc {
     return [{ t: 'p', c: [{ t: 'b', c: [{ t: 'text', v: block.text }] }] }];
   if (block.type === 'equation')
     return [{ t: 'math', tex: block.latex ?? block.text }];
-  if (block.type === 'code') return [{ t: 'code', text: block.text }];
+  if (block.type === 'code') return [parseSourceCode(block.text)];
   if (block.type === 'image')
     return [
       {

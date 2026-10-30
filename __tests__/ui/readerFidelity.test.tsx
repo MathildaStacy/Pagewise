@@ -719,7 +719,7 @@ const explanation: Extract<StudyOverlay, { kind: 'explain' | 'translate' }> = {
   subtitle: 'p.103 · 3.5.2 A*搜索 · 整理模型',
 };
 async function renderOverlay(
-  skin: 'paper' | 'glass',
+  skin: SkinId,
   overlay: StudyOverlay,
   actions = intents,
 ) {
@@ -811,7 +811,7 @@ it.each([
   await act(async () => okay.props.onPress());
   expect(overlayAction).not.toHaveBeenCalled();
 });
-it.each(['paper', 'glass'] as const)(
+it.each(['paper', 'glass', 'meta', 'google', 'win11'] as const)(
   'uses the %s translation footer from its prototype',
   async skin => {
     const closeOverlay = jest.fn();
@@ -827,9 +827,9 @@ it.each(['paper', 'glass'] as const)(
         .some(node => node.props.typography === 'sheetQuote'),
     ).toBe(true);
     expect(actions.map((action: { label: string }) => action.label)).toEqual(
-      skin === 'glass' ? ['好的'] : [],
+      skin !== 'paper' ? ['好的'] : [],
     );
-    if (skin === 'glass') {
+    if (skin !== 'paper') {
       expect(actions[0].kind).toBe('primary');
       await act(async () => actions[0].onPress());
       expect(closeOverlay).toHaveBeenCalledTimes(1);
