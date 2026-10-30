@@ -129,18 +129,52 @@ it.each(['cancel', 'error', 'truncated'] as const)(
     await prose('English text '.repeat(1200));
     const ctl = new AbortController();
     let calls = 0;
-    jest.spyOn(c.ai, 'complete').mockImplementation(async () => {
-      if (++calls === 2) {
-        if (failure === 'cancel') ctl.abort();
-        else if (failure === 'truncated')
-          return { ...response('被截断的译文'), stop: 'max_tokens' };
-        else throw new Error('translation unavailable');
-      }
-      return response('部分译文');
-    });
+    const complete = jest
+      .spyOn(c.ai, 'complete')
+      .mockImplementation(async () => {
+        if (++calls === 2) {
+          if (failure === 'cancel') ctl.abort();
+          else if (failure === 'truncated')
+            return { ...response('被截断的译文'), stop: 'max_tokens' };
+          else throw new Error('translation unavailable');
+        }
+        return response('部分译文');
+      });
     await expect(
       session.translateSection('3.5.2', ctl.signal),
     ).rejects.toThrow();
     expect(await c.db.all('SELECT * FROM section_translation')).toEqual([]);
+    complete.mockImplementation(async () => response('重试完整译文'));
+    const translated = await session.translateSection('3.5.2');
+    expect(translated).not.toContain('部分译文');
+    expect(await c.db.get('SELECT content FROM section_translation')).toEqual({
+      content: translated,
+    });
   },
 );
+
+it('keeps a complete cached translation when regeneration fails, and replaces it only after a successful retry', async () => {
+  await prose('An English paragraph. '.repeat(600));
+  const complete = jest
+    .spyOn(c.ai, 'complete')
+    .mockImplementation(async () => response('已完成的旧译文'));
+  const original = await session.translateSection('3.5.2');
+  complete
+    .mockResolvedValueOnce(response('尚未完成的新译文'))
+    .mockRejectedValueOnce(new Error('translation offline'));
+  await expect(
+    session.translateSection('3.5.2', undefined, undefined, true),
+  ).rejects.toThrow('translation offline');
+  complete.mockClear();
+  expect(await session.translateSection('3.5.2')).toBe(original);
+  expect(complete).not.toHaveBeenCalled();
+  complete.mockImplementation(async () => response('重试完成的新译文'));
+  const replacement = await session.translateSection(
+    '3.5.2',
+    undefined,
+    undefined,
+    true,
+  );
+  expect(replacement).not.toBe(original);
+  expect(await session.translateSection('3.5.2')).toBe(replacement);
+});

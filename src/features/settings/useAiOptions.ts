@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useContainer } from '@app/ContainerProvider';
 import {
@@ -41,18 +41,22 @@ export function useAiOptions(
     }, [c, purpose]),
   );
   const state = presentAiOptions(data.providers, value ?? data.config);
+  // React 批量渲染之前的后续修改也要保留刚选的参数。
+  const latest = useRef(state.config);
+  latest.current = state.config;
   return {
     state,
     error,
     patch(patch: Partial<ConversationConfig>) {
       const config =
-        state.config ??
+        latest.current ??
         (state.models[0]
           ? { ...state.models[0], effort: 'low' as const, search: false }
           : null);
-      return config
+      latest.current = config
         ? normalizeAiOptions({ ...config, ...patch }, data.providers)
         : null;
+      return latest.current;
     },
   };
 }

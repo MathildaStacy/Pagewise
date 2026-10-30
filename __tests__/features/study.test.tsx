@@ -160,6 +160,99 @@ it('uses the chosen model, reasoning effort and search for explanation and trans
     noTools: true,
   });
 });
+
+it.each(['study', 'reader'] as const)(
+  'retains both rapid reasoning and search changes in the %s and after reopening',
+  async screen => {
+    const vm = await mount(() =>
+      screen === 'reader'
+        ? useReaderVM('aima', '3.5.2')
+        : useStudyVM('aima', { autoStart: false }),
+    );
+    await act(() => {
+      vm().intents.setAiOptions?.({ effort: 'high' });
+      vm().intents.setAiOptions?.({ search: true });
+    });
+    expect(vm().state.aiOptions?.config).toMatchObject({
+      effort: 'high',
+      search: true,
+    });
+    const session = getStudySession(c, 'aima');
+    const conversation = session.store.getState().conversation!.id;
+    await act(() => session.newConversation());
+    await act(() => session.selectConversation(conversation));
+    expect(vm().state.aiOptions?.config).toMatchObject({
+      effort: 'high',
+      search: true,
+    });
+  },
+);
+
+it('cancels a closed translation and ignores its late response after a new translation opens', async () => {
+  const vm = await mount(() => useReaderVM('aima', '3.5.2'));
+  const session = getStudySession(c, 'aima');
+  const translations = jest.spyOn(session, 'translateSection');
+  const complete = c.ai.complete;
+  let release!: () => void;
+  const pending = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  let started!: () => void;
+  const ready = new Promise<void>(resolve => {
+    started = resolve;
+  });
+  let signal: AbortSignal | undefined;
+  const ai = jest
+    .spyOn(c.ai, 'complete')
+    .mockImplementationOnce(async (...args) => {
+      const result = await complete(...args);
+      signal = args[2]?.signal;
+      started();
+      await pending;
+      return {
+        ...result,
+        parts: [
+          { t: 'text', text: JSON.stringify({ answer: '迟到的旧译文' }) },
+        ],
+      };
+    });
+  try {
+    await act(async () => {
+      vm().intents.translateSection?.();
+      await ready;
+    });
+    expect(vm().state.overlay).toMatchObject({
+      kind: 'sectionTranslation',
+      streaming: true,
+    });
+    await act(() => vm().intents.closeOverlay());
+    expect(signal?.aborted).toBe(true);
+    expect(vm().state.overlay).toBeNull();
+    await act(async () => {
+      vm().intents.translateSection?.();
+      await translations.mock.results[1].value;
+    });
+    const current = vm().state.overlay;
+    expect(current).toMatchObject({
+      kind: 'sectionTranslation',
+      streaming: false,
+    });
+    await act(async () => {
+      release();
+      await expect(translations.mock.results[0].value).rejects.toThrow();
+    });
+    expect(vm().state.overlay).toEqual(current);
+    const cached = await c.db.get<{ content: string }>(
+      "SELECT content FROM section_translation WHERE book_id='aima' AND section_id='3.5.2'",
+    );
+    expect(cached?.content).toBeTruthy();
+    expect(cached?.content).not.toContain('迟到的旧译文');
+  } finally {
+    release();
+    ai.mockRestore();
+    translations.mockRestore();
+  }
+});
 it.each([false, true])(
   'prefills and focuses a shelf question without sending or starting AI (warm session: %s)',
   async warm => {
@@ -597,6 +690,51 @@ it.each([false, true])(
     ]);
   },
 );
+it.each(['explain', 'translate'] as const)(
+  'preserves inline code, fenced code and its language when a %s answer is saved and reopened as a pin',
+  async kind => {
+    const vm = await mount(() => useReaderVM('aima', '3.5.2'));
+    const session = getStudySession(c, 'aima');
+    const code =
+      '// Literal ``` marker\n  const text = `hello`;\n\nconsole.log(text);';
+    const answer = `Use \`std::string\` and \`\`a\`b\`\`.\n\n\`\`\`\`typescript\n${code}\n\`\`\`\``;
+    const explain = jest
+      .spyOn(session, 'explainBlock')
+      .mockResolvedValue(answer);
+    try {
+      const item = vm().state.read.items.find(
+        block => block.kind === 'block' && block.type === 'text',
+      );
+      if (item?.kind !== 'block') throw new Error('missing block');
+      await act(() =>
+        vm().intents.pressBlock(item.ref, { x: 0, y: 0, w: 200, h: 50 }),
+      );
+      await act(() => vm().intents.menuAction(kind));
+      const shown = vm().state.overlay;
+      if (shown?.kind !== kind) throw new Error('missing explanation');
+      expect(shown.answer).toContainEqual({
+        t: 'code',
+        text: code,
+        language: 'typescript',
+      });
+      await act(() => vm().intents.overlayAction('ok'));
+      const pin = (await c.repos.notes.pins.list('aima', '3.5.2')).find(entry =>
+        entry.question.startsWith(kind === 'explain' ? '解释：' : '翻译：'),
+      )!;
+      expect(pin.answer_summary).toContain('std::string');
+      expect(pin.answer_summary).toContain('a`b');
+      expect(pin.answer_summary).not.toContain('（未核验）');
+      await act(() => vm().intents.pressPin(String(pin.id)));
+      expect(vm().state.overlay).toMatchObject({
+        kind: 'pin',
+        answer: shown.answer,
+      });
+    } finally {
+      explain.mockRestore();
+    }
+  },
+);
+
 it('reader explanation stays outside thread, saves a pin, and block note persists', async () => {
   const vm = await mount(() => useReaderVM('aima', '3.5.2'));
   const session = getStudySession(c, 'aima'),

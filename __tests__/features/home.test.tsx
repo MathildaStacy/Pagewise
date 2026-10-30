@@ -55,6 +55,18 @@ async function mount<T>(hook: () => T) {
   return () => vm;
 }
 
+it('retains both rapid reasoning and search changes for a shelf question', async () => {
+  const vm = await mount(useAskVM);
+  await act(async () => {
+    vm().intents.setAiOptions?.({ effort: 'high' });
+    vm().intents.setAiOptions?.({ search: true });
+  });
+  expect(vm().state.aiOptions?.config).toMatchObject({
+    effort: 'high',
+    search: true,
+  });
+});
+
 it('loads Today from the current library, routes to reading, and persists goal changes', async () => {
   const vm = await mount(useHomeVM);
   expect(vm().state.books).toHaveLength(3);

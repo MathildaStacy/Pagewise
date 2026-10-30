@@ -122,6 +122,7 @@ export class StudySession implements StudySessionApi {
   private initialized = false;
   private opening: Promise<void> | null = null;
   private active: Promise<void> | null = null;
+  private configWrite: Promise<void> | null = null;
   private controller: AbortController | null = null;
   private extraControllers = new Set<AbortController>();
   private background = new Set<Promise<void>>();
@@ -242,7 +243,9 @@ export class StudySession implements StudySessionApi {
     this.retryAction = operation;
     this.controller = new AbortController();
     this.set({ busy: true, error: null });
-    const work = operation()
+    const work = (
+      this.configWrite ? this.configWrite.then(operation) : operation()
+    )
       .catch(error => {
         if (!this.controller?.signal.aborted) {
           this.set({ error: toAppError(error).message });
@@ -611,11 +614,38 @@ export class StudySession implements StudySessionApi {
       await this.checkpoint();
     });
   }
-  async setConfig(config: ConversationConfig) {
-    if (this.state.busy) return;
-    const options = await loadAiOptions(this.c, 'teach');
-    this.set({ config: normalizeAiOptions(config, options.providers) });
-    await this.checkpoint();
+  setConfig(config: ConversationConfig): Promise<void> {
+    const conversationId = this.state.conversation?.id;
+    if (this.disposed || this.state.busy || conversationId === undefined)
+      return Promise.resolve();
+    // 连续点击立即基于最新选项；持久化按点击顺序写入原对话。
+    this.set({ config });
+    const work = (this.configWrite ?? Promise.resolve()).then(async () => {
+      const options = await loadAiOptions(this.c, 'teach');
+      const normalized = normalizeAiOptions(config, options.providers);
+      await this.c.repos.conversations.update(conversationId, {
+        config: asJson(normalized),
+      });
+      const current = this.state;
+      if (
+        current.conversation?.id === conversationId &&
+        current.config === config
+      )
+        this.set({
+          config: normalized,
+          conversation: {
+            ...current.conversation,
+            config: asJson(normalized),
+          },
+        });
+    });
+    const pending = work
+      .catch(() => {})
+      .finally(() => {
+        if (this.configWrite === pending) this.configWrite = null;
+      });
+    this.configWrite = pending;
+    return work;
   }
   private taskMessage(): StoredMessage {
     return {
@@ -2288,6 +2318,7 @@ export class StudySession implements StudySessionApi {
     if (this.flashTimer) clearTimeout(this.flashTimer);
     this.stop();
     await this.active;
+    await this.configWrite;
     await Promise.allSettled([...this.background]);
     if (this.anchorTimer) {
       clearTimeout(this.anchorTimer);

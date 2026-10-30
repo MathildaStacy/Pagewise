@@ -134,6 +134,93 @@ it('lists conversations with their own book and chapter, and opens a conversatio
   expect(state().main.sectionId).toBe('3.5.2');
   expect(state().conversation?.id).toBe(original);
 });
+
+it('keeps a delayed model option change in its original conversation when starting another conversation', async () => {
+  await setup(scripted([]));
+  const first = state().conversation!.id;
+  const defaults = state().config!;
+  const config = { ...defaults, effort: 'high' as const, search: true };
+  let release!: () => void;
+  const delayed = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  let started!: () => void;
+  const reading = new Promise<void>(resolve => {
+    started = resolve;
+  });
+  const get = c.repos.settings.get;
+  const settings = jest
+    .spyOn(c.repos.settings, 'get')
+    .mockImplementationOnce(async (key, fallback) => {
+      started();
+      await delayed;
+      return get(key, fallback);
+    });
+  const update = session.setConfig(config);
+  const switching = session.newConversation();
+  try {
+    await reading;
+    expect(state().config).toEqual(config);
+    expect(state().conversation?.id).toBe(first);
+    release();
+    await Promise.all([update, switching]);
+    const second = state().conversation!.id;
+    expect(second).not.toBe(first);
+    expect(state().conversation?.id).toBe(second);
+    expect(state().config).toEqual(defaults);
+    await session.selectConversation(first);
+    expect(state().config).toEqual(config);
+  } finally {
+    release();
+    await Promise.all([update, switching]);
+    settings.mockRestore();
+  }
+});
+
+it('sends with both immediately changed options and finishes saving them before disposal', async () => {
+  const ai = scripted([text('使用刚选的模型参数回答')]);
+  await setup(ai);
+  const conversation = state().conversation!.id;
+  const config = { ...state().config!, effort: 'high' as const };
+  const first = session.setConfig(config);
+  const selected = { ...config, search: true };
+  const second = session.setConfig(selected);
+  const send = session.send('马上发送的问题');
+  await Promise.all([first, second, send]);
+  expect(jest.mocked(ai.stream).mock.calls[0][1].config).toEqual(selected);
+  const latest = { ...selected, effort: 'medium' as const };
+  const update = session.setConfig(latest);
+  await session.dispose();
+  await update;
+  expect((await c.repos.conversations.get(conversation))?.config).toEqual(
+    latest,
+  );
+  session = new StudySession(c, 'aima');
+  await session.open({ autoStart: false });
+  expect(state().config).toEqual(latest);
+});
+
+it('can save and switch conversations after a failed option save is retried', async () => {
+  await setup(scripted([]));
+  const original = state().conversation!.id;
+  const config = { ...state().config!, effort: 'high' as const, search: true };
+  const update = jest
+    .spyOn(c.repos.conversations, 'update')
+    .mockRejectedValueOnce(new Error('temporary storage failure'));
+  try {
+    await expect(session.setConfig(config)).rejects.toThrow(
+      'temporary storage failure',
+    );
+    await session.setConfig(config);
+    await session.newConversation();
+    expect(state().conversation?.id).not.toBe(original);
+    await session.selectConversation(original);
+    expect(state().config).toEqual(config);
+    expect(state().busy).toBe(false);
+  } finally {
+    update.mockRestore();
+  }
+});
 afterEach(async () => {
   if (session) await session.dispose();
   if (c) await c.close();

@@ -1274,12 +1274,28 @@ export function useStudyVM(
 function formatTokens(n: number) {
   return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
 }
+function markdownCode(
+  text: string,
+  { block = false, language = '' }: { block?: boolean; language?: string } = {},
+) {
+  const fence = '`'.repeat(
+    Math.max(
+      block ? 3 : 1,
+      ...Array.from(text.matchAll(/`+/g), match => match[0].length + 1),
+    ),
+  );
+  return block
+    ? `${fence}${language}\n${text}\n${fence}`
+    : `${fence}${text.trim() ? ` ${text} ` : text}${fence}`;
+}
 function docText(doc: import('@ui/kit').RichDoc): string {
   const inline = (items: import('@ui/kit').RichInline[]): string =>
     items
       .map(i =>
         i.t === 'text'
           ? i.v
+          : i.t === 'code'
+          ? markdownCode(i.v)
           : i.t === 'b'
           ? inline(i.c)
           : i.t === 'math'
@@ -1300,7 +1316,7 @@ function docText(doc: import('@ui/kit').RichDoc): string {
         : b.t === 'aux'
         ? docText(b.body)
         : b.t === 'code'
-        ? b.text
+        ? markdownCode(b.text, { block: true, language: b.language })
         : b.text ?? '',
     )
     .join('\n\n');

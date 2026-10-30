@@ -14,6 +14,9 @@ import path from 'node:path';
 import { createDb, type Db, type Row } from '@data/db';
 import { migrate, migrations, SCHEMA_VERSION } from '@data/migrations';
 import { createCardsRepo } from '@data/repos/cards';
+import { createConversationsRepo } from '@data/repos/conversations';
+import { createMessagesRepo } from '@data/repos/messages';
+import { createStudyRepo } from '@data/repos/study';
 import { createTestContainer } from '@app/testing';
 import type { Container } from '@app/container';
 import {
@@ -181,5 +184,80 @@ it('exports and restores suspension and edited content without adding reviews, a
     expect(await restoredDb.all('SELECT * FROM review_log')).toHaveLength(1);
   } finally {
     await restoredDb.close();
+  }
+});
+
+it('exports and restores each conversation, its options and progress, the selected conversation and the complete chapter translation', async () => {
+  await c.db.run(
+    "INSERT INTO section(book_id,id,level,ord,title,is_leaf,source) VALUES ('book','one',1,1,'第一章',1,'manual')",
+  );
+  const first = await c.repos.conversations.create('book', 'one', '原理解读');
+  const second = await c.repos.conversations.create('book', 'one', '代码讨论');
+  const config = {
+    providerId: 'provider',
+    model: 'model',
+    effort: 'high',
+    search: true,
+  };
+  const checkpoint = { part: 1, step: 2, phase: 'ready', detours: [] };
+  await c.repos.conversations.update(first.id, { config, checkpoint });
+  for (const [conversation, content] of [
+    [first, '为什么使用这个算法？'],
+    [second, '请解释这段代码。'],
+  ] as const) {
+    await c.db.run(
+      "INSERT INTO message(book_id,section_id,conversation_id,kind,content,created_at) VALUES ('book','one',?,'user',?,?)",
+      [conversation.id, content, at],
+    );
+  }
+  await c.repos.study.put({
+    book_id: 'book',
+    conversation_id: first.id,
+    main_section: 'one',
+    main_part: 1,
+    main_step: 2,
+    phase: 'ready',
+  });
+  await c.db.run(
+    'INSERT INTO section_translation(book_id,section_id,source_text,content,updated_at) VALUES (?,?,?,?,?)',
+    ['book', 'one', 'English source', '完整的章节译文', at],
+  );
+  const conversations = await c.repos.conversations.list();
+  const archive = await exportBackup(c);
+  await expect(restoreBackup(c, archive)).resolves.toBe(true);
+  const db = openDb(restored);
+  try {
+    expect(await createConversationsRepo(db, () => at).list()).toEqual(
+      conversations,
+    );
+    const messages = createMessagesRepo(db);
+    expect(
+      (await messages.thread('book', 'one', { conversation_id: first.id })).map(
+        message => message.content,
+      ),
+    ).toEqual(['为什么使用这个算法？']);
+    expect(
+      (
+        await messages.thread('book', 'one', { conversation_id: second.id })
+      ).map(message => message.content),
+    ).toEqual(['请解释这段代码。']);
+    expect(await createStudyRepo(db).get('book')).toMatchObject({
+      conversation_id: first.id,
+      main_part: 1,
+      main_step: 2,
+      phase: 'ready',
+    });
+    expect(await db.all('SELECT * FROM section_translation')).toEqual([
+      {
+        book_id: 'book',
+        section_id: 'one',
+        source_text: 'English source',
+        content: '完整的章节译文',
+        updated_at: at,
+      },
+    ]);
+    expect(await db.all('PRAGMA foreign_key_check')).toEqual([]);
+  } finally {
+    await db.close();
   }
 });
