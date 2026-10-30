@@ -37,6 +37,7 @@ import {
   parsePart,
   presentMap,
   presentShelf,
+  presentConversation,
   sectionName,
 } from './presenters';
 import type {
@@ -70,13 +71,7 @@ export function useShelfVM() {
           setState(s => ({
             ...s,
             ...presentShelf(records, c.clock.now(), c.mode === 'demo'),
-            conversations: conversations.map(item => ({
-              id: item.id,
-              bookId: item.book_id,
-              sectionId: item.section_id,
-              title: item.title,
-              subtitle: `${item.book_title} · ${item.section_title} · ${item.message_count} 条消息`,
-            })),
+            conversations: conversations.map(presentConversation),
             loading: false,
             error: null,
           }));

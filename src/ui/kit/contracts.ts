@@ -260,6 +260,8 @@ export interface SheetProps {
     onPress(): void;
   }[];
   detent?: 'auto' | 'half' | 'full';
+  /** Keep text-heavy panels legible above the reader in translucent skins. */
+  opaque?: boolean;
   children?: ReactNode;
 }
 export interface DialogProps {

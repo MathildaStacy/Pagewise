@@ -64,6 +64,8 @@ import type {
 import type { AiOptionsState } from '@features/settings/types';
 import { AiOptionsControl } from './AiOptionsControl';
 import { RefinementSheet } from './RefinementSheet';
+import { TranslationView } from './TranslationView';
+import { ConversationPicker } from './ConversationList';
 
 export function ReaderView({
   state,
@@ -936,7 +938,9 @@ export function StudyOverlays({
     );
   }
   const title =
-    overlay.kind === 'menu'
+    overlay.kind === 'conversations'
+      ? '本节对话'
+      : overlay.kind === 'menu'
       ? overlay.title ?? '伴读'
       : overlay.kind === 'roadmap'
       ? '本节路线图'
@@ -972,10 +976,28 @@ export function StudyOverlays({
       subtitle={subtitle}
       onClose={intents.closeOverlay}
       actions={actions}
+      opaque={
+        overlay.kind === 'translate' ||
+        overlay.kind === 'sectionTranslation' ||
+        overlay.kind === 'conversations'
+      }
       detent={
-        overlay.kind === 'figure' || overlay.kind === 'table' ? 'full' : 'auto'
+        overlay.kind === 'figure' ||
+        overlay.kind === 'table' ||
+        overlay.kind === 'translate' ||
+        overlay.kind === 'sectionTranslation'
+          ? 'full'
+          : 'auto'
       }
     >
+      {overlay.kind === 'conversations' ? (
+        <ConversationPicker
+          items={overlay.items}
+          currentId={overlay.currentId}
+          onOpen={id => intents.menuSelect(`conversation:${id}`)}
+          onNew={() => intents.newConversation?.()}
+        />
+      ) : null}
       {overlay.kind === 'menu'
         ? overlay.rows.map(row => (
             <Row
@@ -1056,9 +1078,19 @@ export function StudyOverlays({
           <Text style={s.body}>{overlay.caption}</Text>
         </ScrollView>
       ) : null}
-      {overlay.kind === 'explain' ||
-      overlay.kind === 'translate' ||
-      overlay.kind === 'sectionTranslation' ? (
+      {overlay.kind === 'translate' || overlay.kind === 'sectionTranslation' ? (
+        <TranslationView
+          key={
+            overlay.kind === 'sectionTranslation'
+              ? overlay.sectionId
+              : `block-${overlay.seq}`
+          }
+          overlay={overlay}
+          intents={intents}
+          aiOptions={aiOptions}
+        />
+      ) : null}
+      {overlay.kind === 'explain' ? (
         <View style={s.overlayBody}>
           <AiOptionsControl
             state={aiOptions}

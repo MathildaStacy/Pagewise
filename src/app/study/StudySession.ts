@@ -38,6 +38,7 @@ import {
   buildTaskPrompt,
   buildTeachPrompt,
   parseTaskJson,
+  streamedTaskAnswer,
   type StudyTask,
 } from './prompts';
 import { finishSection } from './finishSection';
@@ -666,25 +667,47 @@ export class StudySession implements StudySessionApi {
     signal = this.controller?.signal,
     purpose: 'teach' | 'tidy' = 'tidy',
     config?: ConversationConfig,
+    onAnswer?: (answer: string) => void,
   ): Promise<Record<string, JsonValue>> {
-    const response = await this.c.ai.complete(
-      purpose,
-      {
-        system: buildTaskPrompt(task, input),
-        contextBlocks: [],
-        tools: [],
-        noTools: !config?.search,
-        bookId: this.bookId,
-        config,
-        history: [this.taskMessage()],
-      },
-      { signal },
-    );
+    const request: GatewayRequest = {
+      system: buildTaskPrompt(task, input),
+      contextBlocks: [],
+      tools: [],
+      noTools: !config?.search,
+      bookId: this.bookId,
+      config,
+      history: [this.taskMessage()],
+    };
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let pending = '';
+    let published = '';
+    const publish = () => {
+      timer = undefined;
+      if (signal?.aborted || pending === published) return;
+      published = pending;
+      onAnswer?.(pending);
+    };
+    let response;
+    try {
+      response = onAnswer
+        ? await this.c.ai.stream(purpose, request, {
+            signal: signal ?? new AbortController().signal,
+            onText: full => {
+              pending = streamedTaskAnswer(full);
+              timer ??= setTimeout(publish, 50);
+            },
+          })
+        : await this.c.ai.complete(purpose, request, { signal });
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
     if (signal?.aborted) throw new Error('已停止');
     if (task === 'translate' && response.stop === 'max_tokens')
       throw new Error('模型的译文未完整返回，请重试或切换模型');
     this.set({ lastUsage: response.usage });
-    return jsonObject(parseTaskJson(textOf(response.parts))) ?? {};
+    const data = jsonObject(parseTaskJson(textOf(response.parts))) ?? {};
+    if (typeof data.answer === 'string') onAnswer?.(data.answer);
+    return data;
   }
   private async ensurePlan() {
     await this.refreshReadingSource();
@@ -2211,6 +2234,7 @@ export class StudySession implements StudySessionApi {
     signal?: AbortSignal,
     config?: ConversationConfig,
     refresh = false,
+    onText?: (text: string) => void,
   ): Promise<string> {
     if (signal?.aborted) throw new Error('已停止翻译');
     const blocks = await this.c.repos.blocks.reading.bySection(
@@ -2227,7 +2251,11 @@ export class StudySession implements StudySessionApi {
       'SELECT source_text, content FROM section_translation WHERE book_id = ? AND section_id = ?',
       [this.bookId, sectionId],
     );
-    if (!refresh && cached?.source_text === source) return cached.content;
+    if (!refresh && cached?.source_text === source) {
+      if (signal?.aborted) throw new Error('已停止翻译');
+      onText?.(cached.content);
+      return cached.content;
+    }
     const controller = new AbortController();
     this.extraControllers.add(controller);
     const abort = () => controller.abort();
@@ -2239,6 +2267,7 @@ export class StudySession implements StudySessionApi {
         if (controller.signal.aborted) throw new Error('已停止翻译');
         if (!chunk.translate) {
           answers.push(chunk.source);
+          onText?.(answers.join('\n\n'));
           continue;
         }
         const data = await this.task(
@@ -2251,6 +2280,9 @@ export class StudySession implements StudySessionApi {
           controller.signal,
           'tidy',
           config,
+          onText
+            ? answer => onText([...answers, answer].join('\n\n'))
+            : undefined,
         );
         const answer = stringValue(data.answer);
         if (!answer.trim()) throw new Error('AI 未返回译文，请重试');
@@ -2273,6 +2305,7 @@ export class StudySession implements StudySessionApi {
     kind: 'explain' | 'translate',
     signal?: AbortSignal,
     config?: ConversationConfig,
+    onText?: (text: string) => void,
   ): Promise<string> {
     const block = await this.c.repos.blocks.reading.get(this.bookId, seq);
     if (!block) throw new Error('找不到这段原文');
@@ -2296,6 +2329,7 @@ export class StudySession implements StudySessionApi {
         controller.signal,
         kind === 'explain' ? 'teach' : 'tidy',
         config,
+        onText,
       );
       const answer = stringValue(data.answer);
       if (!answer) throw new Error('AI 未返回内容，请重试');

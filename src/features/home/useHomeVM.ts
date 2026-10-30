@@ -24,7 +24,11 @@ import {
 import { demoRefBySourceId } from '@app/demo/seed';
 import { parse } from '@core/markup';
 import { useAppNav } from '@features/nav';
-import { presentShelf, sectionName } from '@features/library/presenters';
+import {
+  presentShelf,
+  presentConversation,
+  sectionName,
+} from '@features/library/presenters';
 import { useShelfVM } from '@features/library/useLibraryVM';
 import type { RichDoc, RichInline } from '@ui/kit';
 import { useAiOptions } from '@features/settings/useAiOptions';
@@ -92,13 +96,7 @@ export function useHomeVM() {
         const hour = c.clock.now().getHours();
         setState({
           ...data,
-          conversations: data.conversations.map(item => ({
-            id: item.id,
-            bookId: item.book_id,
-            sectionId: item.section_id,
-            title: item.title,
-            subtitle: `${item.book_title} · ${item.section_title} · ${item.message_count} 条消息`,
-          })),
+          conversations: data.conversations.map(presentConversation),
           loading: false,
           error: null,
           demo: c.mode === 'demo',

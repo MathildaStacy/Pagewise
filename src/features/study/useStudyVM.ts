@@ -17,8 +17,10 @@ import {
   toggleStudyHighlight,
 } from '@app/usecases/studyReader';
 import { pageRangeLabel, parseBlockRef } from '@core/ids';
+import { stableStreamText } from '@core/markup';
 import type { Block, Section } from '@core/types';
 import { useAppNav } from '@features/nav';
+import { presentConversation } from '@features/library/presenters';
 import { useAiOptions } from '@features/settings/useAiOptions';
 import { openExternalSource } from '@app/usecases/aiOptions';
 import {
@@ -580,12 +582,14 @@ export function useStudyVM(
   };
   const startTranslation = (refresh = false) => {
     if (!readerId) return;
+    const request = ++explainRequest.current;
     explanationController.current?.abort();
     const controller = new AbortController();
     explanationController.current = controller;
     setOverlay({
       kind: 'sectionTranslation',
       sectionId: readerId,
+      quote: reader?.blocks.flatMap(block => blockDoc(block, raw.book)),
       answer: null,
       streaming: true,
       subtitle: sectionLabel(readSection) + ' · 简体中文',
@@ -596,6 +600,29 @@ export function useStudyVM(
         controller.signal,
         aiOptions.state.config ?? undefined,
         refresh,
+        partial => {
+          if (
+            mounted.current &&
+            !controller.signal.aborted &&
+            explainRequest.current === request
+          )
+            setOverlay(current =>
+              current?.kind === 'sectionTranslation' &&
+              current.sectionId === readerId
+                ? {
+                    ...current,
+                    answer: messageDoc(
+                      stableStreamText(partial),
+                      [],
+                      new Map(),
+                      raw.book,
+                      readerId,
+                      true,
+                    ),
+                  }
+                : current,
+            );
+        },
       )
       .then(answer => {
         if (mounted.current && !controller.signal.aborted)
@@ -627,25 +654,10 @@ export function useStudyVM(
       )
       .then(items =>
         setOverlay({
-          kind: 'menu',
-          title: '本节对话',
-          rows: [
-            {
-              key: 'newConversation',
-              title: '新增对话',
-              sub: '从本节开始一段独立对话',
-            },
-            ...items.map(item => ({
-              key: 'conversation:' + item.id,
-              title:
-                (item.id === raw.conversation?.id ? '当前 · ' : '') +
-                item.title,
-              sub: `${item.message_count} 条消息 · ${item.updated_at.slice(
-                0,
-                10,
-              )}`,
-            })),
-          ],
+          kind: 'conversations',
+          currentId: raw.conversation?.id,
+          subtitle: items[0]?.section_title ?? sectionLabel(readSection),
+          items: items.map(presentConversation),
         }),
       )
       .catch(fail);
@@ -829,6 +841,30 @@ export function useStudyVM(
         key,
         controller.signal,
         aiOptions.state.config ?? undefined,
+        key === 'translate'
+          ? partial => {
+              if (
+                mounted.current &&
+                !controller.signal.aborted &&
+                explainRequest.current === request
+              )
+                setOverlay(current =>
+                  current?.kind === 'translate' && current.seq === seq
+                    ? {
+                        ...current,
+                        answer: messageDoc(
+                          stableStreamText(partial),
+                          [seq],
+                          new Map([[seq, block]]),
+                          raw.book,
+                          raw.main.sectionId,
+                          true,
+                        ),
+                      }
+                    : current,
+                );
+            }
+          : undefined,
       )
       .then(answer => {
         if (
@@ -1199,6 +1235,15 @@ export function useStudyVM(
     overlayAction: key => {
       const shown = overlay;
       if (!shown) return;
+      if (
+        key === 'stop' &&
+        (shown.kind === 'translate' || shown.kind === 'sectionTranslation')
+      ) {
+        explanationController.current?.abort();
+        explainRequest.current++;
+        setOverlay({ ...shown, streaming: false, stopped: true });
+        return;
+      }
       if (key === 'regenerate') {
         if (shown.kind === 'sectionTranslation') startTranslation(true);
         else if (shown.kind === 'explain' || shown.kind === 'translate')

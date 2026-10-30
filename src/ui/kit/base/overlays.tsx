@@ -100,7 +100,10 @@ export function Glass(props: GlassProps) {
   return <GlassSurface {...props} />;
 }
 
-function SheetBackground({ style }: BottomSheetBackgroundProps) {
+function SheetBackground({
+  style,
+  opaque,
+}: BottomSheetBackgroundProps & { opaque?: boolean }) {
   const tokens = useTokens();
   const inset = useSkin().skin.id === 'glass';
   const sheetBackgroundStyle = StyleSheet.create({
@@ -113,7 +116,7 @@ function SheetBackground({ style }: BottomSheetBackgroundProps) {
   }).root;
   return (
     <GlassSurface
-      material={inset || tokens.brand?.kind === 'win11'}
+      material={!opaque && (inset || tokens.brand?.kind === 'win11')}
       strength="strong"
       style={[style, sheetBackgroundStyle]}
     />
@@ -305,6 +308,7 @@ export function Sheet({
   onClose,
   actions = [],
   detent = 'auto',
+  opaque = false,
   children,
 }: SheetProps) {
   const tokens = useTokens(),
@@ -329,7 +333,7 @@ export function Sheet({
       paddingBottom: inset ? 6 : 8,
     },
     footerSurface: {
-      backgroundColor: tokens.color.glassStrong,
+      backgroundColor: opaque ? tokens.color.surface : tokens.color.glassStrong,
       borderBottomLeftRadius: tokens.shape.sheet,
       borderBottomRightRadius: tokens.shape.sheet,
       overflow: 'hidden',
@@ -339,6 +343,12 @@ export function Sheet({
   const renderHeader = useCallback(
     () => <SheetHeader title={title} subtitle={subtitle} onClose={onClose} />,
     [title, subtitle, onClose],
+  );
+  const renderBackground = useCallback(
+    (props: BottomSheetBackgroundProps) => (
+      <SheetBackground {...props} opaque={opaque} />
+    ),
+    [opaque],
   );
   const renderFooter = useCallback(
     (props: BottomSheetFooterProps) => (
@@ -382,7 +392,7 @@ export function Sheet({
           bottomInset={inset ? 8 : 0}
           topInset={safe.top}
           containerStyle={s.container}
-          backgroundComponent={SheetBackground}
+          backgroundComponent={renderBackground}
           handleComponent={inset ? renderHeader : null}
           footerComponent={inset ? renderFooter : undefined}
           keyboardBehavior="interactive"

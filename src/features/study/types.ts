@@ -1,5 +1,6 @@
 import type { ComposerQuote, PageOrigProps, RichDoc } from '@ui/kit';
 import type { StudyOpenOptions } from '@app/study/types';
+import type { ConversationSummary } from '@features/library/types';
 import type {
   AiOptionsState,
   ConversationConfig,
@@ -163,11 +164,19 @@ export interface ReaderState {
 }
 export type StudyOverlay =
   | {
+      kind: 'conversations';
+      items: ConversationSummary[];
+      currentId?: number;
+      subtitle: string;
+    }
+  | {
       kind: 'sectionTranslation';
       sectionId: string;
+      quote?: RichDoc;
       answer: RichDoc | null;
       streaming: boolean;
       error?: string;
+      stopped?: boolean;
       subtitle: string;
     }
   | {
@@ -216,6 +225,7 @@ export type StudyOverlay =
       streaming: boolean;
       subtitle: string;
       error?: string;
+      stopped?: boolean;
     }
   | {
       kind: 'pin';

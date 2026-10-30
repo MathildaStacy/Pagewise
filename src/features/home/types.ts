@@ -1,17 +1,15 @@
-import type { ShelfState, ShelfIntents } from '../library/types';
+import type {
+  ShelfState,
+  ShelfIntents,
+  ConversationSummary,
+} from '../library/types';
 import type { RichDoc } from '@ui/kit';
 import type {
   AiOptionsState,
   ConversationConfig,
 } from '@features/settings/types';
 export interface HomeState {
-  conversations?: {
-    id: number;
-    bookId: string;
-    sectionId: string;
-    title: string;
-    subtitle: string;
-  }[];
+  conversations?: ConversationSummary[];
   loading: boolean;
   error: string | null;
   demo: boolean;

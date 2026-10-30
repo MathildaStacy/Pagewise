@@ -3,6 +3,7 @@ import type { Container } from '@app/container';
 import { StudySession } from '@app/study/StudySession';
 import type { GatewayRequest } from '@services/ai/gateway';
 import type { ParsedResponse } from '@services/ai/protocol';
+import { streamedTaskAnswer } from '@app/study/prompts';
 
 let c: Container, session: StudySession;
 const inputOf = (req: GatewayRequest) =>
@@ -177,4 +178,97 @@ it('keeps a complete cached translation when regeneration fails, and replaces it
   );
   expect(replacement).not.toBe(original);
   expect(await session.translateSection('3.5.2')).toBe(replacement);
+});
+
+it('publishes decoded Chinese before the streaming request finishes and replays the complete cache without a request', async () => {
+  await prose('A technical paragraph.');
+  let finish!: () => void;
+  const pending = new Promise<void>(resolve => {
+    finish = resolve;
+  });
+  let started!: () => void;
+  const ready = new Promise<void>(resolve => {
+    started = resolve;
+  });
+  const onText = jest.fn();
+  const stream = jest
+    .spyOn(c.ai, 'stream')
+    .mockImplementation(async (_purpose, _req, handlers) => {
+      handlers.onText('{"answer":"中文\\n译文');
+      started();
+      await pending;
+      return response('中文\n译文完成');
+    });
+  const work = session.translateSection(
+    '3.5.2',
+    undefined,
+    undefined,
+    false,
+    onText,
+  );
+  try {
+    await ready;
+    await new Promise(resolve => setTimeout(resolve, 70));
+    expect(onText).toHaveBeenLastCalledWith('中文\n译文');
+    expect(await c.db.all('SELECT * FROM section_translation')).toEqual([]);
+  } finally {
+    finish();
+  }
+  expect(await work).toBe('中文\n译文完成');
+  expect(onText).toHaveBeenLastCalledWith('中文\n译文完成');
+  stream.mockClear();
+  onText.mockClear();
+  expect(
+    await session.translateSection(
+      '3.5.2',
+      undefined,
+      undefined,
+      false,
+      onText,
+    ),
+  ).toBe('中文\n译文完成');
+  expect(stream).not.toHaveBeenCalled();
+  expect(onText).toHaveBeenCalledWith('中文\n译文完成');
+});
+
+it.each(['cancel', 'error', 'truncated'] as const)(
+  'does not cache a streamed translation on %s',
+  async failure => {
+    await prose('An English sentence. '.repeat(700));
+    const controller = new AbortController();
+    const stream = jest.spyOn(c.ai, 'stream');
+    stream.mockImplementation(async (_purpose, _req, handlers) => {
+      handlers.onText('{"answer":"部分译文');
+      if (failure === 'cancel') controller.abort();
+      if (failure === 'error') throw new Error('stream interrupted');
+      return {
+        ...response('部分译文'),
+        stop: failure === 'truncated' ? 'max_tokens' : 'end',
+      };
+    });
+    await expect(
+      session.translateSection(
+        '3.5.2',
+        controller.signal,
+        undefined,
+        false,
+        jest.fn(),
+      ),
+    ).rejects.toThrow();
+    expect(await c.db.all('SELECT * FROM section_translation')).toEqual([]);
+  },
+);
+
+it('decodes every partial JSON boundary without leaking escapes or half a Unicode character', () => {
+  const answer = '首行\n"术语"、\\路径\t😀';
+  const json = JSON.stringify({ answer }).replace('😀', '\\ud83d\\ude00');
+  let previous = '';
+  for (let end = 0; end <= json.length; end++) {
+    const text = streamedTaskAnswer(json.slice(0, end));
+    expect(answer.startsWith(text)).toBe(true);
+    expect(text.startsWith(previous)).toBe(true);
+    expect(text).not.toMatch(/[\uD800-\uDBFF]$/);
+    previous = text;
+  }
+  expect(previous).toBe(answer);
 });

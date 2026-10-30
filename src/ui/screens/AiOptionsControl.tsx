@@ -15,11 +15,13 @@ export function AiOptionsControl({
   onChange,
   disabled,
   inline = false,
+  compact = false,
 }: {
   state?: AiOptionsState;
   onChange?(patch: Partial<ConversationConfig>): void;
   disabled?: boolean;
   inline?: boolean;
+  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const s = useStyles();
@@ -80,12 +82,18 @@ export function AiOptionsControl({
         accessibilityState={{ disabled, expanded: open }}
         disabled={disabled}
         onPress={() => setOpen(true)}
-        style={({ pressed }) => [s.control, pressed && s.pressed]}
+        style={({ pressed }) => [
+          s.control,
+          compact && s.compact,
+          pressed && s.pressed,
+        ]}
       >
-        <Text numberOfLines={2} style={s.label}>
-          {selected?.label ?? '选择 AI 模型'}
-          {effort ? ' · 推理' + effort : ''} · 搜索
-          {state.config?.search ? '开' : '关'}
+        <Text numberOfLines={compact ? 1 : 2} style={s.label}>
+          {compact
+            ? selected?.model ?? '选择 AI 模型'
+            : `${selected?.label ?? '选择 AI 模型'}${
+                effort ? ' · 推理' + effort : ''
+              } · 搜索${state.config?.search ? '开' : '关'}`}
         </Text>
         <Icon name="arrowDown" size={16} />
       </Pressable>
@@ -108,5 +116,6 @@ const useStyles = makeStyles(t => ({
     paddingHorizontal: t.space.pageX,
   },
   label: { ...t.type.caption, color: t.color.ink2, flexShrink: 1 },
+  compact: { paddingHorizontal: 8 },
   pressed: { backgroundColor: t.color.pressed },
 }));

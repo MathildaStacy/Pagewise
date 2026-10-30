@@ -1,4 +1,9 @@
-import type { Book, BookPart, Section } from '@core/types';
+import type {
+  Book,
+  BookPart,
+  Section,
+  ConversationListItem,
+} from '@core/types';
 import { pageLabel, pageRangeLabel, type PageLabelBook } from '@core/ids';
 import { sectionName } from '@features/sectionName';
 import type { MapRecord, ShelfRecord } from '@app/usecases/library';
@@ -8,7 +13,24 @@ import type {
   ParseProgressState,
   ShelfBook,
   ShelfState,
+  ConversationSummary,
 } from './types';
+
+export function presentConversation(
+  item: ConversationListItem,
+): ConversationSummary {
+  return {
+    id: item.id,
+    bookId: item.book_id,
+    sectionId: item.section_id,
+    title: item.title,
+    subtitle: `${item.book_title} · ${item.section_title} · ${item.message_count} 条消息`,
+    bookTitle: item.book_title,
+    sectionTitle: item.section_title,
+    messageCount: item.message_count,
+    updatedAt: item.updated_at,
+  };
+}
 
 export const pageRange = (
   section: Pick<Section, 'page_from' | 'page_to'>,

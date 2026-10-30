@@ -163,14 +163,30 @@ export function StudyView({
           </View>
         ) : null}
         <View style={s.conversations}>
-          <Button
-            variant="text"
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`本节对话，${
+              state.conversationTitle ?? '选择对话'
+            }`}
             onPress={() => intents.openConversations?.()}
-            label="本节对话"
-          />
-          <Text numberOfLines={1} style={s.conversationTitle}>
-            {state.conversationTitle}
-          </Text>
+            style={({ pressed }) => [
+              s.conversationSwitch,
+              state.mode === 'read' && s.readConversationSwitch,
+              pressed && s.conversationPressed,
+            ]}
+          >
+            <Icon name="listen" size={18} color={s.conversationTitle.color} />
+            {state.mode === 'listen' ? (
+              <Text numberOfLines={1} style={s.conversationTitle}>
+                {state.conversationTitle ?? '本节对话'}
+              </Text>
+            ) : null}
+            <Icon
+              name="arrowDown"
+              size={16}
+              color={s.conversationTitle.color}
+            />
+          </Pressable>
           {state.mode === 'read' ? (
             <>
               <Button
@@ -187,13 +203,14 @@ export function StudyView({
               />
             </>
           ) : null}
-          <Button
-            variant="text"
-            icon="add"
-            onPress={() => intents.newConversation?.()}
-            disabled={state.listen.busy}
-            label="新对话"
-          />
+          {state.mode === 'listen' ? (
+            <IconButton
+              icon="add"
+              onPress={() => intents.newConversation?.()}
+              disabled={state.listen.busy}
+              label="新建对话"
+            />
+          ) : null}
         </View>
         {state.mode === 'read' ? (
           <ReaderContent state={state.read} intents={intents} />
@@ -505,11 +522,24 @@ const useStyles = makeStyles(t => ({
   sources: { gap: t.space.gap, paddingTop: t.space.gap },
   conversations: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     alignItems: 'center',
-    paddingHorizontal: t.space.gap,
-    gap: t.space.gap,
+    paddingHorizontal: t.space.pageX,
+    paddingBottom: 8,
+    gap: 8,
   },
+  conversationSwitch: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    borderRadius: t.shape.md,
+    backgroundColor: t.color.surfaceAlt,
+  },
+  conversationPressed: { backgroundColor: t.color.pressed },
+  readConversationSwitch: { flex: 0, minWidth: 64, justifyContent: 'center' },
   conversationTitle: {
     ...t.type.caption,
     color: t.color.ink2,

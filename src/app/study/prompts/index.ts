@@ -145,3 +145,40 @@ export function parseTaskJson(text: string): unknown {
     text.trim().replace(/^```(?:json)?\s*([\s\S]*?)\s*```$/, '$1'),
   ) as unknown;
 }
+
+/** Read only the answer string from an unfinished task JSON, without exposing JSON syntax. */
+export function streamedTaskAnswer(text: string): string {
+  const start = /"answer"\s*:\s*"/.exec(text);
+  if (!start) return '';
+  let answer = '';
+  for (let i = start.index + start[0].length; i < text.length; i++) {
+    const char = text[i];
+    if (char === '"') break;
+    if (char !== '\\') {
+      answer += char;
+      continue;
+    }
+    const escape = text[++i];
+    if (!escape) break;
+    if (escape === 'u') {
+      const hex = text.slice(i + 1, i + 5);
+      if (!/^[\da-f]{4}$/i.test(hex)) break;
+      answer += String.fromCharCode(parseInt(hex, 16));
+      i += 4;
+    } else {
+      const value: Record<string, string> = {
+        '"': '"',
+        '\\': '\\',
+        '/': '/',
+        b: '\b',
+        f: '\f',
+        n: '\n',
+        r: '\r',
+        t: '\t',
+      };
+      if (!(escape in value)) break;
+      answer += value[escape];
+    }
+  }
+  return answer.replace(/[\uD800-\uDBFF]$/, '');
+}

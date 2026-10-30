@@ -2,7 +2,7 @@ import Renderer, { act } from 'react-test-renderer';
 import { AiOptionsControl } from '@ui/screens/AiOptionsControl';
 import { ConversationList } from '@ui/screens/ConversationList';
 import { SettingsSelect } from '@ui/screens/MeAIView';
-import { Row, SkinProvider, Switch, type SkinId } from '@ui/kit';
+import { SkinProvider, Switch, type SkinId } from '@ui/kit';
 import type { AiOptionsState } from '@features/settings/types';
 
 const options: AiOptionsState = {
@@ -63,6 +63,9 @@ it.each(variants)(
                 sectionId: '1.2',
                 title: '独立对话',
                 subtitle: '英文书 · 1.2 Code · 3 条消息',
+                bookTitle: '英文书',
+                sectionTitle: '1.2 Code',
+                messageCount: 3,
               },
             ]}
             onOpen={onOpen}
@@ -71,10 +74,14 @@ it.each(variants)(
         </SkinProvider>,
       );
     });
-    const conversation = renderer.root
-      .findAllByType(Row)
-      .find(node => node.props.title === '独立对话')!;
-    expect(conversation.props.subtitle).toContain('英文书 · 1.2 Code');
+    const conversation = renderer.root.findAll(
+      node =>
+        node.props.testID === 'conversation-42' &&
+        typeof node.props.onPress === 'function',
+    )[0];
+    expect(conversation.props.accessibilityLabel).toContain(
+      '英文书 · 1.2 Code',
+    );
     await act(async () => conversation.props.onPress());
     expect(onOpen).toHaveBeenCalledWith(42);
     const selects = renderer.root.findAllByType(SettingsSelect);

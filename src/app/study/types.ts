@@ -194,12 +194,14 @@ export interface StudySessionApi {
     kind: 'explain' | 'translate',
     signal?: AbortSignal,
     config?: ConversationConfig,
+    onText?: (text: string) => void,
   ): Promise<string>;
   translateSection(
     sectionId: string,
     signal?: AbortSignal,
     config?: ConversationConfig,
     refresh?: boolean,
+    onText?: (text: string) => void,
   ): Promise<string>;
   generateGuide(): Promise<string>;
   clearNotice(): void;

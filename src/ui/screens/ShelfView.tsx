@@ -337,6 +337,7 @@ export function ShelfView({
         <ConversationList
           items={state.conversations}
           onOpen={intents.openConversation}
+          initialLimit={5}
         />
         <View style={s.fabSpace} />
         <ShelfOverlays state={state} intents={intents} />

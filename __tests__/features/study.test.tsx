@@ -118,6 +118,7 @@ it('starts a blank conversation from the independent reader without sending an a
 
 it('uses the chosen model, reasoning effort and search for explanation and translation requests', async () => {
   const complete = jest.spyOn(c.ai, 'complete');
+  const stream = jest.spyOn(c.ai, 'stream');
   const vm = await mount(() => useReaderVM('aima', '3.5.2'));
   const model = vm().state.aiOptions!.models.find(item =>
     /haiku/.test(item.model),
@@ -149,13 +150,13 @@ it('uses the chosen model, reasoning effort and search for explanation and trans
     noTools: false,
   });
   await act(() => vm().intents.menuAction('translate'));
-  expect(complete.mock.calls.at(-1)![1]).toMatchObject({
+  expect(stream.mock.calls.at(-1)![1]).toMatchObject({
     config: selected,
     noTools: false,
   });
   await act(() => vm().intents.setAiOptions?.({ search: false }));
   await act(() => vm().intents.overlayAction('regenerate'));
-  expect(complete.mock.calls.at(-1)![1]).toMatchObject({
+  expect(stream.mock.calls.at(-1)![1]).toMatchObject({
     config: { ...selected, search: false },
     noTools: true,
   });
@@ -192,7 +193,7 @@ it('cancels a closed translation and ignores its late response after a new trans
   const vm = await mount(() => useReaderVM('aima', '3.5.2'));
   const session = getStudySession(c, 'aima');
   const translations = jest.spyOn(session, 'translateSection');
-  const complete = c.ai.complete;
+  const stream = c.ai.stream;
   let release!: () => void;
   const pending = new Promise<void>(resolve => {
     release = resolve;
@@ -203,9 +204,9 @@ it('cancels a closed translation and ignores its late response after a new trans
   });
   let signal: AbortSignal | undefined;
   const ai = jest
-    .spyOn(c.ai, 'complete')
+    .spyOn(c.ai, 'stream')
     .mockImplementationOnce(async (...args) => {
-      const result = await complete(...args);
+      const result = await stream(...args);
       signal = args[2]?.signal;
       started();
       await pending;
@@ -251,6 +252,48 @@ it('cancels a closed translation and ignores its late response after a new trans
     release();
     ai.mockRestore();
     translations.mockRestore();
+  }
+});
+
+it('stops a translation while keeping the original and received Chinese visible', async () => {
+  const vm = await mount(() => useReaderVM('aima', '3.5.2'));
+  const session = getStudySession(c, 'aima');
+  let signal: AbortSignal | undefined;
+  const translation = jest
+    .spyOn(session, 'translateSection')
+    .mockImplementation(
+      async (_id, requestSignal, _config, _refresh, onText) => {
+        signal = requestSignal;
+        onText?.('已经收到的中文译文。');
+        return new Promise<string>((_resolve, reject) => {
+          requestSignal?.addEventListener(
+            'abort',
+            () => reject(new Error('已停止')),
+            { once: true },
+          );
+        });
+      },
+    );
+  try {
+    await act(() => vm().intents.translateSection?.());
+    const before = vm().state.overlay;
+    expect(before).toMatchObject({
+      kind: 'sectionTranslation',
+      streaming: true,
+    });
+    if (before?.kind !== 'sectionTranslation')
+      throw new Error('Missing translation');
+    expect(before.quote?.length).toBeGreaterThan(0);
+    expect(before.answer).toBeTruthy();
+    await act(() => vm().intents.overlayAction('stop'));
+    expect(signal?.aborted).toBe(true);
+    expect(vm().state.overlay).toEqual({
+      ...before,
+      streaming: false,
+      stopped: true,
+    });
+  } finally {
+    translation.mockRestore();
   }
 });
 it.each([false, true])(
@@ -1058,9 +1101,7 @@ it('opens refinement from both source readers and gives adopted blocks a visible
     });
     const buttons = renderer!.root.findAllByType(Button);
     const entry = buttons.find(b => b.props.label === '精修本节')!;
-    const badge = buttons.find(
-      b => b.props.label === 'AI 精修 · 接续上段',
-    )!;
+    const badge = buttons.find(b => b.props.label === 'AI 精修 · 接续上段')!;
     expect(entry.props.disabled).toBe(false);
     expect(badge).toBeDefined();
     await act(() => entry.props.onPress());

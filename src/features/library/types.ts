@@ -69,6 +69,10 @@ export interface ConversationSummary {
   sectionId: string;
   title: string;
   subtitle: string;
+  bookTitle?: string;
+  sectionTitle?: string;
+  messageCount?: number;
+  updatedAt?: string;
 }
 export interface MapNode {
   id: string;
