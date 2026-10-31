@@ -1,0 +1,126 @@
+
+> pagewise@0.0.11 check
+> npm run lint && npm run typecheck && npm test -- --runInBand
+
+
+> pagewise@0.0.11 lint
+> eslint . --ext .js,.cjs,.ts,.tsx --max-warnings 0
+
+
+> pagewise@0.0.11 typecheck
+> tsc --noEmit
+
+
+> pagewise@0.0.11 test
+> jest --runInBand
+
+PASS __tests__/ui/components.test.tsx
+PASS __tests__/app/App.test.tsx
+PASS __tests__/ui/readingPolish.test.tsx
+PASS __tests__/features/study.test.tsx
+PASS __tests__/ui/pagePreviews.test.tsx
+PASS __tests__/features/notes.test.tsx
+PASS __tests__/app/dev/storageEpubSmoke.test.ts
+PASS __tests__/app/storage.test.ts
+PASS __tests__/features/reviewUI.test.tsx
+PASS __tests__/ui/readerFidelity.test.tsx
+PASS __tests__/features/settings.test.tsx
+PASS __tests__/app/study/session.test.ts
+PASS __tests__/app/dev/reparseSmoke.test.ts
+PASS __tests__/features/library.test.tsx
+PASS __tests__/app/import/import.test.ts
+PASS __tests__/ui/code.test.tsx
+PASS __tests__/features/refinement.test.tsx
+PASS __tests__/features/home.test.tsx
+PASS __tests__/features/noteLearning.test.tsx
+PASS __tests__/ui/brandControlsFidelity.test.tsx
+PASS __tests__/ui/shelfReaderStatsFidelity.test.tsx
+PASS __tests__/features/libraryExperience.test.tsx
+PASS __tests__/ui/settingsFidelity.test.tsx
+PASS __tests__/app/study/translation.test.ts
+PASS __tests__/ui/glassDialog.test.tsx
+PASS __tests__/ui/readerAiSkins.test.tsx
+PASS __tests__/ui/skin.test.tsx
+PASS __tests__/app/refinement.test.ts
+PASS __tests__/features/review.test.tsx
+PASS __tests__/ui/notesReviewFidelity.test.tsx
+PASS __tests__/ui/sheetFidelity.test.tsx
+PASS __tests__/ui/studyFinishingFidelity.test.tsx
+PASS __tests__/ui/math.test.tsx
+PASS __tests__/services/epub/parser.test.ts
+PASS __tests__/ui/reveal.test.tsx
+PASS __tests__/ui/PageOrig.test.tsx
+PASS __tests__/ui/brandFidelity.test.tsx
+PASS __tests__/features/appearance.test.tsx
+PASS __tests__/ui/streaming.test.tsx
+PASS __tests__/arch/boundaries.test.ts
+PASS __tests__/app/cardBackup.test.ts
+PASS __tests__/core/markup.test.ts
+PASS __tests__/app/demoSeed.test.ts
+PASS __tests__/data/repos/content.test.ts
+PASS __tests__/app/exportNotes.test.ts
+PASS __tests__/app/math.test.ts
+PASS __tests__/app/log.test.ts
+PASS __tests__/services/math/assets.test.ts
+PASS __tests__/ui/tokens.test.ts
+PASS __tests__/ui/navigationIsolation.test.tsx
+PASS __tests__/data/repos/usage.test.ts
+PASS __tests__/core/mapPerformance.test.ts
+PASS __tests__/services/math/WebViewHost.test.tsx
+PASS __tests__/app/noteLearning.test.ts
+PASS __tests__/app/readerRuntime.test.ts
+PASS __tests__/services/ai/options.test.ts
+PASS __tests__/data/repos/learning.test.ts
+PASS __tests__/app/aiConfiguration.test.ts
+PASS __tests__/data/cardManagement.test.ts
+PASS __tests__/core/migration.test.ts
+PASS __tests__/services/ai/gateway.test.ts
+PASS __tests__/prompts/prompts.test.ts
+PASS __tests__/app/bookImages.test.ts
+PASS __tests__/app/study/finishSection.test.ts
+PASS __tests__/services/ai/stream.test.ts
+PASS __tests__/app/home.test.ts
+PASS __tests__/data/repos/settings.test.ts
+PASS __tests__/app/aiSettings.test.ts
+PASS __tests__/core/map.test.ts
+PASS __tests__/services/ai/protocol.test.ts
+PASS __tests__/app/appearance.test.ts
+PASS __tests__/data/migrations.test.ts
+PASS __tests__/app/container.test.ts
+PASS __tests__/services/epub/alice.test.ts
+PASS __tests__/data/drivers.test.ts
+PASS __tests__/ui/contrast.test.ts
+PASS __tests__/data/repos/drafts.test.ts
+PASS __tests__/app/demoFactory.test.ts
+PASS __tests__/core/lesson.test.ts
+PASS __tests__/data/repos/math.test.ts
+PASS __tests__/core/citations.test.ts
+PASS __tests__/services/math/renderer.test.ts
+PASS __tests__/core/context.test.ts
+PASS __tests__/services/mineru/client.test.ts
+PASS __tests__/app/errors.test.ts
+PASS __tests__/core/detour.test.ts
+PASS __tests__/app/clock.test.ts
+PASS __tests__/services/backup/manifest.test.ts
+PASS __tests__/core/refinement/index.test.ts
+PASS __tests__/data/schema.test.ts
+PASS __tests__/features/sectionName.test.ts
+PASS __tests__/services/mineru/adapter.test.ts
+PASS __tests__/platform/environment.test.ts
+PASS __tests__/app/events.test.ts
+PASS __tests__/app/mineruConnection.test.ts
+PASS __tests__/data/db.test.ts
+PASS __tests__/platform/logFiles.test.ts
+PASS __tests__/core/streamText.test.ts
+PASS __tests__/services/mineru/split.test.ts
+PASS __tests__/services/ai/services.test.ts
+PASS __tests__/app/aiOptions.test.ts
+PASS __tests__/services/ai/cache.test.ts
+PASS __tests__/core/review.test.ts
+PASS __tests__/services/secrets.test.ts
+
+Test Suites: 1 skipped, 104 passed, 104 of 105 total
+Tests:       2 skipped, 2004 passed, 2006 total
+Snapshots:   15 passed, 15 total
+Time:        26.179 s, estimated 47 s
+Ran all test suites.

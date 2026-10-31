@@ -1,0 +1,226 @@
+
+> pagewise@0.0.11 test
+> jest --runInBand --runTestsByPath __tests__/mainAudit.repro.test.tsx
+
+FAIL __tests__/mainAudit.repro.test.tsx
+  ✕ relearning a completed section should preserve its completed status (29 ms)
+  ✕ finishing an earlier section should not demote a completed following section (14 ms)
+  ✕ search should find an English phrase with spaces (15 ms)
+  ✕ cross-book sources should use the same printed page labels as the reader (13 ms)
+  ✕ a transient note write failure should not permanently poison all note reads (13 ms)
+  ✕ reopening a book should pick up changed teaching preferences (16 ms)
+  ✕ removing a highlight should preserve its separately entered block note (14 ms)
+  ✕ leaving the reader immediately after scrolling should retain the new anchor (32 ms)
+  ✕ the requested PDF page should become available before a slow neighbour finishes (13 ms)
+  ✕ reopening a long conversation should leave older saved messages reachable (27 ms)
+
+  ● relearning a completed section should preserve its completed status
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "done"
+    Received: "learning"
+
+      33 |   await c.repos.sections.update('aima', '3.4.2', { status: 'done' });
+      34 |   await startSection(c, 'aima', '3.4.2');
+    > 35 |   expect((await c.repos.sections.get('aima', '3.4.2'))?.status).toBe('done');
+         |                                                                 ^
+      36 | });
+      37 |
+      38 | it('finishing an earlier section should not demote a completed following section', async () => {
+
+      at Object.toBe (__tests__/mainAudit.repro.test.tsx:35:65)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● finishing an earlier section should not demote a completed following section
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "done"
+    Received: "learning"
+
+      40 |   await c.repos.sections.update('aima', next.id, { status: 'done' });
+      41 |   await finishSection(c, { bookId: 'aima', sectionId: '3.4.2', summary: '复习小结', stuck: [], cards: [] });
+    > 42 |   expect((await c.repos.sections.get('aima', next.id))?.status).toBe('done');
+         |                                                                 ^
+      43 | });
+      44 |
+      45 | it('search should find an English phrase with spaces', async () => {
+
+      at Object.toBe (__tests__/mainAudit.repro.test.tsx:42:65)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● search should find an English phrase with spaces
+
+    expect(received).toHaveLength(expected)
+
+    Expected length: 1
+    Received length: 0
+    Received array:  []
+
+      46 |   await c.repos.blocks.insertMany('aima', [{ seq: 99999, type: 'text', text: 'Uniform cost search expands the least cost node.', chars: 47 }]);
+      47 |   expect(await c.repos.blocks.search('aima', 'Uniform')).toHaveLength(1);
+    > 48 |   expect(await c.repos.blocks.search('aima', 'Uniform cost')).toHaveLength(1);
+         |                                                               ^
+      49 | });
+      50 |
+      51 | it('cross-book sources should use the same printed page labels as the reader', async () => {
+
+      at Object.toHaveLength (__tests__/mainAudit.repro.test.tsx:48:63)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● cross-book sources should use the same printed page labels as the reader
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "p.100"
+    Received: "p.140"
+
+      53 |   await c.repos.blocks.insertMany('aima', [{ seq: 99998, type: 'text', text: 'OffsetProbe', chars: 11, page: 120 }]);
+      54 |   const hits = await searchShelf(c, 'OffsetProbe', 'aima');
+    > 55 |   expect(hits[0].page).toBe('p.100');
+         |                        ^
+      56 | });
+      57 |
+      58 | it('a transient note write failure should not permanently poison all note reads', async () => {
+
+      at Object.toBe (__tests__/mainAudit.repro.test.tsx:55:24)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● a transient note write failure should not permanently poison all note reads
+
+    expect(received).resolves.toBeDefined()
+
+    Received promise rejected instead of resolved
+    Rejected to value: [Error: temporary disk failure]
+
+      60 |   await expect(saveUserNote(c, 'aima', '3.5.2', '我的笔记')).rejects.toThrow('temporary disk failure');
+      61 |   set.mockRestore();
+    > 62 |   await expect(loadNotes(c)).resolves.toBeDefined();
+         |         ^
+      63 | });
+      64 |
+      65 | it('reopening a book should pick up changed teaching preferences', async () => {
+
+      at expect (node_modules/expect/build/index.js:113:15)
+      at Object.expect (__tests__/mainAudit.repro.test.tsx:62:9)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● reopening a book should pick up changed teaching preferences
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "extra": "多用 Python 类比",
+    -   "recap": false,
+    +   "extra": "",
+    +   "recap": true,
+      }
+
+      68 |   await patchPrefs(c, { recap: false, extra: '多用 Python 类比' });
+      69 |   await session.open({ sectionId: '3.5.2', autoStart: false });
+    > 70 |   expect(session.store.getState().prefs).toMatchObject({ recap: false, extra: '多用 Python 类比' });
+         |                                          ^
+      71 | });
+      72 |
+      73 | it('removing a highlight should preserve its separately entered block note', async () => {
+
+      at Object.toMatchObject (__tests__/mainAudit.repro.test.tsx:70:42)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● removing a highlight should preserve its separately entered block note
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "这段推导需要复看"
+    Received: undefined
+
+      75 |   await saveStudyBlockNote(c, 'aima', '3.5.2', block.seq, '这段推导需要复看');
+      76 |   await toggleStudyHighlight(c, 'aima', block.seq);
+    > 77 |   expect((await c.repos.notes.highlights.list('aima')).find(h => h.block_seq === block.seq)?.note).toBe('这段推导需要复看');
+         |                                                                                                    ^
+      78 | });
+      79 |
+      80 | it('leaving the reader immediately after scrolling should retain the new anchor', async () => {
+
+      at Object.toBe (__tests__/mainAudit.repro.test.tsx:77:100)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● leaving the reader immediately after scrolling should retain the new anchor
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 105001
+    Received: 103000
+
+      93 |   renderer = undefined;
+      94 |   await ReactTestRenderer.act(async () => { await jest.advanceTimersByTimeAsync(1500); });
+    > 95 |   expect((await c.repos.study.get('aima'))?.read_anchor).toBe(target);
+         |                                                          ^
+      96 | });
+      97 |
+      98 | it('the requested PDF page should become available before a slow neighbour finishes', async () => {
+
+      at Object.toBe (__tests__/mainAudit.repro.test.tsx:95:58)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● the requested PDF page should become available before a slow neighbour finishes
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+    -   "delivered": true,
+    +   "delivered": false,
+        "visibleRendered": true,
+      }
+
+      117 |   await request;
+      118 |   await runtime.close();
+    > 119 |   expect(state).toEqual({ visibleRendered: true, delivered: true });
+          |                 ^
+      120 | });
+      121 |
+      122 | it('reopening a long conversation should leave older saved messages reachable', async () => {
+
+      at Object.toEqual (__tests__/mainAudit.repro.test.tsx:119:17)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● reopening a long conversation should leave older saved messages reachable
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected value: "history-audit-0"
+    Received array: ["history-audit-5", "history-audit-6", "history-audit-7", "history-audit-8", "history-audit-9", "history-audit-10", "history-audit-11", "history-audit-12", "history-audit-13", "history-audit-14", …]
+
+      143 |   try {
+      144 |     await reopened.open({ conversationId, mode: 'listen', autoStart: false });
+    > 145 |     expect(reopened.store.getState().messages.map(message => message.content)).toContain('history-audit-0');
+          |                                                                                ^
+      146 |   } finally {
+      147 |     await reopened.dispose();
+      148 |   }
+
+      at Object.toContain (__tests__/mainAudit.repro.test.tsx:145:80)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       10 failed, 10 total
+Snapshots:   0 total
+Time:        0.492 s, estimated 3 s
+Ran all test suites within paths "__tests__/mainAudit.repro.test.tsx".
