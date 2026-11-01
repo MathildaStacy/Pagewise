@@ -4,6 +4,7 @@ import type {
   MathRender,
   MathRenderer,
 } from './types';
+import { nativeMathSvg } from './nativeSvg';
 export type {
   MathBridge,
   MathCacheStore,
@@ -140,8 +141,11 @@ function validRender(value: unknown): value is MathRender {
     result.baseline <= result.height
   );
 }
-/** The hidden WebView owns its lifecycle; queued requests share a strict 3s deadline. */
-export function createMathBridge(timeoutMs = 3000): MathBridge {
+/** Allow the offline WebView to start before applying the per-formula deadline. */
+export function createMathBridge(
+  timeoutMs = 3000,
+  startupTimeoutMs = 15000,
+): MathBridge {
   let send: ((payload: string) => void) | undefined;
   let ready = false,
     closed = false,
@@ -156,6 +160,11 @@ export function createMathBridge(timeoutMs = 3000): MathBridge {
     pending.clear();
   }
   function dispatch(id: string, task: Pending) {
+    clearTimeout(task.timer);
+    task.timer = setTimeout(() => {
+      pending.delete(id);
+      task.reject(new MathRenderError('timeout'));
+    }, timeoutMs);
     try {
       send!(task.payload);
     } catch {
@@ -188,7 +197,7 @@ export function createMathBridge(timeoutMs = 3000): MathBridge {
         const timer = setTimeout(() => {
           pending.delete(id);
           reject(new MathRenderError('timeout'));
-        }, timeoutMs);
+        }, startupTimeoutMs);
         const task: Pending = {
           payload: JSON.stringify({ id, tex, display }),
           resolve,
@@ -294,13 +303,14 @@ export function createMathRenderer({
           }
         }
         if (closed) throw new MathRenderError('closed');
-        const result = stored ?? (await bridge.render(tex, display));
-        if (!validRender(result)) throw new MathRenderError('invalid');
+        const raw = stored ?? (await bridge.render(tex, display));
+        if (!validRender(raw)) throw new MathRenderError('invalid');
+        const result = { ...raw, svg: nativeMathSvg(raw.svg) };
         if (closed) throw new MathRenderError('closed');
         remember(key, result);
         if (cache) {
           try {
-            if (stored) await cache.touch(key);
+            if (stored?.svg === result.svg) await cache.touch(key);
             else {
               await cache.put(key, result);
               await cache.prune(5000);

@@ -1,0 +1,26 @@
+{
+  "date": "2026-11-01",
+  "command": "npm run check",
+  "node": "24.22.0 arm64",
+  "lint": "passed",
+  "typecheck": "passed",
+  "test_suites": {
+    "passed": 108,
+    "skipped": 1
+  },
+  "tests": {
+    "passed": 2034,
+    "skipped": 1
+  },
+  "snapshots": {
+    "passed": 15
+  },
+  "private_aima_fixture": "executed",
+  "android": {
+    "task": ":app:assembleDebug",
+    "architecture": "arm64-v8a",
+    "result": "BUILD SUCCESSFUL",
+    "versionCode": 13,
+    "versionName": "0.0.13"
+  }
+}

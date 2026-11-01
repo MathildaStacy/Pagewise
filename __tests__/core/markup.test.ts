@@ -1,5 +1,6 @@
 import { blockRef, isBlockRef, parseBlockRef } from '@core/ids';
 import {
+  displayTex,
   parse,
   parseInline,
   parseSourceCode,
@@ -388,4 +389,21 @@ it('serializes and validates safe block refs without guessing malformed IDs', ()
     expect(() => blockRef(value)).toThrow();
   expect(parse('')).toEqual([]);
   expect(parse(' \n\n ')).toEqual([]);
+});
+
+it('unwraps the display delimiters MinerU keeps around standalone formulas', () => {
+  expect(
+    displayTex(
+      '$$ a _ {j} = g (\\mathbf {w} ^ {\\top} \\mathbf {x})\\tag{21.1} $$',
+    ),
+  ).toBe(
+    'a _ {j} = g (\\mathbf {w} ^ {\\top} \\mathbf {x})\\qquad\\text{(21.1)}',
+  );
+  // The equation number follows the formula, so MathJax keeps its natural width.
+  expect(displayTex('$$ a=b \\tag {A.2} $$')).toBe('a=b \\qquad\\text{(A.2)}');
+  expect(displayTex('a=b \\tag*{†}')).toBe('a=b \\qquad\\text{†}');
+  expect(displayTex('\\[ x^2 \\]')).toBe('x^2');
+  expect(displayTex('E=mc^2')).toBe('E=mc^2');
+  // Two formulas in one block stay as they are rather than being glued into one.
+  expect(displayTex('$$a$$ and $$b$$')).toBe('$$a$$ and $$b$$');
 });

@@ -1,0 +1,18 @@
+{
+  "before": {
+    "sections": 1252,
+    "units": 891,
+    "under_1000_chars": 157,
+    "median_chars": 2682,
+    "uncovered_blocks": 296,
+    "numbered_under_unnumbered": 268
+  },
+  "after": {
+    "sections": 750,
+    "units": 586,
+    "under_1000_chars": 9,
+    "median_chars": 4529,
+    "uncovered_blocks": 1,
+    "numbered_under_unnumbered": 0
+  }
+}

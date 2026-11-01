@@ -1,3 +1,4 @@
+import { displayTex } from '@core/markup';
 import type { Block } from '@core/types';
 
 export interface TranslationChunk {
@@ -33,7 +34,7 @@ export function translationChunks(
       let source =
         block.type === 'equation' ? block.latex || block.text : block.text;
       if (!source.trim()) continue;
-      if (block.type === 'equation') source = `$$\n${source}\n$$`;
+      if (block.type === 'equation') source = `$$\n${displayTex(source)}\n$$`;
       else if (!/^\s*(?:`{3,}|~{3,})/.test(source)) {
         const fence = '`'.repeat(
           Math.max(

@@ -69,7 +69,7 @@ const privateRoot = path.join(
 const privateBlocks = path.join(privateRoot, 'benchmark-blocks.json');
 const privateOutline = path.join(privateRoot, 'benchmark-outline.json');
 (existsSync(privateBlocks) && existsSync(privateOutline) ? test : test.skip)(
-  'private 200-page live MinerU result builds the same 1170 sections with bounded comparisons',
+  'private 200-page live MinerU result builds the same 1053 sections with bounded comparisons',
   () => {
     const blocks = JSON.parse(readFileSync(privateBlocks, 'utf8')) as Block[];
     const outline = JSON.parse(
@@ -80,8 +80,10 @@ const privateOutline = path.join(privateRoot, 'benchmark-outline.json');
     const compare = jest.spyOn(migration, 'textSimilarity');
     try {
       const result = buildMap(blocks, outline);
-      expect(result.sections).toHaveLength(1170);
-      expect(result.parts).toHaveLength(267);
+      // 1170 → 1053: run-in subheadings the bookmarks skip (`What you observe`) stay inside
+      // their unit; each chapter's opening is its own `本章导读` unit.
+      expect(result.sections).toHaveLength(1053);
+      expect(result.parts).toHaveLength(215);
       expect(compare.mock.calls.length).toBeLessThan(12000);
     } finally {
       compare.mockRestore();

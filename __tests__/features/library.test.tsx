@@ -165,6 +165,29 @@ it('bounds the map check notice for a long book while retaining per-row flags', 
   );
   expect(map.chapters).toHaveLength(846);
 });
+it('asks to confirm only doubtful sections, not long units split into parts', async () => {
+  const record = await loadBookMap(c, 'aima');
+  const section = record.sections.find(value => value.is_leaf)!;
+  const chapter = { ...section, id: 'ch', parent_id: null, flag: null };
+  const sections = [
+    chapter,
+    ...(['split', 'split', 'merged', null] as const).map((flag, index) => ({
+      ...section,
+      id: `s${index}`,
+      parent_id: 'ch',
+      ord: index + 1,
+      flag,
+    })),
+  ];
+  const map = presentMap({ ...record, sections }, {});
+  expect(map.check.sub).toContain('1 处需要你确认');
+  expect(map.chapters[0].children.map(node => node.flagged)).toEqual([
+    false,
+    false,
+    true,
+    false,
+  ]);
+});
 it('counts numbered chapters while retaining unnumbered front matter in the map', async () => {
   const record = await loadBookMap(c, 'aima');
   const root = record.sections.find(value => !value.parent_id)!;

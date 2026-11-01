@@ -124,39 +124,78 @@ it('accepts layout, headings and adjacent continuations but converts semantic ed
     parse(source, [edit(3, source[2].text, { continuesFrom: 2 })]).edits[0]
       .continuesFrom,
   ).toBe(2);
-  expect(() =>
-    parse(source, [edit(3, source[2].text, { continuesFrom: 1 })]),
-  ).toThrow('相邻');
+  const far = parse(source, [edit(3, source[2].text, { continuesFrom: 1 })]);
+  expect(far.edits).toEqual([]);
+  expect(far.issues[0].reason).toContain('相邻');
 });
 
 it.each([
-  ['unknown target', [edit(99, 'text')]],
-  ['duplicate target', [edit(1, 'text'), edit(1, 'text')]],
-  ['content type change', [edit(1, 'text', { type: 'image' })]],
-  ['invalid heading', [edit(1, 'text', { type: 'title', level: 7 })]],
-  ['foreign formula field', [edit(1, 'text', { latex: 'x' })]],
-])('rejects %s instead of applying a partial result', (_name, edits) => {
-  expect(() => parse([block(1, 'text')], edits)).toThrow();
+  ['unknown target', [edit(99, 'text')], '本批以外'],
+  ['duplicate target', [edit(1, 'text'), edit(1, 'text')], '重复'],
+  ['content type change', [edit(1, 'text', { type: 'image' })], '内容类型'],
+  [
+    'invalid heading',
+    [edit(1, 'text', { type: 'title', level: 7 })],
+    '层级无效',
+  ],
+])(
+  'turns a %s into an issue and keeps the rest of the batch',
+  (_name, rows, reason) => {
+    const source = [block(1, 'text'), block(2, 'two\nlines')];
+    const result = parse(source, [...rows, edit(2, 'two lines')]);
+    expect(result.edits.map(e => [e.seq, e.text])).toEqual([[2, 'two lines']]);
+    expect(result.issues.map(i => i.reason).join()).toContain(reason);
+  },
+);
+
+it('ignores a formula field on prose, the response that stopped real AIMA runs', () => {
+  const source = [block(1, 'where is the vector ofx inputs')];
+  const result = parse(
+    source,
+    [
+      edit(1, 'where $\\mathbf{w}$ is the vector of $\\mathbf{x}$ inputs', {
+        type: 'text',
+        latex: '\\mathbf{w}',
+      }),
+    ],
+    'vision',
+  );
+  expect(result.edits[0]).toMatchObject({
+    text: 'where $\\mathbf{w}$ is the vector of $\\mathbf{x}$ inputs',
+    latex: null,
+  });
+  expect(result.issues).toEqual([]);
 });
 
-it('rejects incomplete JSON, out-of-batch issues and edits to protected code/images', () => {
-  const source = [block(1, 'text')],
+it('fails a batch only for unreadable output, and relocates issues instead of rejecting them', () => {
+  const source = [block(1, 'text'), block(2, 'next')],
     chunk = { seqs: [1], context: [2] };
   expect(() =>
     parseRefinement('{"edits":[', source, chunk, 'structure'),
   ).toThrow('完整');
   expect(() =>
-    parseRefinement(
-      '{"edits":[],"issues":[{"seq":2,"reason":"context"}]}',
-      source,
-      chunk,
-      'structure',
-    ),
-  ).toThrow('本批');
+    parseRefinement('{"issues":[]}', source, chunk, 'structure'),
+  ).toThrow('修改列表');
+  const result = parseRefinement(
+    '{"edits":[{"seq":2,"text":"next","reason":"x"}],"issues":[{"seq":2,"reason":"context"},{"seq":77,"reason":"stray"}]}',
+    source,
+    chunk,
+    'structure',
+  );
+  expect(result.edits).toEqual([]);
+  expect(result.issues).toEqual([
+    { seq: 2, reason: 'context' },
+    { seq: 1, reason: 'stray' },
+    expect.objectContaining({
+      seq: 1,
+      reason: expect.stringContaining('1 条'),
+    }),
+  ]);
   for (const type of ['code', 'image'] as const)
-    expect(() =>
-      parse([block(1, 'code', { type })], [edit(1, 'new')], 'vision'),
-    ).toThrow('不能修改');
+    expect(
+      parse([block(1, 'code', { type })], [edit(1, 'new')], 'vision').issues[0]
+        .reason,
+    ).toContain('不能修改');
 });
 
 it('permits image-verified formula and table corrections even with empty OCR text, and never clears their content', () => {
@@ -169,17 +208,50 @@ it('permits image-verified formula and table corrections even with empty OCR tex
     edit(2, '', { html: '<table><tr><td>1</td></tr></table>' }),
   ];
   expect(parse(source, edits, 'vision').edits).toHaveLength(2);
-  expect(() => parse(source, edits)).toThrow('受保护');
-  expect(() => parse(source, [edit(1, '', { latex: '' })], 'vision')).toThrow(
-    '清空',
-  );
-  expect(() => parse(source, [edit(2, '', { html: null })], 'vision')).toThrow(
-    '清空',
-  );
+  const structure = parse(source, edits);
+  expect(structure.edits).toEqual([]);
+  expect(structure.issues[0].reason).toContain('受保护');
+  for (const row of [edit(1, '', { latex: '' }), edit(2, '', { html: null })]) {
+    const result = parse(source, [row], 'vision');
+    expect(result.edits).toEqual([]);
+    expect(result.issues[0].reason).toContain('清空');
+  }
   expect(
     parse([block(1, 'a long original sentence')], [edit(1, 'x')], 'vision')
       .issues,
   ).toHaveLength(1);
+});
+
+it('allows page-verified removal of spurious subscript tags without permitting large text deletions', () => {
+  const source = [
+    block(
+      1,
+      '<sub>w</sub>hil<sub>e no</sub>t <sub>converge</sub>d d<sub>o</sub>',
+    ),
+    block(
+      2,
+      'f<sub>or</sub> <sub>eac</sub>h $w _ { i }$ i<sub>n</sub> <sub>w</sub> d<sub>o</sub>',
+    ),
+    block(3, '<sup>A</sup> long original sentence that must not disappear.'),
+  ];
+  const result = parse(
+    source,
+    [
+      edit(1, 'while not converged do'),
+      edit(2, 'for each $w_i$ in $\\mathbf{w}$ do'),
+      edit(3, 'A'),
+    ],
+    'vision',
+  );
+  expect(result.edits.map(e => e.seq)).toEqual([1, 2]);
+  expect(result.issues).toEqual([
+    expect.objectContaining({
+      seq: 3,
+      reason: expect.stringContaining('幅度过大'),
+    }),
+  ]);
+  // Structure-only mode still cannot change non-whitespace source characters.
+  expect(parse(source, [edit(1, 'while not converged do')]).edits).toEqual([]);
 });
 
 it('projects only selected applied suggestions, retaining source IDs, geometry, image assets and raw text', () => {
@@ -234,7 +306,11 @@ it('keeps fenced code intact when an importer classified it as prose', () => {
   const source = [block(1, '```python\nif x:\n  run()\n```')];
   expect(ruleEdits(source)).toEqual([]);
   expect(refinementChunks(source, 'vision')).toEqual([]);
-  expect(() =>
-    parse(source, [edit(1, '```python if x: run() ```')], 'vision'),
-  ).toThrow('代码');
+  const result = parse(
+    source,
+    [edit(1, '```python if x: run() ```')],
+    'vision',
+  );
+  expect(result.edits).toEqual([]);
+  expect(result.issues[0].reason).toContain('代码');
 });

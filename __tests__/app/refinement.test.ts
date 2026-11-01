@@ -383,7 +383,9 @@ it.each([false, true])(
       mode: 'structure',
     });
     if (initiallyApplied) await applyRefinement(c, run.id, [2]);
-    const stream = jest.spyOn(c.ai, 'stream').mockResolvedValue(response('回答'));
+    const stream = jest
+      .spyOn(c.ai, 'stream')
+      .mockResolvedValue(response('回答'));
     session = new StudySession(c, 'aima');
     await session.open({ autoStart: false });
     session.setQuote(2);
@@ -397,7 +399,9 @@ it.each([false, true])(
     await session.send('再解释当前版本');
     const request = stream.mock.calls.at(-1)![1];
     expect(request.contextBlocks.map(block => block.text).join('\n')).toContain(
-      initiallyApplied ? '>Adjacent\nsource</block>' : '>Adjacent source</block>',
+      initiallyApplied
+        ? '>Adjacent\nsource</block>'
+        : '>Adjacent source</block>',
     );
     expect(request.system).toContain('以 current_source 为准');
     const after = await c.repos.messages.thread('aima', sectionId);
@@ -405,3 +409,36 @@ it.each([false, true])(
       expect(after.find(message => message.id === old.id)).toEqual(old);
   },
 );
+
+it('retries an unreadable reply once and finishes even when a row is invalid', async () => {
+  await source(['Layer', 'A network is organized into many layers of units.']);
+  const garbled: ParsedResponse = {
+    ...empty(),
+    parts: [{ t: 'text', text: '{"edits":[' }],
+  };
+  const complete = jest
+    .spyOn(c.ai, 'complete')
+    .mockResolvedValueOnce(garbled)
+    .mockResolvedValueOnce(
+      response({
+        edits: [
+          { seq: 1, role: 'note', reason: '页边术语' },
+          { seq: 2, text: 'A network', latex: 'x', reason: '多给了公式字段' },
+          { seq: 99, role: 'body', reason: '越界' },
+        ],
+        issues: [],
+      }),
+    );
+  const run = await generate();
+  expect(complete).toHaveBeenCalledTimes(2);
+  expect(run).toMatchObject({ status: 'ready', error: null, input_tokens: 20 });
+  expect(run.document.edits).toEqual([
+    expect.objectContaining({ seq: 1, role: 'note' }),
+  ]);
+  const reasons = run.document.issues.map(i => i.reason).join('\n');
+  expect(reasons).toContain('原页复核');
+  expect(reasons).toContain('1 条');
+  const prompt = complete.mock.calls[0][1];
+  expect(prompt.system).toContain('runin');
+  expect(prompt.system).toContain('不要返回 text、latex、html');
+});

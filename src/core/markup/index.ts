@@ -352,6 +352,23 @@ function blocks(
 export function parse(text: string, options: ParseOptions = {}): RichDoc {
   return blocks(text.replace(/\r\n?/g, '\n'), 0, options).doc;
 }
+/**
+ * MinerU stores display formulas as `$$ … $$`; the renderer is already in math mode and would print
+ * the `$`. A `\tag` makes MathJax size the formula to the page width, so the number follows it instead.
+ */
+export function displayTex(source: string): string {
+  const tex = source.trim();
+  const inner =
+    /^\$\$([\s\S]*)\$\$$/.exec(tex)?.[1] ??
+    /^\\\[([\s\S]*)\\\]$/.exec(tex)?.[1];
+  const body =
+    inner !== undefined && !inner.includes('$$') ? inner.trim() : tex;
+  return body.replace(
+    /\\tag(\*?)\s*\{([^{}]*)\}/g,
+    (_, starred: string, label: string) =>
+      `\\qquad\\text{${starred ? label : `(${label})`}}`,
+  );
+}
 /** MinerU may store a complete fence in code_body. Also works for already imported books. */
 export function parseSourceCode(text: string): Extract<Block, { t: 'code' }> {
   if (/^\s*(?:`{3,}|~{3,})/.test(text)) {
