@@ -100,6 +100,8 @@ const xhrFetch: FetchLike = (url, init) =>
   });
 
 export type AiErrorCode =
+  | 'not_configured'
+  | 'missing_key'
   | 'auth'
   | 'not_found'
   | 'rate_limit'

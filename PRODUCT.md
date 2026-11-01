@@ -8,7 +8,7 @@ android
 
 ## Stack
 
-计划 React Native 0.87 + TypeScript，Android 先行，iOS 后补（沿用 AShareSim 的栈）。现阶段只有 `docs/design/prototype/` 下的单文件 HTML 原型，模拟 Android 手机界面，用来定交互和视觉。
+React Native 0.87 + TypeScript，Android 已实现；SQLite 保存本地数据，Keychain 保存服务密钥。HTML 原型用于追溯各皮肤的视觉与交互，当前行为以源码及有证据的验收记录为准。iOS 尚未实现。
 
 ## Users
 

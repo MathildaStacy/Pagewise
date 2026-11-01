@@ -178,7 +178,20 @@ export function RefinementSheet({
             </Text>
           </View>
         ) : null}
-        {state.error ? <Note tone="bad">{state.error}</Note> : null}
+        {state.error ? (
+          <>
+            <Note tone="bad">{state.error}</Note>
+            <Button
+              variant="secondary"
+              onPress={() => {
+                action('close');
+                intents.openAiSettings?.();
+              }}
+            >
+              AI 服务设置
+            </Button>
+          </>
+        ) : null}
         {state.edits.map(edit => (
           <View key={edit.seq} style={s.edit}>
             {complete && !state.busy ? (

@@ -4,12 +4,14 @@
 > 读者：负责写代码的 AI 实现者（以下称"实现者"）和负责人。
 > 需求来源：[产品设计](../PRODUCT_DESIGN.md)、[伴读引擎规格](../STUDY_ENGINE.md)。本目录只规定**怎么实现**；需求和本目录冲突时，以需求文档为准，并在 `QUESTIONS.md` 记一条。
 
+本轮修复与验收见 [PM 体验收口](pm-experience-closure.md)。历史计划中的未验收项不能由单元测试通过替代。
+
 ## 1. 文档地图
 
 | 文件 | 内容 | 什么时候读 |
 | --- | --- | --- |
 | [01-architecture.md](01-architecture.md) | 技术栈、分层、目录、依赖规则、组合根、状态、导航、错误、日志 | 开工前必读 |
-| [02-skins.md](02-skins.md) | 设计系统与换肤：Token、组件契约、两套皮肤（纸感默认 / 苹果风）、各皮肤允许和不允许的差异 | 写任何 UI 之前 |
+| [02-skins.md](02-skins.md) | 设计系统与换肤：Token、组件契约、五套皮肤（纸感默认 / 苹果风 / Meta / 新谷歌 / Win11）、各皮肤允许和不允许的差异 | 写任何 UI 之前 |
 | [03-screens.md](03-screens.md) | 每个页面：入口、区域布局、ViewModel 契约（状态 + 意图）、边界状态 | 做某个页面时 |
 | [04-data.md](04-data.md) | SQLite 表结构（DDL）、迁移、仓库接口、全文搜索 | 做数据层时 |
 | [05-engine-ai.md](05-engine-ai.md) | 伴读引擎落地：AI 输出标记、富文本 AST、上下文组装、工具、岔路、路线图、引用校验、续学、小结、提示词 | 做听讲 / 读书 / AI 时 |
@@ -25,7 +27,7 @@
 | `docs/design/prototype-apple.html`（源文件 `docs/design/prototype-apple/`） | **第二皮肤「苹果风」（glass）**的完整参考：所有页面都画全了（含「外观」页），浅色 + 深色。页面集合、导航、文案、操作区域和纸感原型一致，组件形态按 [02-skins.md](02-skins.md) §5、§7 做；听讲 / 读书已包含 app.js 的新交互。颜色、字号、圆角、间距、动效直接取 `base.css` / `pages.css` |
 | `docs/design/explore/apple.html`（CSS 在 `explore/src/apple.html` 的 `<style>` 里） | 苹果风最早的探索稿，只画了听讲和读书两页；glass Token 的出处（02 §4.3）。和 `prototype-apple.html` 冲突时以后者为准 |
 | `docs/design/explore/src/app.js` | 听讲 / 读书的**新交互**：路线图（步）、原文预览浮层、来源标记（补充推导 / AI 举例）、岔路折叠、问答便签、本节导读、从这里开始讲、读完这一节。纸感原型 `prototype/` 里还没有这些，以 app.js 为准（`prototype-apple/` 里已经有了） |
-| explore 下其他风格（google / meta / microsoft / windows11 / play） | V1 不做，只证明换肤架构要能容纳它们 |
+| explore 下其他风格（google / meta / microsoft / windows11 / play） | 早期探索；Meta、新谷歌、Win11 已有实现与独立原型，以 02-skins.md 的当前交付清单为准 |
 
 用户于 2026-10-29 要求两套 UI 严格遵循各自原型：顶部模式分别保持各自原型的顺序：Paper 为「伴读 / 原文」，Apple 为「读书 / 听讲」。引擎与开发文档仍用「听讲 / 读书」表示这两种模式；路线图进度用「步」（长小节分「段」，每段再分 2–5「步」，见 [05 §5](05-engine-ai.md)）。
 
@@ -55,5 +57,5 @@
 | 主线 / 岔路 | 主线 = 当前在学的小节；岔路 = 临时去别的小节答问题，最多 2 层 |
 | 听讲 / 读书 | 同一小节的两种学法（AI 为主 / 书为主），共用主线进度 |
 | 讲解模型 / 整理模型 | 用户分别配置的两个模型：讲解、岔路、解释用前者；路线图、摘要、闪卡、回顾、翻译用后者 |
-| 皮肤 Skin | 一整套视觉实现：Token + 组件实现（+ 极少数页面插槽）。V1 两套：`paper`（默认）和 `glass`（苹果风） |
+| 皮肤 Skin | 一整套视觉实现：Token + 组件实现（+ 极少数页面插槽）。当前五套：`paper`（默认）、`glass`（苹果风）、`meta`、`google`、`win11` |
 | ViewModel（VM） | `useXxxVM()` 钩子，返回 `{ state, intents }`，页面只依赖它 |

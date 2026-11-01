@@ -82,7 +82,7 @@ jest.mock('@features/study/StudyScreens', () => ({}));
 jest.mock('@features/appearance/AppearanceScreen', () => ({}));
 jest.mock('@features/gallery/GalleryScreen', () => ({}));
 jest.mock('@features/review/useReviewBadge', () => ({}));
-jest.mock('@features/home/HomeScreens', () => ({ Win11SetupGate: () => null }));
+jest.mock('@features/home/HomeScreens', () => ({ SetupGate: () => null }));
 
 type NavigatorProps = Partial<ComponentProps<typeof RootNavigator>>;
 const no = () => {};

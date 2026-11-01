@@ -10,6 +10,7 @@ import type { ParsedResponse } from '@services/ai/protocol';
 import type { Part } from '@services/ai/types';
 import { AiError } from '@services/ai/http';
 import { rateReviewCard } from '@app/usecases/review';
+import { patchPrefs } from '@app/usecases/settings';
 import { loadHome } from '@app/usecases/home';
 
 let c: Container, session: StudySession;
@@ -674,7 +675,7 @@ it('finishes the final step with a final quiz, or a done card when the preferenc
   await session.answerQuiz(quiz.message.id, 0);
   expect(state().phase).toBe('ready');
   expect(cards().some(item => item.card?.kind === 'done')).toBe(true);
-  session.store.setState({ prefs: { ...state().prefs, quizAtEnd: false } });
+  await patchPrefs(c, { quizAtEnd: false });
   await session.act('next');
   expect(state().phase).toBe('ready');
 });

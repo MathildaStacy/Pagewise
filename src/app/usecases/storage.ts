@@ -240,6 +240,7 @@ export async function exportBackup(
       books: manifest.books.length,
       originals: manifest.books.filter(book => book.originalIncluded).length,
     });
+    c.events.emit('backup.changed', undefined);
     return saved;
   } finally {
     await io.remove(working);

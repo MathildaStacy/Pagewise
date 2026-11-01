@@ -5,6 +5,7 @@ import { redact } from './log';
 export type ErrorCode =
   | `ai.${AiErrorCode}`
   | `mineru.${MineruFailureKind}`
+  | 'mineru.missing_token'
   | 'A0211'
   | 'unknown';
 export interface AppError {
@@ -12,9 +13,18 @@ export interface AppError {
   message: string;
   detail?: string;
   retry?: boolean;
+  settings?: 'MeAI' | 'MeMineru';
 }
 
 const aiMessages: Record<AiErrorCode, { message: string; retry: boolean }> = {
+  not_configured: {
+    message: '还没配置 AI 模型，请先在「AI 服务」分配讲解模型和整理模型',
+    retry: false,
+  },
+  missing_key: {
+    message: '还没填写 API Key，请先在「AI 服务」完成配置',
+    retry: false,
+  },
   auth: {
     message: 'AI 服务的 Key 无效或已过期，请在「我的 → AI 服务」更新',
     retry: false,
@@ -41,7 +51,11 @@ const aiMessages: Record<AiErrorCode, { message: string; retry: boolean }> = {
 export function toAppError(error: unknown): AppError {
   if (error instanceof MineruError && error.code !== 'A0211') {
     return {
-      code: `mineru.${error.kind}`,
+      code:
+        error.code === 'missing_token'
+          ? 'mineru.missing_token'
+          : `mineru.${error.kind}`,
+      ...(error.kind === 'auth' ? { settings: 'MeMineru' as const } : {}),
       message: error.message,
       retry: [
         'service',
@@ -56,6 +70,16 @@ export function toAppError(error: unknown): AppError {
     return {
       code: `ai.${error.code}`,
       ...aiMessages[error.code],
+      ...([
+        'not_configured',
+        'missing_key',
+        'auth',
+        'not_found',
+        'bad_request',
+        'protocol',
+      ].includes(error.code)
+        ? { settings: 'MeAI' as const }
+        : {}),
       detail: redact(error.message),
     };
   }

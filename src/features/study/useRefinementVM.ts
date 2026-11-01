@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { toAppError } from '@app/errors';
 import { useContainer } from '@app/ContainerProvider';
 import {
   applyRefinement,
@@ -63,7 +64,13 @@ export function useRefinementVM(
   }, [bookId, sectionId]);
   const showError = (cause: unknown) => {
     if (mounted.current)
-      setError(cause instanceof Error ? cause.message : '精修失败，请重试');
+      setError(
+        toAppError(cause).code.startsWith('ai.')
+          ? toAppError(cause).message
+          : cause instanceof Error
+          ? cause.message
+          : '精修失败，请重试',
+      );
   };
   const open = useCallback(async () => {
     if (!sectionId) return;

@@ -19,6 +19,8 @@ export interface ShelfBook {
   progress?: number;
 }
 export interface ShelfState extends PageState {
+  backupReminder?: { message: string } | null;
+  backingUp?: boolean;
   conversations?: ConversationSummary[];
   demo: boolean;
   continueCard: null | {
@@ -53,6 +55,9 @@ export interface ShelfState extends PageState {
       };
 }
 export interface ShelfIntents {
+  openAsk?(): void;
+  backup?(): void;
+  dismissBackup?(): void;
   openConversation?(id: number): void;
   refresh(): void;
   openContinue(): void;
@@ -207,12 +212,15 @@ export interface ImportSettingsState extends PageState {
   parts: string;
   quota: string;
   overQuota?: boolean;
+  needsToken?: boolean;
   confirmUpload: boolean;
   canStart: boolean;
   overlay: boolean;
   demo: boolean;
 }
 export interface ImportSettingsIntents {
+  refreshToken?(): void;
+  configureToken?(): void;
   back(): void;
   setModel(value: string): void;
   setOcr(value: boolean): void;

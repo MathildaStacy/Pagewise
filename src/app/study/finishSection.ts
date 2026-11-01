@@ -70,8 +70,11 @@ export async function finishSection(
           created_at: now,
         })),
     );
-    const next =
+    let next =
       (await repos.sections.nextLeaf(input.bookId, input.sectionId)) ?? null;
+    // Revisiting an earlier section must not erase completion of later sections.
+    while (next?.status === 'done')
+      next = (await repos.sections.nextLeaf(input.bookId, next.id)) ?? null;
     if (next)
       await repos.sections.update(input.bookId, next.id, {
         status: 'learning',

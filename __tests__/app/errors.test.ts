@@ -16,12 +16,16 @@ test.each([
 ])('maps MinerU %s to its actionable message without raw detail', code => {
   const source = new MineruError(code);
   const error = toAppError(source);
-  expect(error.code).toBe(`mineru.${source.kind}`);
+  expect(error.code).toBe(
+    code === 'missing_token' ? 'mineru.missing_token' : `mineru.${source.kind}`,
+  );
   expect(error.message).toBe(source.message);
   expect(error.detail).toBeUndefined();
 });
 
 test.each([
+  ['not_configured', false],
+  ['missing_key', false],
   ['auth', false],
   ['not_found', false],
   ['rate_limit', true],

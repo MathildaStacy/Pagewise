@@ -19,7 +19,11 @@ export async function saveUserNote(
         c.clock.now().toISOString(),
       ),
     );
-  pendingWrites.set(c, next);
+  // Readers wait for settlement; the saving caller still receives the failure.
+  pendingWrites.set(
+    c,
+    next.catch(() => undefined),
+  );
   await next;
 }
 export async function loadBookNotes(c: Container, bookId: string) {

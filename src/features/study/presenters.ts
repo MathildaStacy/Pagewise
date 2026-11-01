@@ -448,6 +448,7 @@ export function presentThread(
       id: 'request-error',
       text: raw.error,
       retry: true,
+      settings: raw.errorSettings,
     });
   const active = raw.detours[raw.detours.length - 1]?.detourId;
   if (active !== undefined) {

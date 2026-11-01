@@ -130,6 +130,7 @@ export class StudySession implements StudySessionApi {
   private background = new Set<Promise<void>>();
   private retryAction: (() => Promise<void>) | null = null;
   private reminder: string | null = null;
+  private historyRevision = 0;
   private anchorTimer: ReturnType<typeof setTimeout> | null = null;
   private anchorWrite: Promise<unknown> = Promise.resolve();
   private flashTimer: ReturnType<typeof setTimeout> | null = null;
@@ -181,7 +182,10 @@ export class StudySession implements StudySessionApi {
     return this.store.getState();
   }
   private set(patch: Partial<StudyState>) {
-    this.store.setState(patch);
+    this.store.setState({
+      ...(patch.error === null ? { errorSettings: false } : {}),
+      ...patch,
+    });
   }
   private now() {
     return this.c.clock.now().toISOString();
@@ -245,12 +249,18 @@ export class StudySession implements StudySessionApi {
     this.retryAction = operation;
     this.controller = new AbortController();
     this.set({ busy: true, error: null });
-    const work = (
-      this.configWrite ? this.configWrite.then(operation) : operation()
-    )
+    const work = (async () => {
+      await this.configWrite;
+      this.set({ prefs: await readPrefs(this.c) });
+      await operation();
+    })()
       .catch(error => {
         if (!this.controller?.signal.aborted) {
-          this.set({ error: toAppError(error).message });
+          const failure = toAppError(error);
+          this.set({
+            error: failure.message,
+            errorSettings: failure.settings === 'MeAI',
+          });
           this.c.log.warn('学习会话操作失败');
         }
       })
@@ -280,7 +290,7 @@ export class StudySession implements StudySessionApi {
         }
         return this.setMode(options.mode);
       }
-      return Promise.resolve();
+      return readPrefs(this.c).then(prefs => this.set({ prefs }));
     }
     this.opening = this.run(async () => {
       this.set({ loading: true });
@@ -458,6 +468,8 @@ export class StudySession implements StudySessionApi {
     return this.opening;
   }
   private async loadMain(conversationId?: number, fresh = false) {
+    this.historyRevision++;
+    this.set({ hasOlderMessages: false, loadingHistory: false });
     const id = this.state.main.sectionId;
     if (!id) {
       this.set({
@@ -516,6 +528,7 @@ export class StudySession implements StudySessionApi {
       this.c.repos.sections.parts(this.bookId, id),
       this.c.repos.messages.thread(this.bookId, id, {
         conversation_id: conversation.id,
+        limit: 201,
       }),
     ]);
     if (!section) throw new Error('小节不存在');
@@ -572,10 +585,52 @@ export class StudySession implements StudySessionApi {
         ? blocks.filter(b => b.seq >= part.block_from && b.seq <= part.block_to)
         : [],
       plan: plan ?? null,
-      messages,
+      messages: messages.slice(-200),
+      hasOlderMessages: messages.length > 200,
       conversations: await this.c.repos.conversations.list(this.bookId, id),
       main: { sectionId: id, part: partNo, step },
     });
+  }
+  async loadOlderMessages(): Promise<void> {
+    const { main, messages, conversation, hasOlderMessages, loadingHistory } =
+      this.state;
+    if (
+      !hasOlderMessages ||
+      loadingHistory ||
+      !messages.length ||
+      !conversation
+    )
+      return;
+    const revision = this.historyRevision;
+    this.set({ loadingHistory: true });
+    try {
+      const page = await this.c.repos.messages.thread(
+        this.bookId,
+        main.sectionId,
+        {
+          conversation_id: conversation.id,
+          before_id: messages[0].id,
+          limit: 201,
+        },
+      );
+      if (
+        this.disposed ||
+        revision !== this.historyRevision ||
+        this.state.conversation?.id !== conversation.id
+      )
+        return;
+      const loaded = new Set(this.state.messages.map(message => message.id));
+      this.set({
+        messages: [
+          ...page.slice(-200).filter(message => !loaded.has(message.id)),
+          ...this.state.messages,
+        ],
+        hasOlderMessages: page.length > 200,
+      });
+    } finally {
+      if (!this.disposed && revision === this.historyRevision)
+        this.set({ loadingHistory: false });
+    }
   }
   newConversation(sectionId = this.state.main.sectionId): Promise<void> {
     return this.run(async () => {
@@ -887,7 +942,9 @@ export class StudySession implements StudySessionApi {
       resolved: false,
     });
     const groups: ConversationGroup<NonNullable<StoredMessage['ui']>>[] = [];
-    for (const message of this.state.messages.filter(item => item.in_context)) {
+    for (const message of this.state.messages
+      .slice(-200)
+      .filter(item => item.in_context)) {
       if (message.kind === 'card') {
         const card = parseStudyCard(message.content);
         if (card?.kind === 'fold')
@@ -1959,7 +2016,14 @@ export class StudySession implements StudySessionApi {
     this.set({ readAnchor: seq });
     if (this.anchorTimer) clearTimeout(this.anchorTimer);
     this.anchorTimer = setTimeout(() => {
+      this.flushAnchor();
+    }, 500);
+  }
+  flushAnchor(): Promise<void> {
+    if (this.anchorTimer) {
+      clearTimeout(this.anchorTimer);
       this.anchorTimer = null;
+      const seq = this.state.readAnchor;
       this.anchorWrite = this.anchorWrite
         .then(() =>
           this.c.repos.study.patch(this.bookId, {
@@ -1967,10 +2031,9 @@ export class StudySession implements StudySessionApi {
             last_active_at: this.now(),
           }),
         )
-        .catch(() => {
-          this.set({ error: '阅读位置保存失败，请重试' });
-        });
-    }, 500);
+        .catch(() => this.set({ error: '阅读位置保存失败，请重试' }));
+    }
+    return this.anchorWrite.then(() => undefined);
   }
   setQuote(seq: number | null) {
     this.set({ pendingQuote: seq });
@@ -2399,15 +2462,7 @@ export class StudySession implements StudySessionApi {
     await this.active;
     await this.configWrite;
     await Promise.allSettled([...this.background]);
-    if (this.anchorTimer) {
-      clearTimeout(this.anchorTimer);
-      this.anchorTimer = null;
-      await this.c.repos.study.patch(this.bookId, {
-        read_anchor: this.state.readAnchor,
-        last_active_at: this.now(),
-      });
-    }
-    await this.anchorWrite;
+    await this.flushAnchor();
     this.stopStream();
   }
 }

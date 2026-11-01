@@ -212,13 +212,24 @@ export function ImportSettingsView({
             <Note tone="bad">{state.error}</Note>
           </View>
         ) : null}
+        {state.needsToken ? (
+          <View style={s.uploadNote}>
+            <Note tone="neutral">
+              还没配置 MinerU Token。配置后返回这里继续，文件和解析选项会保留。
+            </Note>
+          </View>
+        ) : null}
         <View style={[s.startAction, state.format === 'EPUB' && s.localAction]}>
           <Button
             size="block"
             disabled={!state.canStart || state.loading}
             onPress={intents.start}
           >
-            {state.format === 'EPUB' ? '导入' : '开始解析'}
+            {state.needsToken
+              ? '先配置 MinerU Token'
+              : state.format === 'EPUB'
+              ? '导入'
+              : '开始解析'}
           </Button>
         </View>
         <Dialog

@@ -329,6 +329,7 @@ export interface Highlight {
   block_seq: number;
   start: number | null;
   end: number | null;
+  /** `none` retains a paragraph note after its highlight is removed. */
   color: string;
   note: string | null;
   created_at: ISODateTime;

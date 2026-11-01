@@ -100,11 +100,13 @@ export async function loadSection(c: Container, bookId: string, id: string) {
   };
 }
 export async function startSection(c: Container, bookId: string, id: string) {
+  let status: 'done' | 'learning' = 'learning';
   await c.db.transaction(async tx => {
     const repos = createRepos(tx);
     const section = await repos.sections.get(bookId, id);
     if (!section?.is_leaf || section.block_from === null)
       throw new Error('这部分正文还未就绪');
+    status = section.status === 'done' ? 'done' : 'learning';
     const study = await repos.study.get(bookId);
     if (study?.main_section !== id) {
       await repos.study.put({
@@ -115,14 +117,14 @@ export async function startSection(c: Container, bookId: string, id: string) {
         read_anchor: section.block_from,
         last_active_at: c.clock.now().toISOString(),
       });
-      await repos.sections.update(bookId, id, { status: 'learning' });
+      await repos.sections.update(bookId, id, { status });
     }
     await repos.books.touchOpened(bookId);
   });
   c.events.emit('section.status', {
     bookId,
     sectionId: id,
-    status: 'learning',
+    status,
   });
 }
 export async function confirmMapFlag(c: Container, bookId: string, id: string) {

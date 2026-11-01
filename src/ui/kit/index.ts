@@ -23,3 +23,6 @@ export type * from './tokens';
 
 export { MathProvider } from './MathProvider';
 export type { FormulaRender, FormulaRenderer } from './MathProvider';
+
+// Use the sheet's gesture-aware touch target for rows inside a draggable sheet.
+export { TouchableOpacity as SheetTouchable } from '@gorhom/bottom-sheet';

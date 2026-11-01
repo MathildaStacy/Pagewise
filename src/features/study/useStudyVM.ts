@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState } from 'react-native';
+import { toAppError } from '@app/errors';
 import { useRefinementVM } from './useRefinementVM';
 import { parseStudyCard } from '@app/study/types';
 import { useStore } from 'zustand';
@@ -47,6 +49,8 @@ import type {
 } from './types';
 
 function errorText(error: unknown) {
+  const failure = toAppError(error);
+  if (failure.code.startsWith('ai.')) return failure.message;
   return error instanceof Error ? error.message : '操作没有完成，请重试';
 }
 type ReaderData = Awaited<ReturnType<typeof loadStudyReader>>;
@@ -132,8 +136,7 @@ export function useStudyVM(
     >();
   const restoredReader = useRef<string | undefined>(undefined);
   const mounted = useRef(true),
-    explainRequest = useRef(0),
-    anchorTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    explainRequest = useRef(0);
   const pendingRefs = useRef(new Set<number>());
   const mode = standalone ? 'read' : raw.mode;
   useEffect(() => {
@@ -192,11 +195,15 @@ export function useStudyVM(
   }, []);
   useEffect(() => {
     mounted.current = true;
+    const listener = AppState.addEventListener('change', state => {
+      if (state !== 'active') session.flushAnchor().catch(fail);
+    });
     return () => {
+      listener.remove();
       mounted.current = false;
-      if (anchorTimer.current) clearTimeout(anchorTimer.current);
+      session.flushAnchor().catch(fail);
     };
-  }, []);
+  }, [session, fail]);
   const {
     mode: initialMode,
     sectionId,
@@ -380,7 +387,10 @@ export function useStudyVM(
         rebase: false,
       });
   }, [raw.notice]);
-  const highlights = new Set(reader?.highlights.map(h => h.block_seq) ?? []);
+  const highlights = new Set(
+    reader?.highlights.filter(h => h.color !== 'none').map(h => h.block_seq) ??
+      [],
+  );
   const pins = new Map(
     reader?.pins.map(p => [
       p.block_seq,
@@ -451,7 +461,11 @@ export function useStudyVM(
     toast: toast ?? raw.notice,
     listen: {
       progress: {
-        label: `第 ${raw.main.step + 1}/${raw.plan?.steps.length ?? 0} 步${
+        label: `${
+          raw.plan?.steps.length
+            ? `第 ${raw.main.step + 1}/${raw.plan.steps.length} 步`
+            : '尚未开始讲解'
+        }${
           raw.parts.length > 1
             ? ` · 第 ${raw.main.part + 1}/${raw.parts.length} 段`
             : ''
@@ -466,9 +480,14 @@ export function useStudyVM(
           }
         : null,
       thread: presentThread(raw, blocks, expanded, history),
+      history: {
+        canLoad: !!raw.hasOlderMessages,
+        loading: !!raw.loadingHistory,
+      },
       scroll: {
         // Streaming growth is followed through content size changes, not per-text tokens.
-        toEndToken: raw.messages.length * 2 + (raw.streaming ? 1 : 0),
+        toEndToken:
+          (raw.messages.at(-1)?.id ?? 0) * 2 + (raw.streaming ? 1 : 0),
         toItemId: itemToScroll ? String(itemToScroll.id) : undefined,
         toItemToken: stepScrollToken,
       },
@@ -711,7 +730,6 @@ export function useStudyVM(
       anchorRef.current =
         raw.plan?.steps[raw.main.step]?.block_from ?? raw.readAnchor;
     if (next === 'listen' && anchorRef.current !== null) {
-      if (anchorTimer.current) clearTimeout(anchorTimer.current);
       session.reportAnchor(anchorRef.current);
     }
     if (standalone && next === 'listen') {
@@ -1204,12 +1222,19 @@ export function useStudyVM(
         setSelection({ seq, anchor });
     },
     menuAction,
+    loadOlderMessages: () => {
+      setHistory(true);
+      run(session.loadOlderMessages());
+    },
+    openAiSettings: () => {
+      closeOverlay();
+      nav.open({ name: 'MeAI' });
+    },
     reportAnchor: ref => {
       const seq = parseBlockRef(ref);
       if (seq === null) return;
       anchorRef.current = seq;
-      if (anchorTimer.current) clearTimeout(anchorTimer.current);
-      anchorTimer.current = setTimeout(() => session.reportAnchor(seq), 500);
+      session.reportAnchor(seq);
     },
     pressPin: id => {
       const pin = reader?.pins.find(p => String(p.id) === id);

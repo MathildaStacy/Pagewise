@@ -255,6 +255,23 @@ export function StudyView({
                     ? { paddingBottom: dockHeight + 8 + 24 }
                     : undefined,
                 ]}
+                maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
+                ListHeaderComponent={
+                  state.listen.history?.canLoad ? (
+                    <Button
+                      variant="secondary"
+                      disabled={state.listen.history.loading}
+                      onPress={() => {
+                        stick.pause();
+                        intents.loadOlderMessages?.();
+                      }}
+                    >
+                      {state.listen.history.loading
+                        ? '正在加载…'
+                        : '加载更早的消息'}
+                    </Button>
+                  ) : undefined
+                }
                 data={thread}
                 keyExtractor={item => item.id}
                 renderItem={({ item }) => (
@@ -512,7 +529,14 @@ function ThreadCard({
               重试
             </Button>
           ) : null}
-          <Text style={s.hint}>可在「我的 → AI 服务」检查模型与密钥。</Text>
+          {item.settings ? (
+            <Button
+              variant="secondary"
+              onPress={() => intents.openAiSettings?.()}
+            >
+              去设置 AI 服务
+            </Button>
+          ) : null}
         </View>
       );
   }

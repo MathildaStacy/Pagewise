@@ -78,7 +78,7 @@ export async function createContainer(
   async function resolve(assignment: ModelAssignment | undefined) {
     if (!assignment) {
       throw new AiError(
-        'bad_request',
+        'not_configured',
         '请先在「我的 → AI 服务」分配讲解模型和整理模型',
       );
     }
@@ -93,7 +93,7 @@ export async function createContainer(
     }
     const key = await secrets.get('ai.key.' + assignment.providerId);
     if (!key) {
-      throw new AiError('auth', '请先在「我的 → AI 服务」填写 API Key');
+      throw new AiError('missing_key', '请先在「我的 → AI 服务」填写 API Key');
     }
     log.registerSecret(key);
     return { service, key, cacheKey: await configuration.cacheKey() };

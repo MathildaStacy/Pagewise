@@ -155,19 +155,28 @@ export function NoteDetailView({
             </NoteGroup>
           ) : null}
           {state.highlights.length ? (
-            <NoteGroup title="高亮" grouped={grouped}>
+            <NoteGroup title="高亮与批注" grouped={grouped}>
               {state.highlights.map((item, index) => (
                 <Pressable
                   key={item.ref}
                   onPress={() => intents.openHighlight(item.ref)}
                   style={s.qa}
                   accessibilityRole="button"
-                  accessibilityLabel={`打开高亮 ${item.page}`}
+                  accessibilityLabel={`打开原文 ${item.page}`}
                 >
                   {separator(index)}
                   <Text style={s.highlightLine}>
-                    <Text style={s.highlight}>{item.text}</Text>
+                    <Text
+                      style={
+                        item.highlighted === false ? undefined : s.highlight
+                      }
+                    >
+                      {item.text}
+                    </Text>
                   </Text>
+                  {item.note ? (
+                    <Text style={s.highlightLine}>{item.note}</Text>
+                  ) : null}
                   <Text style={s.page}>{item.page}</Text>
                 </Pressable>
               ))}

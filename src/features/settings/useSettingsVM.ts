@@ -119,7 +119,7 @@ export function useMeVM(): { state: MeState; intents: MeIntents } {
     () =>
       run(async () => {
         const data = await readSettingsOverview(c);
-        if (appearance.skin === 'win11') {
+        {
           const home = await loadHome(c);
           setOverview({
             storage:
@@ -201,7 +201,7 @@ export function useMeVM(): { state: MeState; intents: MeIntents } {
           ],
         ]);
       }),
-    [c, run, appearance.skin],
+    [c, run],
   );
   useEffect(refresh, [refresh]);
   return {
@@ -233,7 +233,7 @@ export function useMeVM(): { state: MeState; intents: MeIntents } {
               : row,
           )
           .flatMap(row =>
-            appearance.skin === 'win11' && row.key === 'MePrefs'
+            row.key === 'MePrefs'
               ? [
                   row,
                   {
@@ -245,7 +245,7 @@ export function useMeVM(): { state: MeState; intents: MeIntents } {
                     tone: 'neutral' as const,
                   },
                 ]
-              : appearance.skin === 'win11' && row.key === 'About'
+              : row.key === 'About'
               ? [
                   {
                     key: 'Welcome',

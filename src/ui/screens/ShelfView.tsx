@@ -21,6 +21,7 @@ import {
   Note,
   Screen,
   Sheet,
+  SheetTouchable,
   StatusDot,
   ToastHost,
   useTokens,
@@ -87,6 +88,35 @@ export function ShelfView({
             </View>
           }
         />
+        <View style={s.shelfTools}>
+          <Button variant="ghost" onPress={() => intents.openAsk?.()}>
+            问书架
+          </Button>
+        </View>
+        {state.backupReminder ? (
+          <View style={s.errorPanel}>
+            <Note tone="neutral">
+              {state.backupReminder.message}{' '}
+              备份包含学习记录，不含原书文件和服务密钥。
+            </Note>
+            <View style={s.backupActions}>
+              <Button
+                variant="secondary"
+                disabled={state.backingUp}
+                onPress={() => intents.backup?.()}
+              >
+                {state.backingUp ? '正在备份…' : '备份到下载目录'}
+              </Button>
+              <Button
+                variant="ghost"
+                disabled={state.backingUp}
+                onPress={() => intents.dismissBackup?.()}
+              >
+                明天提醒
+              </Button>
+            </View>
+          </View>
+        ) : null}
         {state.error ? (
           <View style={s.errorPanel}>
             <Note tone="bad">{state.error}</Note>
@@ -381,14 +411,11 @@ export function ShelfOverlays({
             </Text>
             <View style={s.importList}>
               {state.overlay.recent.map((file, index) => (
-                <Pressable
+                <SheetTouchable
                   key={file.key}
                   accessibilityRole="button"
                   accessibilityLabel={`导入 ${file.name}`}
-                  style={({ pressed }) => [
-                    s.importFile,
-                    pressed && s.rowPressed,
-                  ]}
+                  style={s.importFile}
                   onPress={() => intents.pickRecent(file.key)}
                 >
                   {index > 0 ? <View style={s.importDivider} /> : null}
@@ -401,19 +428,16 @@ export function ShelfOverlays({
                     <Text style={s.importFileName}>{file.name}</Text>
                     <Text style={s.importFileMeta}>{file.meta}</Text>
                   </View>
-                </Pressable>
+                </SheetTouchable>
               ))}
-              <Pressable
+              <SheetTouchable
                 accessibilityRole="button"
                 onPress={intents.pickOther}
-                style={({ pressed }) => [
-                  s.chooseOther,
-                  pressed && s.rowPressed,
-                ]}
+                style={s.chooseOther}
               >
                 <View style={s.importDivider} />
                 <Text style={s.chooseOtherLabel}>从其他位置选择…</Text>
-              </Pressable>
+              </SheetTouchable>
             </View>
             <View style={s.importNote}>
               <Note tone="neutral">{state.overlay.note}</Note>
@@ -485,6 +509,12 @@ export function ShelfOverlays({
   );
 }
 const useStyles = makeStyles(t => ({
+  shelfTools: {
+    paddingHorizontal: t.space.pageX,
+    paddingBottom: t.space.gap,
+    alignItems: 'flex-start',
+  },
+  backupActions: { flexDirection: 'row', flexWrap: 'wrap', gap: t.space.gap },
   root: {
     flex: 1,
   },

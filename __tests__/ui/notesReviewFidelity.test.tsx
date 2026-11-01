@@ -254,7 +254,15 @@ it.each(['paper', 'glass'] as const)(
     expect(groups).toEqual(
       skin === 'paper'
         ? []
-        : ['摘要', '问答', '岔路记录', '问答便签', '卡点', '高亮', '我的笔记'],
+        : [
+            '摘要',
+            '问答',
+            '岔路记录',
+            '问答便签',
+            '卡点',
+            '高亮与批注',
+            '我的笔记',
+          ],
     );
     expect(style(root.findByType(TextInput))).toMatchObject(
       skin === 'paper'

@@ -9,14 +9,14 @@
 
 ## 当前状态
 
-已进入开发（2026-10-29）：T1 基础件、T2 双皮肤组件库与 T3 数据层及演示书库已实现。SQLite 保存书籍、学习记录、外观和 AI 配置，Demo 使用独立内存库；T4 导航与外围页面正在开发。实施顺序和验收见 [开发计划](docs/dev/07-plan.md)。
+当前 Android 应用代码版本为 v0.0.11，已实现导入、伴读、阅读、笔记、复习、备份及五套皮肤。已发布内容见 [v0.0.11 发布说明](docs/dev/releases/v0.0.11.md)，本分支的需求审查、修复范围与实际验收见 [PM 体验收口](docs/dev/pm-experience-closure.md)。V1 长期使用目标尚未全部验收。
 
 | 文档 | 内容 |
 | --- | --- |
 | [docs/PRODUCT_DESIGN.md](docs/PRODUCT_DESIGN.md) | 产品目标、核心场景、信息架构、功能清单、技术方案、里程碑、待决定的问题 |
 | [docs/STUDY_ENGINE.md](docs/STUDY_ENGINE.md) | 伴读引擎规格：数据模型、解析流水线、地图构建、讲解协议、上下文组装、工具、岔路状态机、引用校验、复习调度 |
 | [docs/design/prototype.html](docs/design/prototype.html) | 可交互原型，用浏览器直接打开（源文件在 [docs/design/prototype/](docs/design/prototype/)） |
-| [docs/dev/](docs/dev/README.md) | Android 实现规格：架构分层、换肤系统（纸感 / 苹果风）、页面与 ViewModel 契约、数据表、引擎与 AI、导入解析、任务拆分与验收 |
+| [docs/dev/](docs/dev/README.md) | Android 实现规格：架构分层、换肤系统（纸感 / 苹果风 / Meta / 新谷歌 / Win11）、页面与 ViewModel 契约、数据表、引擎与 AI、导入解析、任务拆分与验收 |
 
 在线看原型：<https://htmlpreview.github.io/?https://github.com/MathildaStacy/Pagewise/blob/main/docs/design/prototype.html>
 

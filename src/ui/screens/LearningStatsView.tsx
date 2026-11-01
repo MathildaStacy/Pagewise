@@ -230,22 +230,24 @@ export function LearningStatsView({
             </View>
           }
         />
-        <SettingsRow
-          title="每天提醒"
-          subtitle={
-            state.demo
-              ? '21:00 · 本机通知，不联网'
-              : '本机通知尚未接入，可在演示书库预览'
-          }
-          right={
-            <Switch
-              value={state.reminder}
-              disabled={!state.demo}
-              onChange={intents.reminder}
-              accessibilityLabel="每天提醒"
-            />
-          }
-        />
+        {state.demo ? (
+          <SettingsRow
+            title="每天提醒"
+            subtitle={
+              state.demo
+                ? '21:00 · 本机通知，不联网'
+                : '本机通知尚未接入，可在演示书库预览'
+            }
+            right={
+              <Switch
+                value={state.reminder}
+                disabled={!state.demo}
+                onChange={intents.reminder}
+                accessibilityLabel="每天提醒"
+              />
+            }
+          />
+        ) : null}
       </SettingsGroup>
     </Screen>
   );

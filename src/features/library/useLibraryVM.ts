@@ -25,6 +25,11 @@ import {
   pickImportDraft,
   type ImportSelection,
 } from '@app/usecases/importBooks';
+import {
+  loadBackupReminder,
+  dismissBackupReminder,
+} from '@app/usecases/backupReminder';
+import { exportBackup } from '@app/usecases/storage';
 import { getParseQueue } from '@app/usecases/parseQueue';
 import { requiresMineruToken } from '@app/usecases/mineruConnection';
 import {
@@ -64,14 +69,20 @@ export function useShelfVM() {
     overlay: null,
   });
   const mounted = useRef(true);
+  const backingUp = useRef(false);
   const refresh = useCallback(() => {
-    Promise.all([loadShelf(c), loadLibraryConversations(c)])
-      .then(([records, conversations]) => {
+    Promise.all([
+      loadShelf(c),
+      loadLibraryConversations(c),
+      loadBackupReminder(c),
+    ])
+      .then(([records, conversations, backupReminder]) => {
         if (mounted.current)
           setState(s => ({
             ...s,
             ...presentShelf(records, c.clock.now(), c.mode === 'demo'),
             conversations: conversations.map(presentConversation),
+            backupReminder,
             loading: false,
             error: null,
           }));
@@ -85,6 +96,7 @@ export function useShelfVM() {
     mounted.current = true;
     refresh();
     const stops = [
+      c.events.subscribe('backup.changed', refresh),
       c.events.subscribe('book.parse', refresh),
       c.events.subscribe('section.status', refresh),
     ];
@@ -141,6 +153,29 @@ export function useShelfVM() {
   return {
     state,
     intents: {
+      openAsk: () => nav.open({ name: 'AskShelf' }),
+      backup: () => {
+        if (backingUp.current) return;
+        backingUp.current = true;
+        setState(s => ({ ...s, backingUp: true, toast: null }));
+        exportBackup(c)
+          .then(() => {
+            if (mounted.current)
+              setState(s => ({
+                ...s,
+                backupReminder: null,
+                toast: '备份已保存到下载目录；不含原书文件和服务密钥',
+              }));
+          })
+          .catch(fail)
+          .finally(() => {
+            backingUp.current = false;
+            if (mounted.current) setState(s => ({ ...s, backingUp: false }));
+          });
+      },
+      dismissBackup: () => {
+        dismissBackupReminder(c).then(refresh).catch(fail);
+      },
       openConversation: (id: number) => {
         const item = state.conversations?.find(
           conversation => conversation.id === id,
@@ -672,8 +707,8 @@ export function useImportSettingsVM(draftId: string) {
   });
   useEffect(() => {
     let active = true;
-    loadImportDraft(c, draftId)
-      .then(({ info, mineru }) => {
+    Promise.all([loadImportDraft(c, draftId), c.secrets.get('mineru.token')])
+      .then(([{ info, mineru }, token]) => {
         if (!active) return;
         const pages = Number(info.pages) || 0;
         draftMeta.current = { pages, size: Number(info.size_bytes ?? 0) };
@@ -741,6 +776,11 @@ export function useImportSettingsVM(draftId: string) {
               : 0) +
               pages >
             importPriorityPages,
+          needsToken:
+            c.mode !== 'demo' &&
+            format === 'PDF' &&
+            !info.existingBookId &&
+            !token?.trim(),
           confirmUpload: mineru.confirmUpload ?? true,
           canStart: true,
         }));
@@ -753,8 +793,28 @@ export function useImportSettingsVM(draftId: string) {
       active = false;
     };
   }, [c, draftId]);
+  const refreshToken = useCallback(() => {
+    c.secrets
+      .get('mineru.token')
+      .then(token => {
+        setState(s => ({
+          ...s,
+          needsToken:
+            c.mode !== 'demo' &&
+            s.format === 'PDF' &&
+            !existing &&
+            !token?.trim(),
+        }));
+      })
+      .catch(error => setState(s => ({ ...s, error: message(error) })));
+  }, [c, existing]);
+  const configureToken = () => nav.open({ name: 'MeMineru' });
   const confirm = () => {
     if (submitting.current || !state.canStart) return;
+    if (state.needsToken) {
+      configureToken();
+      return;
+    }
     setState(s => ({ ...s, overlay: false }));
     if (existing) {
       setState(s => ({ ...s, toast: '这本书已经在书架上了' }));
@@ -780,6 +840,8 @@ export function useImportSettingsVM(draftId: string) {
     state,
     intents: {
       back: nav.back,
+      refreshToken,
+      configureToken,
       setModel: (model: string) => {
         if (model === 'vlm' || model === 'pipeline')
           setState(s => ({
@@ -806,6 +868,10 @@ export function useImportSettingsVM(draftId: string) {
           };
         }),
       start: () => {
+        if (state.needsToken) {
+          configureToken();
+          return;
+        }
         if (
           !/^\d+$/.test(state.priorityFrom) ||
           Number(state.priorityFrom) < 1 ||

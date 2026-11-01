@@ -27,12 +27,7 @@ jest.mock('@gorhom/bottom-sheet', () => {
   const { View, ScrollView } = require('react-native');
   const BottomSheet = React.forwardRef(
     (
-      {
-        children,
-        handleComponent: Header,
-        footerComponent: Footer,
-        ...props
-      },
+      { children, handleComponent: Header, footerComponent: Footer, ...props },
       ref,
     ) => {
       React.useImperativeHandle(ref, () => ({
@@ -62,6 +57,7 @@ jest.mock('@gorhom/bottom-sheet', () => {
   return {
     __esModule: true,
     default: BottomSheet,
+    TouchableOpacity: require('react-native').TouchableOpacity,
     BottomSheetView: View,
     BottomSheetScrollView: ScrollView,
     BottomSheetBackdrop: View,

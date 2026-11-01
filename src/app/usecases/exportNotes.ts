@@ -91,7 +91,7 @@ export function markdownNotes(data: BookNotesData, strip = true): ExportFile[] {
         '',
       );
     if (highlights.length) {
-      lines.push('## 高亮', '');
+      lines.push('## 高亮与批注', '');
       for (const item of highlights) {
         const block = data.blocks.find(value => value.seq === item.block_seq)!;
         lines.push(

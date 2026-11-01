@@ -79,6 +79,9 @@ export function useStickToBottom(
     };
     return {
       scrollToEnd,
+      pause: () => {
+        following.current = false;
+      },
       listProps: {
         scrollEventThrottle: 32,
         onContentSizeChange: () => scrollToEnd(),

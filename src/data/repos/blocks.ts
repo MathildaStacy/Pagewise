@@ -151,7 +151,10 @@ export function createBlocksRepo(db: Db) {
       query: string,
       limit = 8,
     ): Promise<BlockSearchHit[]> {
-      const q = query.replace(/\s/gu, '');
+      const q = query
+        .trim()
+        .replace(/\s+/gu, ' ')
+        .replace(/(\p{Script=Han}) (?=\p{Script=Han})/gu, '$1');
       const count = Math.max(0, Math.floor(limit));
       if (!q || count === 0) {
         return [];

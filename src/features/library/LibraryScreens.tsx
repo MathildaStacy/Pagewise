@@ -28,5 +28,11 @@ export function ParseProgressScreen({ bookId }: { bookId: string }) {
   return <ParseProgressView {...useParseProgressVM(bookId)} />;
 }
 export function ImportSettingsScreen({ draftId }: { draftId: string }) {
-  return <ImportSettingsView {...useImportSettingsVM(draftId)} />;
+  const vm = useImportSettingsVM(draftId);
+  const focused = useIsFocused();
+  const refreshToken = vm.intents.refreshToken;
+  useEffect(() => {
+    if (focused) refreshToken?.();
+  }, [focused, refreshToken]);
+  return <ImportSettingsView {...vm} />;
 }

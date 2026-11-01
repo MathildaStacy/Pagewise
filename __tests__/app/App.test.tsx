@@ -1,6 +1,7 @@
 import ReactTestRenderer, { act } from 'react-test-renderer';
 import App from '../../src/App';
 import { createTestContainer, createTestDemoContainer } from '@app/testing';
+import { WelcomeView } from '@ui/screens/WelcomeView';
 import { TabBar, AppBar } from '@ui/kit';
 
 jest.mock('@app/dev/nativeSmoke', () => ({ runNativePdfSmoke: jest.fn() }));
@@ -18,7 +19,7 @@ jest.mock('@data/drivers/opSqlite', () => ({
 }));
 
 const settle = () => new Promise(resolve => setTimeout(resolve, 100));
-it('starts at an empty real shelf, opens settings, enters an isolated Demo library and returns', async () => {
+it('starts with onboarding, reaches the empty real shelf, opens settings, enters an isolated Demo library and returns', async () => {
   let renderer!: ReactTestRenderer.ReactTestRenderer;
   const device = await createTestContainer();
   const bootstrap = () => Promise.resolve(device);
@@ -29,6 +30,17 @@ it('starts at an empty real shelf, opens settings, enters an isolated Demo libra
       );
       await settle();
     });
+    await act(async () => {
+      await settle();
+    });
+    expect(renderer.root.findByType(WelcomeView)).toBeDefined();
+    await act(async () => {
+      renderer.root.findByType(WelcomeView).props.intents.skip();
+      await settle();
+    });
+    expect(await device.repos.settings.get('welcome.completed', false)).toBe(
+      true,
+    );
     expect(JSON.stringify(renderer.toJSON())).toContain('导入第一本书');
     await act(async () => {
       renderer.root.findByType(TabBar).props.onSelect('Me');

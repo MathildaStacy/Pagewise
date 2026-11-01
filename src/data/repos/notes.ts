@@ -181,9 +181,21 @@ export function createNotesRepo(db: Db, now = () => new Date().toISOString()) {
             params,
           );
           if (existing) {
-            // 一并移除旧版本可能留下的整块重复记录。
+            if (existing.color === 'none') {
+              await tx.run('UPDATE highlight SET color=? WHERE id=?', [
+                input.color ?? 'yellow',
+                existing.id,
+              ]);
+              return { ...existing, color: input.color ?? 'yellow' };
+            }
+            // A note-only annotation keeps its source association and user text.
+            // Retain every legacy duplicate that contains a note.
             await tx.run(
-              'DELETE FROM highlight WHERE book_id = ? AND block_seq = ? AND start IS ? AND end IS ?',
+              "UPDATE highlight SET color='none' WHERE book_id = ? AND block_seq = ? AND start IS ? AND end IS ? AND coalesce(note, '') != ''",
+              params,
+            );
+            await tx.run(
+              "DELETE FROM highlight WHERE book_id = ? AND block_seq = ? AND start IS ? AND end IS ? AND coalesce(note, '') = ''",
               params,
             );
             return null;

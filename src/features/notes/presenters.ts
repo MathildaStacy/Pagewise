@@ -33,7 +33,7 @@ export function presentNotes(data: BookNotesData[]): NotesState {
                     d.sections.filter(s => sectionHasNotes(d, s)).length
                   } 节有笔记 · ${d.qa.length} 条问答 · ${
                     d.highlights.length
-                  } 处高亮`
+                  } 处批注`
                 : '还没有笔记',
               hasNotes: d.sections.some(s => sectionHasNotes(d, s)),
             },
@@ -78,7 +78,7 @@ export function presentNotesBook(data: BookNotesData): NotesBookState {
     if (stuck.length)
       tags.push({ tone: 'stuck', label: `卡点 ${stuck.length}` });
     if (highlights.length)
-      tags.push({ tone: 'default', label: `高亮 ${highlights.length}` });
+      tags.push({ tone: 'default', label: `批注 ${highlights.length}` });
     if (qa.some(q => q.from_section))
       tags.push({ tone: 'detour', label: '岔路' });
     chapters[index].sections.push({
@@ -143,6 +143,8 @@ export function presentNoteDetail(
         return {
           ref: `b${b.seq}`,
           text: b.text,
+          note: h.note ?? undefined,
+          highlighted: h.color !== 'none',
           page: pageLabel(data.book ?? { page_offset: 0 }, b.page, b.loc),
         };
       }),

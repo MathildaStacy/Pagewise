@@ -121,7 +121,17 @@ export function TranslationView({
           />
         ) : null}
         {reveal.canSkip ? <RevealSkip onPress={reveal.skip} /> : null}
-        {overlay.error ? <Note tone="bad">{overlay.error}</Note> : null}
+        {overlay.error ? (
+          <>
+            <Note tone="bad">{overlay.error}</Note>
+            <Button
+              variant="secondary"
+              onPress={() => intents.openAiSettings?.()}
+            >
+              AI 服务设置
+            </Button>
+          </>
+        ) : null}
         {overlay.stopped ? (
           <Text style={s.status}>已保留当前译文，可重新翻译。</Text>
         ) : null}

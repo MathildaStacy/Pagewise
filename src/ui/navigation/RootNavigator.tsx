@@ -62,7 +62,7 @@ import {
   AskShelfScreen,
   LearningStatsScreen,
   WelcomeScreen,
-  Win11SetupGate,
+  SetupGate,
 } from '@features/home/HomeScreens';
 import { Button, Empty, Screen, TabBar, useSkin, useTokens } from '@ui/kit';
 
@@ -394,7 +394,7 @@ export function RootNavigator({
   const theme = { ...DefaultTheme, ...skin.navigationTheme(tokens) };
   return (
     <AppNavProvider value={navigation}>
-      <Win11SetupGate ready={ready} />
+      <SetupGate ready={ready} />
       <NavigationContainer
         ref={navRef}
         theme={theme}

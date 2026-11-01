@@ -82,7 +82,13 @@ export interface NoteDetailState {
     messageIds?: number[];
   }[];
   stuck: { text: string; resolved: boolean }[];
-  highlights: { ref: string; text: string; page: string }[];
+  highlights: {
+    ref: string;
+    text: string;
+    page: string;
+    note?: string;
+    highlighted?: boolean;
+  }[];
   pins: { ref: string; q: string; page: string }[];
   userText: string;
   loading: boolean;

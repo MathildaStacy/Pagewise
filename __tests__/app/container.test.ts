@@ -50,7 +50,7 @@ test('unconfigured containers guide setup without making a request', async () =>
   const c = await createTestContainer();
   try {
     await expect(c.ai.complete('teach', request)).rejects.toMatchObject({
-      code: 'bad_request',
+      code: 'not_configured',
     });
   } finally {
     await c.close();
@@ -90,7 +90,7 @@ test('configured gateway resolves purpose and Keystore key, records usage withou
   );
   try {
     await expect(c.ai.complete('teach', request)).rejects.toMatchObject({
-      code: 'auth',
+      code: 'missing_key',
     });
     await c.secrets.set('ai.key.fixture', 'private-fixture-key');
     const result = await c.ai.complete('teach', {
@@ -115,7 +115,7 @@ test('configured gateway resolves purpose and Keystore key, records usage withou
     c.log.error('private-fixture-key');
     expect(await c.log.export()).not.toContain('private-fixture-key');
     await expect(c.ai.complete('tidy', request)).rejects.toMatchObject({
-      code: 'bad_request',
+      code: 'not_configured',
     });
     settings.assign('tidy', { providerId: 'missing', model: 'x' });
     await expect(c.ai.complete('tidy', request)).rejects.toMatchObject({

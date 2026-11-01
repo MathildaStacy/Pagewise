@@ -107,7 +107,13 @@ export type ThreadItem =
     }
   | { kind: 'done'; id: string; title: string; text: string }
   | { kind: 'typing'; id: string }
-  | { kind: 'error'; id: string; text: string; retry: boolean };
+  | {
+      kind: 'error';
+      id: string;
+      text: string;
+      retry: boolean;
+      settings?: boolean;
+    };
 export interface ReaderBlock {
   refined?: boolean;
   continuesFrom?: number;
@@ -259,6 +265,7 @@ export interface StudyState {
     progress: { label: string; steps: { title: string; state: StepState }[] };
     detour: null | { title: string; backLabel: string };
     thread: ThreadItem[];
+    history?: { canLoad: boolean; loading: boolean };
     scroll: { toEndToken: number; toItemId?: string; toItemToken?: number };
     quickActions: {
       key: QuickKey;
@@ -279,6 +286,8 @@ export interface StudyState {
   overlay: StudyOverlay | null;
 }
 export interface StudyIntents {
+  loadOlderMessages?(): void;
+  openAiSettings?(): void;
   openRefinement?(): void;
   refinementAction?(action: string): void;
   refinementMode?(mode: 'structure' | 'vision'): void;

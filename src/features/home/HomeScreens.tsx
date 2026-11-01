@@ -1,7 +1,6 @@
 import { useAppNav } from '@features/nav';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useContainer } from '@app/ContainerProvider';
-import { useSkin } from '@ui/kit';
 import { TodayView } from '@ui/screens/TodayView';
 import { AskShelfView } from '@ui/screens/AskShelfView';
 import { LearningStatsView } from '@ui/screens/LearningStatsView';
@@ -21,25 +20,27 @@ export function LearningStatsScreen() {
 export function WelcomeScreen() {
   return <WelcomeView {...useWelcomeVM()} />;
 }
-export function Win11SetupGate({ ready }: { ready: boolean }) {
+export function SetupGate({ ready }: { ready: boolean }) {
   const c = useContainer(),
-    nav = useAppNav(),
-    { skin } = useSkin();
+    nav = useAppNav();
+  const shown = useRef<typeof c | null>(null);
   useEffect(() => {
-    if (!ready || skin.id !== 'win11' || c.mode === 'demo') return;
+    if (!ready || c.mode === 'demo' || shown.current === c) return;
     let mounted = true;
     Promise.all([
       c.repos.settings.get('welcome.completed', false),
       c.repos.books.list(),
     ])
       .then(([completed, books]) => {
-        if (mounted && !completed && !books.length)
+        if (mounted && !completed && !books.length) {
+          shown.current = c;
           nav.open({ name: 'Welcome' });
+        }
       })
       .catch(() => {});
     return () => {
       mounted = false;
     };
-  }, [c, nav, ready, skin.id]);
+  }, [c, nav, ready]);
   return null;
 }

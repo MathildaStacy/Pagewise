@@ -1,4 +1,5 @@
 import type { Container } from '../container';
+import { pageLabel } from '@core/ids';
 import { loadShelf } from './library';
 import { createSettingsRepo } from '@data/repos/settings';
 import type { ConversationConfig } from '@services/ai/types';
@@ -151,8 +152,7 @@ export async function searchShelf(c: Container, query: string, scope: string) {
           sectionId: block.section_id ?? '',
           section:
             sections.find(s => s.id === block.section_id)?.title ?? book.title,
-          page:
-            block.page === null ? 'EPUB' : `p.${block.page + book.page_offset}`,
+          page: pageLabel(book, block.page, block.loc),
           text: block.text,
         }));
     }),

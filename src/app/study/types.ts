@@ -69,6 +69,9 @@ export interface StudyState {
   readAnchor: number | null;
   flashRef: number | null;
   messages: Message[];
+  hasOlderMessages?: boolean;
+  loadingHistory?: boolean;
+  errorSettings?: boolean;
   streaming: StudyStreaming | null;
   busy: boolean;
   loading: boolean;
@@ -180,6 +183,8 @@ export interface StudySessionApi {
   setMode(mode: 'read' | 'listen', anchor?: number): Promise<void>;
   setReaderView(view: 'orig' | 'flow'): Promise<void>;
   reportAnchor(seq: number): void;
+  flushAnchor(): Promise<void>;
+  loadOlderMessages(): Promise<void>;
   jumpStep(index: number): Promise<void>;
   backMain(rebase?: boolean): Promise<void>;
   answerQuiz(messageId: number, index: number): Promise<void>;
