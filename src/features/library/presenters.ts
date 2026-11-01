@@ -7,6 +7,13 @@ import type {
 import { pageLabel, pageRangeLabel, type PageLabelBook } from '@core/ids';
 import { sectionName } from '@features/sectionName';
 import type { MapRecord, ShelfRecord } from '@app/usecases/library';
+import {
+  learningLeaves,
+  learningSelection,
+  roleLabel,
+} from '@core/learningScope';
+import { structureIssues } from '@core/map/structureChecks';
+import { cleanBookAuthor, cleanBookTitle } from '@core/bookMetadata';
 import type {
   BookMapState,
   MapNode,
@@ -131,7 +138,7 @@ export function shelfStatus(record: ShelfRecord): ShelfBook['status'] {
     };
   }
   if (study?.main_section) {
-    const leaves = sections.filter(s => s.is_leaf);
+    const leaves = learningLeaves(sections, record.learningScope, book.title);
     return {
       tone: 'accent',
       text: `在学 ${
@@ -150,14 +157,14 @@ export function shelfStatus(record: ShelfRecord): ShelfBook['status'] {
     }已就绪 · 未开始`,
   };
 }
-export const bookMeta = (book: Book, chapters?: number) =>
+export const bookMeta = (book: Book, entries?: number) =>
   [
-    book.author,
+    cleanBookAuthor(book.author),
     book.format.toUpperCase(),
     book.pages
       ? `${book.pages} 页`
-      : chapters !== undefined
-      ? `${chapters} 章`
+      : entries !== undefined
+      ? `${entries} 个目录条目`
       : null,
   ]
     .filter(Boolean)
@@ -169,14 +176,14 @@ export function presentShelf(
 ): Pick<ShelfState, 'books' | 'continueCard' | 'empty' | 'demo'> {
   const books: ShelfBook[] = records.map(record => ({
     id: record.book.id,
-    title: record.book.title,
-    author: record.book.author,
+    title: cleanBookTitle(record.book.title),
+    author: cleanBookAuthor(record.book.author),
     meta: bookMeta(
       record.book,
       record.sections.filter(section => !section.parent_id).length,
     ),
     cover: {
-      title: record.book.title.replace(/[（(].*$/u, ''),
+      title: cleanBookTitle(record.book.title).replace(/[（(].*$/u, ''),
       color: record.book.cover_color,
       uri: record.book.coverUri,
     },
@@ -195,9 +202,15 @@ export function presentShelf(
         ? record.parts.reduce((n, p) => n + parsePart(p).progress, 0) /
           record.parts.length
         : 0
-      : record.sections.filter(s => s.is_leaf).length
-      ? record.sections.filter(s => s.is_leaf && s.status === 'done').length /
-        record.sections.filter(s => s.is_leaf).length
+      : learningLeaves(record.sections, record.learningScope, record.book.title)
+          .length
+      ? learningLeaves(
+          record.sections,
+          record.learningScope,
+          record.book.title,
+        ).filter(s => s.status === 'done').length /
+        learningLeaves(record.sections, record.learningScope, record.book.title)
+          .length
       : 0,
   }));
   const current = [...records]
@@ -257,7 +270,7 @@ export function presentShelf(
     demo,
     continueCard: {
       bookId: current.book.id,
-      kicker: `继续学习 · ${current.book.title}`,
+      kicker: `继续学习 · ${cleanBookTitle(current.book.title)}`,
       title: section ? sectionName(section) : current.study!.main_section!,
       meta: [chapterLabel, section ? pageRange(section, current.book) : '']
         .filter(Boolean)
@@ -283,16 +296,51 @@ export function presentShelf(
 export function presentMap(
   record: MapRecord,
   expanded: Record<string, boolean>,
-): Pick<BookMapState, 'title' | 'check' | 'chapters' | 'scrollToSectionId'> {
+  view: 'learning' | 'all' = 'all',
+): Pick<
+  BookMapState,
+  | 'title'
+  | 'check'
+  | 'chapters'
+  | 'scrollToSectionId'
+  | 'scope'
+  | 'start'
+  | 'structureIssues'
+> {
   const { book, sections, study, stuck } = record;
+  const selection = learningSelection(
+    sections,
+    record.learningScope,
+    book.title,
+  );
+  const leaves = learningLeaves(sections, record.learningScope, book.title);
+  const visible = new Set<string>();
+  const byId = new Map(sections.map(s => [s.id, s]));
+  for (const leaf of leaves) {
+    let ancestor: Section | undefined = leaf;
+    while (ancestor && !visible.has(ancestor.id)) {
+      visible.add(ancestor.id);
+      ancestor = ancestor.parent_id ? byId.get(ancestor.parent_id) : undefined;
+    }
+  }
+  const shown = (s: Section) => view === 'all' || visible.has(s.id);
   const current = sections.find(s => s.id === study?.main_section);
   // Splitting a long unit into parts is routine and needs no review; only doubts do.
   const review = (s: Section) => !!s.flag && s.flag !== 'split';
   const flagged = sections.filter(review);
-  const roots = sections.filter(s => !s.parent_id);
-  const chapterCount =
-    roots.filter(s => /^\d+$/.test(s.no ?? '')).length || roots.length;
-  const children = (id: string) => sections.filter(s => s.parent_id === id);
+  const issues = structureIssues(sections);
+  const roots = sections.filter(s => !s.parent_id && shown(s));
+  const numberedChapters = sections.filter(
+    s =>
+      shown(s) &&
+      /^\d+$/.test(s.no ?? '') &&
+      selection.get(s.id)?.role === 'body',
+  ).length;
+  const structureCount = numberedChapters
+    ? `${numberedChapters} 章`
+    : `${roots.length} 个目录条目`;
+  const children = (id: string) =>
+    sections.filter(s => s.parent_id === id && shown(s));
   const descendant = (s: Section) =>
     Boolean(
       current &&
@@ -316,6 +364,14 @@ export function presentMap(
         ? pageLabel(book, s.page_from)
         : '章节',
       tags: [
+        ...(!selection.get(s.id)?.included
+          ? [
+              {
+                tone: 'muted' as const,
+                label: `${roleLabel[selection.get(s.id)!.role]} · 不计进度`,
+              },
+            ]
+          : []),
         ...(review(s) ? [{ tone: 'stuck' as const, label: '需确认' }] : []),
         ...(stuck.some(value => value.section_id === s.id)
           ? [{ tone: 'stuck' as const, label: '卡点' }]
@@ -328,48 +384,72 @@ export function presentMap(
     };
   };
   return {
-    title: book.title.replace(/[（(].*$/u, ''),
+    title: cleanBookTitle(book.title).replace(/[（(].*$/u, ''),
+    structureIssues: issues,
+    scope: {
+      view,
+      included: leaves.length,
+      excluded:
+        sections.filter(s => s.is_leaf && s.block_from !== null).length -
+        leaves.length,
+    },
+    start: (() => {
+      const next =
+        leaves.find(s => s.id === study?.main_section && s.status !== 'done') ??
+        leaves.find(s => s.status !== 'done');
+      return next
+        ? {
+            id: next.id,
+            label: `${
+              study?.main_section === next.id ? '继续学习' : '开始学习'
+            } · ${sectionName(next)}`,
+          }
+        : null;
+    })(),
     scrollToSectionId: study?.main_section ?? undefined,
     check: {
       ok: sections.length > 0,
-      tone: flagged.length ? 'stuck' : 'muted',
+      tone: flagged.length || issues.length ? 'stuck' : 'muted',
       text:
         book.format === 'epub'
-          ? `从 EPUB 目录建立：${chapterCount} 章`
+          ? `从 EPUB 目录建立：${structureCount}`
           : book.has_outline
-          ? `已和 PDF 书签核对：${chapterCount} 章${
-              flagged.length ? '' : '一致'
-            }`
-          : `已建立书的地图 · ${chapterCount} 章`,
-      sub: flagged.length
+          ? `已结合 PDF 书签建图：${structureCount}`
+          : `已建立书的地图 · ${structureCount}`,
+      sub: issues.length
+        ? `${issues.length} 处编号疑问${
+            flagged.length ? ` · ${flagged.length} 处标题标记` : ''
+          }，请对照原书核对`
+        : flagged.length
         ? `${flagged.length} 处需要你确认 · 点开黄色标记逐项核对`
         : book.status === 'ready'
-        ? '没有需要确认的地方'
+        ? '未发现已知结构异常，可对照原文核对'
         : '解析中，已就绪的章节可以先学',
     },
-    chapters: sections
-      .filter(s => !s.parent_id)
-      .map(s => ({
-        id: s.id,
-        no: s.no ?? '',
-        title: s.title,
-        meta: [
-          pageRange(s, book),
-          children(s.id).length ? `${children(s.id).length} 节` : '',
-          s.status === 'done'
-            ? '已学完'
-            : descendant(s)
-            ? `在学 ${current?.no ?? current?.title ?? study?.main_section}`
-            : '',
-        ]
-          .filter(Boolean)
-          .join(' · '),
-        status: s.status,
-        current: descendant(s),
-        expanded: expanded[s.id] ?? descendant(s),
-        leaf: s.is_leaf,
-        children: children(s.id).map(node),
-      })),
+    chapters: roots.map(s => ({
+      id: s.id,
+      no: s.no ?? '',
+      title: s.title,
+      meta: [
+        !selection.get(s.id)?.included
+          ? `${roleLabel[selection.get(s.id)!.role]} · 不计进度`
+          : '',
+        pageRange(s, book),
+        children(s.id).length ? `${children(s.id).length} 节` : '',
+        s.status === 'done'
+          ? '已学完'
+          : descendant(s)
+          ? `在学 ${current?.no ?? current?.title ?? study?.main_section}`
+          : '',
+      ]
+        .filter(Boolean)
+        .join(' · '),
+      status: s.status,
+      current: descendant(s),
+      expanded: expanded[s.id] ?? descendant(s),
+      leaf: s.is_leaf,
+      children: children(s.id).map(node),
+    })),
   };
 }
 export function markSnippet(

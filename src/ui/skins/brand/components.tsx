@@ -546,11 +546,11 @@ function ModeSwitch({ value, onChange }: KitProps['ModeSwitch']) {
         }).root
       }
     >
-      {(['read', 'listen'] as const).map((key, i) => (
+      {(['listen', 'read'] as const).map((key, i) => (
         <Pressable
           key={key}
           accessibilityRole="tab"
-          accessibilityLabel={key === 'read' ? '读书' : '听讲'}
+          accessibilityLabel={key === 'read' ? '原文' : '伴读'}
           accessibilityState={{ selected: value === key }}
           onPress={() => onChange(key)}
           hitSlop={8}
@@ -602,7 +602,7 @@ function ModeSwitch({ value, onChange }: KitProps['ModeSwitch']) {
               }).root
             }
           >
-            {key === 'read' ? '读书' : '听讲'}
+            {key === 'read' ? '原文' : '伴读'}
           </Text>
           {kind === 'win11' && value === key ? (
             <View

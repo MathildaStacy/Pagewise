@@ -1,0 +1,77 @@
+[
+  {
+    "title": "Artificial Intelligence A Modern Approach",
+    "originalEntries": 750,
+    "populatedLeaves": 586,
+    "learningLeaves": 540,
+    "first": {
+      "id": "ch1-intro",
+      "title": "本章导读",
+      "page": 29
+    },
+    "issues": [
+      {
+        "id": "gap:4.5.4",
+        "message": "4.5.3 可能缺失，请对照相邻原文",
+        "sectionId": "4.5.2"
+      },
+      {
+        "id": "gap:16.3.4",
+        "message": "16.3.3 可能缺失，请对照相邻原文",
+        "sectionId": "16.3.2"
+      },
+      {
+        "id": "gap:20.3.2",
+        "message": "20.3.1 可能缺失，请对照相邻原文",
+        "sectionId": "20.3-intro"
+      },
+      {
+        "id": "gap:25.2.5",
+        "message": "25.2.4 可能缺失，请对照相邻原文",
+        "sectionId": "25.2.3"
+      },
+      {
+        "id": "duplicate:26.2_b1692003",
+        "message": "26.2 编号重复，请核对原书是否也重复",
+        "sectionId": "26.2_b1692003"
+      },
+      {
+        "id": "gap:26.2.2",
+        "message": "26.2.1 可能缺失，请对照相邻原文",
+        "sectionId": "26.2.2"
+      }
+    ],
+    "excludedReferences": [
+      {
+        "title": "Contents",
+        "parts": 3
+      },
+      {
+        "title": "Bibliography",
+        "parts": 103
+      }
+    ]
+  },
+  {
+    "title": "ML-Trading",
+    "originalEntries": 1079,
+    "populatedLeaves": 868,
+    "learningLeaves": 848,
+    "first": {
+      "id": "u42001-intro",
+      "title": "本章导读",
+      "page": 42
+    },
+    "issues": [],
+    "excludedReferences": [
+      {
+        "title": "Table of Contents",
+        "parts": 14
+      },
+      {
+        "title": "Index",
+        "parts": 19
+      }
+    ]
+  }
+]

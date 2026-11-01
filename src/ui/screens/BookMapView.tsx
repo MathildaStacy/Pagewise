@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import {
   AppBar,
@@ -8,6 +9,7 @@ import {
   IconButton,
   Note,
   Screen,
+  Segmented,
   SectionStatusIcon,
   Sheet,
   Tag,
@@ -110,6 +112,7 @@ export function BookMapView({
   const { groupedLists } = usePresentation();
   const s = useStyles();
   const section = state.overlay?.kind === 'section' ? state.overlay : null;
+  const [allIssues, setAllIssues] = useState(false);
   const search = state.overlay?.kind === 'search' ? state.overlay : null;
   const dialog =
     state.overlay?.kind === 'flag' || state.overlay?.kind === 'changeMain'
@@ -144,7 +147,14 @@ export function BookMapView({
           <Empty body="正在读取地图…" />
         ) : (
           <View style={s.checkNote}>
-            <SectionStatusIcon status={state.check.ok ? 'done' : 'learning'} />
+            <Icon
+              name={state.check.tone === 'stuck' ? 'warning' : 'check'}
+              size={18}
+              color={state.check.tone === 'stuck' ? t.color.stuck : t.color.ok}
+              label={
+                state.check.tone === 'stuck' ? '目录有待核对项' : '目录已建立'
+              }
+            />
             <View style={s.checkContent}>
               <Text style={s.checkTitle}>{state.check.text}</Text>
               {state.check.sub ? (
@@ -160,10 +170,65 @@ export function BookMapView({
             </View>
           </View>
         )}
+        {state.structureIssues?.length ? (
+          <View style={s.errorPanel}>
+            <Button
+              variant="text"
+              onPress={() => setAllIssues(value => !value)}
+            >
+              {allIssues
+                ? '收起编号检查'
+                : `核对 ${state.structureIssues.length} 处编号疑问`}
+            </Button>
+            {allIssues
+              ? state.structureIssues.map(issue => (
+                  <Button
+                    key={issue.id}
+                    variant="text"
+                    onPress={() => intents.inspectStructure?.(issue.sectionId)}
+                  >
+                    {issue.message}
+                  </Button>
+                ))
+              : null}
+          </View>
+        ) : null}
+        {state.scope ? (
+          <View style={s.errorPanel}>
+            <Segmented
+              options={[
+                { key: 'learning', label: '学习路线' },
+                { key: 'all', label: '原书目录' },
+              ]}
+              value={state.scope.view}
+              onChange={value =>
+                intents.setScopeView?.(value === 'all' ? 'all' : 'learning')
+              }
+              accessibilityLabel="目录范围"
+            />
+            <Text style={s.checkSub}>
+              {state.scope.included} 个学习小节 · {state.scope.excluded}{' '}
+              个小节不计进度
+            </Text>
+            {state.start ? (
+              <Button onPress={() => intents.startLearning?.()}>
+                {state.start.label}
+              </Button>
+            ) : null}
+          </View>
+        ) : null}
         {!state.loading && !state.chapters.length ? (
           <Empty
-            title="地图还未就绪"
-            body="解析完成的章节会出现在这里，可以先回书架查看进度。"
+            title={
+              state.scope?.view === 'learning'
+                ? '还没有学习小节'
+                : '地图还未就绪'
+            }
+            body={
+              state.scope?.view === 'learning'
+                ? '在原书目录中打开小节，可将它纳入学习路线。'
+                : '解析完成的章节会出现在这里，可以先回书架查看进度。'
+            }
           />
         ) : null}
         {state.chapters.map(chapter => (
@@ -250,9 +315,7 @@ export function BookMapView({
                     style={[s.factRow, index > 0 && s.factDivider]}
                   >
                     <Text style={s.factKey}>{fact.k}</Text>
-                    <Text style={s.sectionFact}>
-                      {groupedLists ? fact.v : fact.v.replace(/步/gu, '段')}
-                    </Text>
+                    <Text style={s.sectionFact}>{fact.v}</Text>
                   </View>
                 ))}
               </View>

@@ -374,104 +374,34 @@ const studyIntents: StudyIntents = {
 };
 
 it.each(['light', 'dark'] as const)(
-  'Win11/%s uses the original headphones and exposes context only while listening',
+  'Win11/%s keeps source and teaching modes in the common order with settings in the menu',
   async scheme => {
-    const openContext = jest.fn(),
-      setMode = jest.fn();
-    const intents = { ...studyIntents, openContext, setMode };
-    const state = {
-      ...studySamples.normal,
-      listen: { ...studySamples.normal.listen, thread: [], quickActions: [] },
-    };
-    const tree = (mode: 'listen' | 'read') => (
-      <SkinProvider skinId="win11" scheme={scheme} reduceMotion>
-        <StudyView state={{ ...state, mode }} intents={intents} />
-      </SkinProvider>
+    const setMode = jest.fn(),
+      openMenu = jest.fn();
+    const renderer = await mount(
+      <StudyView
+        state={studySamples.normal}
+        intents={{ ...studyIntents, setMode, openMenu }}
+      />,
+      'win11',
+      scheme,
     );
-    let renderer!: Renderer.ReactTestRenderer;
-    await act(async () => {
-      renderer = Renderer.create(tree('listen'));
-    });
-    mounted.add(renderer);
     const mode = renderer.root.findByType(ModeSwitch);
     const headphones = mode
       .findAllByType(Icon)
       .find(icon => icon.props.name === 'listen')!;
-    expect(headphones).toBeDefined();
     expect(headphones.findByType(SvgXml).props.xml).toContain(
       '<path d="M4 13v-1a8 8 0 0116 0v1"/>',
     );
-    const context = action(renderer.root, 'AI 看到的内容');
-    const t = skins.win11.tokens[scheme];
-    expect(
-      StyleSheet.flatten(
-        typeof context.props.style === 'function'
-          ? context.props.style({ pressed: false })
-          : context.props.style,
-      ),
-    ).toMatchObject({
-      minHeight: 30,
-      borderRadius: 999,
-      backgroundColor: t.brand!.cardLo,
-      borderColor: t.brand!.stroke,
-    });
-    expect(
-      StyleSheet.flatten(context.findAllByType(Text)[0].props.style).color,
-    ).toBe(t.color.ink2);
-    expect(
-      context.findAllByType(View).some(node => {
-        const style = StyleSheet.flatten(node.props.style);
-        return (
-          style?.width === 8 &&
-          style.height === 8 &&
-          style.backgroundColor === t.color.ok
-        );
-      }),
-    ).toBe(true);
-    await act(async () => context.props.onPress());
-    expect(openContext).toHaveBeenCalledTimes(1);
-    await act(async () => action(mode, '读书').props.onPress());
-    expect(setMode).toHaveBeenCalledWith('read');
-    await act(async () => renderer.update(tree('read')));
     expect(action(renderer.root, 'AI 看到的内容')).toBeUndefined();
-    expect(renderer.root.findByType(ModeSwitch)).toBeDefined();
+    await act(async () => action(mode, '原文').props.onPress());
+    expect(setMode).toHaveBeenCalledWith('read');
+    await act(async () =>
+      renderer.root
+        .findAllByType(IconButton)
+        .find(button => button.props.label === '伴读菜单')!
+        .props.onPress(),
+    );
+    expect(openMenu).toHaveBeenCalledTimes(1);
   },
 );
-
-it('Win11 lets the context capsule wrap and grow at 360dp with system font scale 2', async () => {
-  jest.spyOn(Dimensions, 'get').mockReturnValue({
-    width: 360,
-    height: 800,
-    scale: 3,
-    fontScale: 2,
-  });
-  const openContext = jest.fn(),
-    setMode = jest.fn();
-  const renderer = await mount(
-    <StudyView
-      state={{
-        ...studySamples.normal,
-        listen: { ...studySamples.normal.listen, thread: [], quickActions: [] },
-      }}
-      intents={{ ...studyIntents, openContext, setMode }}
-    />,
-    'win11',
-  );
-  const mode = renderer.root.findByType(ModeSwitch);
-  const selector = mode.parent!;
-  expect(StyleSheet.flatten(selector.props.style)).toMatchObject({
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  });
-  const context = action(renderer.root, 'AI 看到的内容');
-  const contextStyle = StyleSheet.flatten(
-    context.props.style({ pressed: false }),
-  );
-  expect(contextStyle.minHeight).toBe(30);
-  expect(contextStyle.height).toBeUndefined();
-  expect(context.findAllByType(Text)[0].props.allowFontScaling).not.toBe(false);
-  await act(async () => context.props.onPress());
-  expect(openContext).toHaveBeenCalledTimes(1);
-  await act(async () => action(mode, '读书').props.onPress());
-  expect(setMode).toHaveBeenCalledWith('read');
-});

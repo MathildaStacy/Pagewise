@@ -1,0 +1,459 @@
+{
+  "name": "aima",
+  "blocks": 15651,
+  "pages": [
+    1,
+    2145
+  ],
+  "runtimeMs": 630,
+  "sections": 750,
+  "roots": 35,
+  "leaves": 586,
+  "emptyLeaves": 0,
+  "chars": {
+    "min": 414,
+    "p50": 4529,
+    "p90": 10838,
+    "max": 306174,
+    "under1000": 9,
+    "over10000": 75
+  },
+  "uncovered": [
+    {
+      "seq": 1001,
+      "text": ""
+    }
+  ],
+  "overlapping": [],
+  "flagCounts": {
+    "merged": 3,
+    "split": 339
+  },
+  "longest": [
+    {
+      "id": "u1885001",
+      "title": "Bibliography",
+      "chars": 306174,
+      "words": 44741,
+      "parts": 103,
+      "page_from": 1885,
+      "page_to": 2124
+    },
+    {
+      "id": "13.4.2",
+      "title": "Inference by Markov chain simulation",
+      "chars": 24852,
+      "words": 4761,
+      "parts": 9,
+      "page_from": 831,
+      "page_to": 842
+    },
+    {
+      "id": "u854001",
+      "title": "Bibliographical and Historical Notes",
+      "chars": 22489,
+      "words": 3349,
+      "parts": 8,
+      "page_from": 854,
+      "page_to": 863
+    },
+    {
+      "id": "26.5.2",
+      "title": "Motion planning",
+      "chars": 22152,
+      "words": 4089,
+      "parts": 8,
+      "page_from": 1723,
+      "page_to": 1738
+    },
+    {
+      "id": "13.4.1",
+      "title": "Direct sampling methods",
+      "chars": 21071,
+      "words": 3999,
+      "parts": 7,
+      "page_from": 822,
+      "page_to": 831
+    },
+    {
+      "id": "18.2.4",
+      "title": "Sequential games: The extensive form",
+      "chars": 19994,
+      "words": 3478,
+      "parts": 7,
+      "page_from": 1138,
+      "page_to": 1148
+    },
+    {
+      "id": "u647001",
+      "title": "Bibliographical and Historical Notes",
+      "chars": 19751,
+      "words": 3006,
+      "parts": 7,
+      "page_from": 647,
+      "page_to": 654
+    },
+    {
+      "id": "u1320001",
+      "title": "Bibliographical and Historical Notes",
+      "chars": 19510,
+      "words": 3087,
+      "parts": 7,
+      "page_from": 1320,
+      "page_to": 1328
+    },
+    {
+      "id": "u1837001",
+      "title": "Bibliographical and Historical Notes",
+      "chars": 19270,
+      "words": 3078,
+      "parts": 7,
+      "page_from": 1837,
+      "page_to": 1844
+    },
+    {
+      "id": "21.7.1",
+      "title": "Unsupervised learning",
+      "chars": 19081,
+      "words": 3339,
+      "parts": 7,
+      "page_from": 1426,
+      "page_to": 1435
+    },
+    {
+      "id": "18.4.2",
+      "title": "Allocating scarce resources with auctions",
+      "chars": 18321,
+      "words": 3422,
+      "parts": 7,
+      "page_from": 1169,
+      "page_to": 1178
+    },
+    {
+      "id": "u1681001",
+      "title": "Bibliographical and Historical Notes",
+      "chars": 17584,
+      "words": 2729,
+      "parts": 6,
+      "page_from": 1681,
+      "page_to": 1687
+    }
+  ],
+  "rootsList": [
+    {
+      "id": "u1002",
+      "no": null,
+      "title": "Artificial Intelligence A Modern Approach",
+      "page_from": 1,
+      "page_to": 1,
+      "chars": 41,
+      "parts": 1
+    },
+    {
+      "id": "u3001",
+      "no": null,
+      "title": "Artificial Intelligence",
+      "page_from": 1,
+      "page_to": 4,
+      "chars": 414,
+      "parts": 1
+    },
+    {
+      "id": "u5001",
+      "no": null,
+      "title": "Artificial Intelligence",
+      "page_from": 5,
+      "page_to": 28,
+      "chars": 22891,
+      "parts": 1
+    },
+    {
+      "id": "ch1",
+      "no": "1",
+      "title": "Introduction",
+      "page_from": 29,
+      "page_to": 94,
+      "chars": 122693,
+      "parts": 1
+    },
+    {
+      "id": "ch2",
+      "no": "2",
+      "title": "Intelligent Agents",
+      "page_from": 95,
+      "page_to": 144,
+      "chars": 81196,
+      "parts": 1
+    },
+    {
+      "id": "ch3",
+      "no": "3",
+      "title": "Solving Problems by Searching",
+      "page_from": 145,
+      "page_to": 232,
+      "chars": 135119,
+      "parts": 1
+    },
+    {
+      "id": "ch4",
+      "no": "4",
+      "title": "Search in Complex Environments",
+      "page_from": 233,
+      "page_to": 295,
+      "chars": 100178,
+      "parts": 1
+    },
+    {
+      "id": "ch5",
+      "no": "5",
+      "title": "Adversarial Search and Games",
+      "page_from": 296,
+      "page_to": 358,
+      "chars": 102082,
+      "parts": 1
+    },
+    {
+      "id": "ch6",
+      "no": "6",
+      "title": "Constraint Satisfaction Problems",
+      "page_from": 359,
+      "page_to": 409,
+      "chars": 89760,
+      "parts": 1
+    },
+    {
+      "id": "ch7",
+      "no": "7",
+      "title": "Logical Agents",
+      "page_from": 410,
+      "page_to": 488,
+      "chars": 134897,
+      "parts": 1
+    },
+    {
+      "id": "ch8",
+      "no": "8",
+      "title": "First-Order Logic",
+      "page_from": 489,
+      "page_to": 541,
+      "chars": 94523,
+      "parts": 1
+    },
+    {
+      "id": "ch9",
+      "no": "9",
+      "title": "Inference in First-Order Logic",
+      "page_from": 542,
+      "page_to": 601,
+      "chars": 105753,
+      "parts": 1
+    },
+    {
+      "id": "ch10",
+      "no": "10",
+      "title": "Knowledge Representation",
+      "page_from": 602,
+      "page_to": 654,
+      "chars": 100093,
+      "parts": 1
+    },
+    {
+      "id": "ch11",
+      "no": "11",
+      "title": "Automated Planning",
+      "page_from": 656,
+      "page_to": 728,
+      "chars": 136084,
+      "parts": 1
+    },
+    {
+      "id": "ch12",
+      "no": "12",
+      "title": "Quantifying Uncertainty",
+      "page_from": 729,
+      "page_to": 779,
+      "chars": 90606,
+      "parts": 1
+    },
+    {
+      "id": "ch13",
+      "no": "13",
+      "title": "Probabilistic Reasoning",
+      "page_from": 780,
+      "page_to": 863,
+      "chars": 157871,
+      "parts": 1
+    },
+    {
+      "id": "ch14",
+      "no": "14",
+      "title": "Probabilistic Reasoning over Time",
+      "page_from": 864,
+      "page_to": 926,
+      "chars": 131035,
+      "parts": 1
+    },
+    {
+      "id": "ch15",
+      "no": "15",
+      "title": "Probabilistic Programming",
+      "page_from": 927,
+      "page_to": 974,
+      "chars": 88480,
+      "parts": 1
+    },
+    {
+      "id": "ch16",
+      "no": "16",
+      "title": "Making Simple Decisions",
+      "page_from": 975,
+      "page_to": 1036,
+      "chars": 110557,
+      "parts": 1
+    },
+    {
+      "id": "ch17",
+      "no": "17",
+      "title": "Making Complex Decisions",
+      "page_from": 1037,
+      "page_to": 1100,
+      "chars": 117742,
+      "parts": 1
+    },
+    {
+      "id": "ch18",
+      "no": "18",
+      "title": "Multiagent Decision Making",
+      "page_from": 1101,
+      "page_to": 1200,
+      "chars": 175827,
+      "parts": 1
+    },
+    {
+      "id": "ch19",
+      "no": "19",
+      "title": "Learning from Examples",
+      "page_from": 1201,
+      "page_to": 1328,
+      "chars": 223966,
+      "parts": 1
+    },
+    {
+      "id": "ch20",
+      "no": "20",
+      "title": "Learning Probabilistic Models",
+      "page_from": 1329,
+      "page_to": 1377,
+      "chars": 87146,
+      "parts": 1
+    },
+    {
+      "id": "ch21",
+      "no": "21",
+      "title": "Deep Learning",
+      "page_from": 1378,
+      "page_to": 1448,
+      "chars": 133022,
+      "parts": 1
+    },
+    {
+      "id": "ch22",
+      "no": "22",
+      "title": "Reinforcement Learning",
+      "page_from": 1449,
+      "page_to": 1511,
+      "chars": 118372,
+      "parts": 1
+    },
+    {
+      "id": "ch23",
+      "no": "23",
+      "title": "Natural Language Processing",
+      "page_from": 1512,
+      "page_to": 1572,
+      "chars": 105453,
+      "parts": 1
+    },
+    {
+      "id": "ch24",
+      "no": "24",
+      "title": "Deep Learning for Natural Language Processing",
+      "page_from": 1573,
+      "page_to": 1615,
+      "chars": 73904,
+      "parts": 1
+    },
+    {
+      "id": "ch25",
+      "no": "25",
+      "title": "Computer Vision",
+      "page_from": 1616,
+      "page_to": 1687,
+      "chars": 124342,
+      "parts": 1
+    },
+    {
+      "id": "ch26",
+      "no": "26",
+      "title": "Robotics",
+      "page_from": 1689,
+      "page_to": 1790,
+      "chars": 159446,
+      "parts": 1
+    },
+    {
+      "id": "ch27",
+      "no": "27",
+      "title": "Philosophy, Ethics, and Safety of AI",
+      "page_from": 1791,
+      "page_to": 1844,
+      "chars": 111641,
+      "parts": 1
+    },
+    {
+      "id": "ch28",
+      "no": "28",
+      "title": "The Future of AI",
+      "page_from": 1845,
+      "page_to": 1862,
+      "chars": 36867,
+      "parts": 1
+    },
+    {
+      "id": "appA",
+      "no": "A",
+      "title": "Mathematical Background",
+      "page_from": 1863,
+      "page_to": 1878,
+      "chars": 22895,
+      "parts": 1
+    },
+    {
+      "id": "appB",
+      "no": "B",
+      "title": "Notes on Languages and Algorithms",
+      "page_from": 1879,
+      "page_to": 1884,
+      "chars": 7294,
+      "parts": 1
+    },
+    {
+      "id": "u1885001",
+      "no": null,
+      "title": "Bibliography",
+      "page_from": 1885,
+      "page_to": 2124,
+      "chars": 306174,
+      "parts": 103
+    },
+    {
+      "id": "u2125001",
+      "no": null,
+      "title": "Index",
+      "page_from": 2125,
+      "page_to": 2145,
+      "chars": 10365,
+      "parts": 1
+    }
+  ]
+}

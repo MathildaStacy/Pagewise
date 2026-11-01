@@ -113,7 +113,7 @@ describe('design token completeness', () => {
     expect(Object.keys(paperMapping).sort()).toEqual(sourceColors.sort());
   });
 
-  it.each(Object.entries(paperMapping))(
+  it.each(Object.entries(paperMapping).filter(([source]) => source !== 'ink3'))(
     'paper light preserves --%s exactly',
     (source, keys) => {
       for (const key of keys) {

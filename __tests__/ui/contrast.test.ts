@@ -2,6 +2,7 @@ import { compositeColor, contrastRatio, parseColor } from '@ui/kit/color';
 import type { ColorTokens, Tokens } from '@ui/kit/tokens';
 import { paperTokens } from '@ui/skins/paper/tokens';
 import { glassTokens } from '@ui/skins/glass/tokens';
+import { skins } from '@ui/skins';
 
 const variants: [string, Tokens][] = [
   ['paper light', paperTokens.light],
@@ -9,6 +10,22 @@ const variants: [string, Tokens][] = [
   ['glass light', glassTokens.light],
   ['glass dark', glassTokens.dark],
 ];
+
+describe.each(
+  Object.values(skins).flatMap(skin =>
+    Object.entries(skin.tokens).map(
+      ([scheme, tokens]) => [skin.id + '/' + scheme, tokens] as const,
+    ),
+  ),
+)('%s reading labels', (_, tokens) => {
+  it('keeps auxiliary text readable on the page and interface surfaces', () => {
+    for (const bg of [tokens.color.surface, tokens.color.bg])
+      expect(contrastRatio(tokens.color.ink3, bg)).toBeGreaterThanOrEqual(4.5);
+    expect(
+      contrastRatio(tokens.color.readerPageLabel, tokens.color.paper),
+    ).toBeGreaterThanOrEqual(4.5);
+  });
+});
 
 type Pair = {
   fg: keyof ColorTokens;

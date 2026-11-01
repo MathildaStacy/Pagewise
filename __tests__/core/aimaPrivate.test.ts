@@ -3,6 +3,8 @@ import path from 'node:path';
 import { buildMap } from '@core/map';
 import { layoutCharacters, ruleEdits } from '@core/refinement';
 import type { Block, Section } from '@core/types';
+import { learningLeaves } from '@core/learningScope';
+import { structureIssues } from '@core/map/structureChecks';
 
 // The real AIMA 4th-edition MinerU result (all 2145 pages), exported from the app into the
 // gitignored private fixture folder. Skipped when the book is not on this machine.
@@ -19,6 +21,39 @@ run('AIMA map and structure refinement on the real parse', () => {
   const own = (s: Section) =>
     blocks.filter(b => b.seq >= s.block_from! && b.seq <= s.block_to!);
 
+  it('excludes bibliography from the default path and surfaces the missing 20.3.1 beside its source', () => {
+    const bibliography = map.sections.find(s => s.title === 'Bibliography')!;
+    expect(bibliography.parts).toBe(103);
+    expect(
+      learningLeaves(map.sections).some(s => s.id === bibliography.id),
+    ).toBe(false);
+    expect(map.sections.some(s => s.id === bibliography.id)).toBe(true);
+    expect(structureIssues(map.sections)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          message: expect.stringContaining('20.3.1'),
+          sectionId: '20.3-intro',
+        }),
+        expect.objectContaining({
+          message: expect.stringContaining('26.2 编号重复'),
+        }),
+      ]),
+    );
+  });
+
+  it('starts the real learning route at chapter 1 rather than the repeated title pages and preface group', () => {
+    const route = learningLeaves(
+      map.sections,
+      {},
+      'Artificial Intelligence A Modern Approach',
+    );
+    expect(route[0].id).toBe('ch1-intro');
+    expect(route.some(s => s.page_to !== null && s.page_to < 29)).toBe(false);
+    expect(map.sections.some(s => s.title === 'New to this edition')).toBe(
+      true,
+    );
+  });
+
   it('follows the printed structure: 28 chapters, two appendices, numbered sections in order', () => {
     const top = map.sections.filter(s => s.level === 1 && s.no);
     expect(top.map(s => s.id)).toEqual([
@@ -33,7 +68,7 @@ run('AIMA map and structure refinement on the real parse', () => {
       ),
     ).toEqual([]);
     // Before: 76 IDs were suffixed because contents lines took them. The one left is a
-    // MinerU misread of `26.2.1` as a second `26.2`.
+    // source book itself repeats `26.2` on physical page 1692.
     expect(
       map.sections.filter(s => /_[bp]\d+$/.test(s.id)).map(s => s.id),
     ).toEqual(['26.2_b1692003']);

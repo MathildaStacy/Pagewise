@@ -152,6 +152,7 @@ it('bounds the map check notice for a long book while retaining per-row flags', 
   const section = record.sections.find(value => value.is_leaf)!;
   const sections = Array.from({ length: 846 }, (_, index) => ({
     ...section,
+    no: null,
     id: `internal-long-section-${index}`,
     parent_id: null,
     ord: index,
@@ -168,11 +169,18 @@ it('bounds the map check notice for a long book while retaining per-row flags', 
 it('asks to confirm only doubtful sections, not long units split into parts', async () => {
   const record = await loadBookMap(c, 'aima');
   const section = record.sections.find(value => value.is_leaf)!;
-  const chapter = { ...section, id: 'ch', parent_id: null, flag: null };
+  const chapter = {
+    ...section,
+    no: null,
+    id: 'ch',
+    parent_id: null,
+    flag: null,
+  };
   const sections = [
     chapter,
     ...(['split', 'split', 'merged', null] as const).map((flag, index) => ({
       ...section,
+      no: null,
       id: `s${index}`,
       parent_id: 'ch',
       ord: index + 1,
@@ -204,6 +212,56 @@ it('counts numbered chapters while retaining unnumbered front matter in the map'
   );
   expect(map.check.text).toContain('2 章');
   expect(map.chapters).toHaveLength(3);
+});
+it.each(['all', 'learning'] as const)(
+  'counts chapters inside Parts without counting appendix answers or references in the %s map',
+  async view => {
+    const record = await loadBookMap(c, 'aima');
+    const root = record.sections.find(value => !value.parent_id)!;
+    const section = (
+      id: string,
+      no: string | null,
+      title: string,
+      parent_id: string | null = null,
+      is_leaf = true,
+    ) => ({ ...root, id, no, title, parent_id, is_leaf });
+    const map = presentMap(
+      {
+        ...record,
+        sections: [
+          section('chapter-1', '1', 'Introduction'),
+          section('part', null, 'Part 1: Data Analysis', null, false),
+          section('chapter-2', '2', 'Data Structures', 'part', false),
+          section('section-2.1', '2.1', 'Bars', 'chapter-2'),
+          section('chapter-3', '3', 'Labeling', 'part'),
+          section('appendix', 'A', 'Exercise Answers', null, false),
+          section('answer-1', '1', 'Introduction', 'appendix'),
+          section('references', null, 'References', null, false),
+          section('reference-1', '1', 'Introduction', 'references'),
+        ],
+        // Including appendix answers must not turn them into body chapters.
+        learningScope: { appendix: 'include' },
+      },
+      {},
+      view,
+    );
+    expect(map.check.text).toContain('3 章');
+  },
+);
+it('keeps a directory-entry count for unnumbered topic roots', async () => {
+  const record = await loadBookMap(c, 'aima');
+  const root = record.sections.find(value => !value.parent_id)!;
+  const map = presentMap(
+    {
+      ...record,
+      sections: [
+        { ...root, id: 'topic-a', no: null, title: 'Topic A' },
+        { ...root, id: 'topic-b', no: null, title: 'Topic B' },
+      ],
+    },
+    {},
+  );
+  expect(map.check.text).toContain('2 个目录条目');
 });
 it('uses the current section chapter ancestor rather than an earlier unnumbered Cover root', async () => {
   const record = (await loadShelf(c)).find(value => value.book.id === 'aima')!;
@@ -403,6 +461,7 @@ it('map section sheet, literal search and start confirmation preserve prior prog
     name: 'Study',
     bookId: 'aima',
     sectionId: '3.5.3',
+    mode: 'listen',
   });
 });
 it('map flags save manual confirmation and refuse a split without a second source heading', async () => {

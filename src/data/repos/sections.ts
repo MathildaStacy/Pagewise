@@ -6,6 +6,12 @@ import type {
 } from '@core/types';
 import type { Db } from '../db';
 import {
+  learningLeaves,
+  learningScopeKey,
+  type LearningScope,
+} from '@core/learningScope';
+import { createSettingsRepo } from './settings';
+import {
   insertRow,
   parseJson,
   serializeJson,
@@ -79,6 +85,24 @@ const toRow = (section: Partial<Section>): SqlValues => ({
 });
 
 export function createSectionsRepo(db: Db) {
+  const settings = createSettingsRepo(db);
+  const scope = (bookId: string) =>
+    settings.get<LearningScope>(learningScopeKey(bookId), {});
+  const tree = async (bookId: string): Promise<Section[]> =>
+    (
+      await db.all<SectionRow>(
+        'SELECT * FROM section WHERE book_id=? ORDER BY ord,id',
+        [bookId],
+      )
+    ).map(fromRow);
+  const selectedLeaves = async (bookId: string) => {
+    const [sections, overrides, book] = await Promise.all([
+      tree(bookId),
+      scope(bookId),
+      db.get<{ title: string }>('SELECT title FROM book WHERE id=?', [bookId]),
+    ]);
+    return learningLeaves(sections, overrides, book?.title);
+  };
   const get = async (
     bookId: string,
     id: string,
@@ -90,13 +114,19 @@ export function createSectionsRepo(db: Db) {
     return row && fromRow(row);
   };
   return {
-    async tree(bookId: string): Promise<Section[]> {
-      return (
-        await db.all<SectionRow>(
-          'SELECT * FROM section WHERE book_id=? ORDER BY ord,id',
-          [bookId],
-        )
-      ).map(fromRow);
+    tree,
+    learningScope: scope,
+    learningLeaves: selectedLeaves,
+    async setLearningScope(
+      bookId: string,
+      id: string,
+      value: 'include' | 'exclude',
+    ) {
+      const overrides = await scope(bookId);
+      await settings.set(learningScopeKey(bookId), {
+        ...overrides,
+        [id]: value,
+      });
     },
     get,
     async replaceAll(
@@ -183,11 +213,9 @@ export function createSectionsRepo(db: Db) {
       if (!current) {
         return undefined;
       }
-      const row = await db.get<SectionRow>(
-        'SELECT * FROM section WHERE book_id=? AND is_leaf=1 AND ord>? ORDER BY ord,id LIMIT 1',
-        [bookId, current.ord],
+      return (await selectedLeaves(bookId)).find(
+        section => section.ord > current.ord,
       );
-      return row && fromRow(row);
     },
     async parts(bookId: string, id: string): Promise<SectionPart[]> {
       return db.all<SectionPart>(

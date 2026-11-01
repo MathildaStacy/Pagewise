@@ -66,6 +66,43 @@ const cards = () =>
     .messages.filter(m => m.kind === 'card')
     .map(m => ({ message: m, card: parseStudyCard(m.content) }));
 
+it('starts the selected chapter after reading a different source without retaining its reader target', async () => {
+  await setup(scripted([]));
+  await session.open({
+    sectionId: '3.4.2',
+    mode: 'read',
+    preserveMain: true,
+    autoStart: false,
+  });
+  expect(state().readerSectionId).toBe('3.4.2');
+  await session.open({ sectionId: '3.5.3', mode: 'listen', autoStart: false });
+  const selected = await c.repos.sections.get('aima', '3.5.3');
+  expect(state()).toMatchObject({
+    mode: 'listen',
+    readerSectionId: null,
+    main: { sectionId: '3.5.3', part: 0, step: 0 },
+    readAnchor: selected!.block_from,
+    section: { id: '3.5.3' },
+  });
+  expect(state().conversation?.section_id).toBe('3.5.3');
+  await session.setMode('read');
+  expect(state().readerSectionId).toBeNull();
+  expect((await c.repos.study.get('aima'))?.main_section).toBe('3.5.3');
+});
+
+it('opens EPUB directly in reflow even when old preferences request the PDF view', async () => {
+  await setup(scripted([]));
+  await session.dispose();
+  await c.repos.books.update('aima', { format: 'epub' });
+  await c.repos.study.patch('aima', { reader_view: 'orig' });
+  session = new StudySession(c, 'aima');
+  await session.open({ mode: 'read', autoStart: false });
+  expect(state().readerView).toBe('flow');
+  await session.setReaderView('orig');
+  expect(state().readerView).toBe('flow');
+  expect((await c.repos.study.get('aima'))?.reader_view).toBe('flow');
+});
+
 it('isolates chapter conversations, restores their progress and config, and reopens the selected conversation', async () => {
   const ai = scripted([text('第一段对话的回答'), text('第二段对话的回答')]);
   await setup(ai);

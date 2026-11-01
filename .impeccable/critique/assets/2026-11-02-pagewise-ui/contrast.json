@@ -1,0 +1,102 @@
+[
+  {
+    "skin": "paper",
+    "scheme": "light",
+    "ink3": "#9AA0A8",
+    "surface": "#FFFFFF",
+    "ink3_on_surface": 2.64,
+    "ink3_on_background": 2.38,
+    "pageLabel_on_paper": 2.41,
+    "body_on_paper": 14.01
+  },
+  {
+    "skin": "paper",
+    "scheme": "dark",
+    "ink3": "#7D828A",
+    "surface": "#1C1D21",
+    "ink3_on_surface": 4.36,
+    "ink3_on_background": 4.81,
+    "pageLabel_on_paper": 6.65,
+    "body_on_paper": 11.77
+  },
+  {
+    "skin": "glass",
+    "scheme": "light",
+    "ink3": "rgba(60,60,67,.32)",
+    "surface": "#FFFFFF",
+    "ink3_on_surface": 1.8,
+    "ink3_on_background": 1.77,
+    "pageLabel_on_paper": 1.8,
+    "body_on_paper": 21
+  },
+  {
+    "skin": "glass",
+    "scheme": "dark",
+    "ink3": "rgba(235,235,245,.3)",
+    "surface": "#1C1C1E",
+    "ink3_on_surface": 2.48,
+    "ink3_on_background": 2.25,
+    "pageLabel_on_paper": 2.48,
+    "body_on_paper": 17.01
+  },
+  {
+    "skin": "meta",
+    "scheme": "light",
+    "ink3": "#8A8D91",
+    "surface": "#FFFFFF",
+    "ink3_on_surface": 3.33,
+    "ink3_on_background": 2.97,
+    "pageLabel_on_paper": 3.33,
+    "body_on_paper": 20.38
+  },
+  {
+    "skin": "meta",
+    "scheme": "dark",
+    "ink3": "#8A8D91",
+    "surface": "#242526",
+    "ink3_on_surface": 4.61,
+    "ink3_on_background": 5.28,
+    "pageLabel_on_paper": 4.61,
+    "body_on_paper": 12.3
+  },
+  {
+    "skin": "google",
+    "scheme": "light",
+    "ink3": "#747775",
+    "surface": "#FFFFFF",
+    "ink3_on_surface": 4.53,
+    "ink3_on_background": 4.53,
+    "pageLabel_on_paper": 4.53,
+    "body_on_paper": 16.48
+  },
+  {
+    "skin": "google",
+    "scheme": "dark",
+    "ink3": "#8E918F",
+    "surface": "#131314",
+    "ink3_on_surface": 5.83,
+    "ink3_on_background": 5.83,
+    "pageLabel_on_paper": 5.19,
+    "body_on_paper": 12.86
+  },
+  {
+    "skin": "win11",
+    "scheme": "light",
+    "ink3": "#8C8C96",
+    "surface": "#FCFCFD",
+    "ink3_on_surface": 3.25,
+    "ink3_on_background": 3.08,
+    "pageLabel_on_paper": 3.33,
+    "body_on_paper": 17.17
+  },
+  {
+    "skin": "win11",
+    "scheme": "dark",
+    "ink3": "rgba(255,255,255,.48)",
+    "surface": "#26262B",
+    "ink3_on_surface": 4.62,
+    "ink3_on_background": 4.9,
+    "pageLabel_on_paper": 4.73,
+    "body_on_paper": 12.83
+  }
+]

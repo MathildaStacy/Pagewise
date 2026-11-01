@@ -459,8 +459,8 @@ function ModeSwitch({ value, onChange }: ModeSwitchProps) {
       <Segmented
         accessibilityLabel="学习方式"
         options={[
-          { key: 'read', label: '读书' },
-          { key: 'listen', label: '听讲' },
+          { key: 'listen', label: '伴读' },
+          { key: 'read', label: '原文' },
         ]}
         value={value}
         onChange={next => onChange(next as 'read' | 'listen')}

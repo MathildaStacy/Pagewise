@@ -463,7 +463,19 @@ export async function importPdfResult(
     )
       throw new Error('解析结果中的页码或段落序号不正确');
     let imagePath: string | null = null;
-    if (raw.imageFile) {
+    if (raw.sourcePage) {
+      const source = sourcePath(runtime, bookId);
+      try {
+        const rendered = await runtime.pdf.render(source, raw.page, 1600);
+        imagePath = `images/p${raw.page}_original.png`;
+        await runtime.files.copy(
+          decodeURIComponent(rendered.uri.replace(/^file:\/\//, '')),
+          `${bookDirectory(runtime, bookId)}/${imagePath}`,
+        );
+      } finally {
+        await runtime.pdf.close(source);
+      }
+    } else if (raw.imageFile) {
       if (
         raw.imageFile.startsWith('/') ||
         raw.imageFile.split('/').includes('..')

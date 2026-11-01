@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from 'react-native';
 import {
   Icon,
+  Gradient,
   SkinProvider,
   makeStyles,
   useTokens,
@@ -31,12 +32,16 @@ function SkinPreview({ skinId }: { skinId: SkinId }) {
   );
 }
 function PreviewContent() {
+  const t = useTokens();
   const { groupedLists } = usePresentation(),
     s = usePreviewStyles(groupedLists);
   return (
     <View style={s.frame}>
       <View style={groupedLists ? s.largeTitle : s.nav} />
-      <View style={s.card} />
+      <Gradient
+        colors={t.brand?.ai ?? [t.color.brandStart, t.color.brandEnd]}
+        style={s.card}
+      />
       {[0, 1, ...(!groupedLists ? [2] : [])].map(i => (
         <View key={i} style={[s.line, !groupedLists && i === 2 && s.short]} />
       ))}
@@ -166,15 +171,8 @@ const usePreviewStyles = (g: boolean) =>
       marginTop: g ? 0 : 8,
       height: 42,
       borderRadius: g ? t.shape.sm + 4 : t.shape.sm,
-      backgroundImage: `linear-gradient(${g ? 140 : 135}deg, ${
-        g ? t.color.brandStart : t.color.accent
-      }, ${g ? t.color.brandEnd : t.color.accentEnd})`,
       ...(t.brand
         ? {
-            backgroundImage:
-              t.brand.kind === 'google'
-                ? undefined
-                : `linear-gradient(110deg, ${t.brand.ai.join(',')})`,
             backgroundColor: t.color.accentBg,
             borderRadius: t.shape.md,
           }

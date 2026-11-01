@@ -311,7 +311,7 @@ it.each(['paper', 'glass'] as const)(
     const label = pageNumber.props.children;
     if (skin === 'paper')
       expect(StyleSheet.flatten(label.props.style)).toMatchObject({
-        color: '#A8A196',
+        color: '#736D64',
         borderTopColor: '#DDD6C8',
       });
     expect(StyleSheet.flatten(label.props.style).textAlign).toBe(

@@ -434,6 +434,71 @@ test('auth expiry pauses all work, persists expiry and resumes accepted batch af
   );
   expect(runtime.mineru.requestUpload).not.toHaveBeenCalled();
 });
+test.each(['missing_token', 'A0211', '-60018'])(
+  '%s explains a queue-wide pause on every waiting book and preserves accepted batches',
+  async code => {
+    await book();
+    await part({ stage: 'running', batch_id: 'accepted-a' });
+    await book('queued');
+    await part({
+      book_id: 'queued',
+      next_poll_at: new Date(clock.now().getTime() + 90000).toISOString(),
+    });
+    await book('accepted');
+    await part({
+      book_id: 'accepted',
+      stage: 'running',
+      batch_id: 'accepted-b',
+      next_poll_at: new Date(clock.now().getTime() + 90000).toISOString(),
+    });
+    await book('ready');
+    await c.repos.books.update('ready', { status: 'ready' });
+    await part({ book_id: 'ready', stage: 'done' });
+    jest
+      .mocked(runtime.mineru.query)
+      .mockRejectedValueOnce(new MineruError(code));
+    await getParseQueue(c).resume();
+    await settle(
+      async () =>
+        (await c.repos.books.list()).filter(value => value.status === 'paused')
+          .length === 3,
+    );
+    for (const id of ['book', 'queued', 'accepted']) {
+      expect(await c.repos.parts.get(id, 1)).toMatchObject({
+        error_code: code,
+        next_poll_at: null,
+      });
+    }
+    expect(await c.repos.parts.get('accepted', 1)).toMatchObject({
+      stage: 'running',
+      batch_id: 'accepted-b',
+    });
+    expect(await c.repos.books.get('ready')).toMatchObject({ status: 'ready' });
+    expect(await c.repos.parts.get('ready', 1)).toMatchObject({
+      stage: 'done',
+      error_code: null,
+    });
+    await settle(
+      async () =>
+        code !== '-60018' ||
+        (await c.repos.settings.get('parseQueue.dailyLimitDate', null)) ===
+          clock.today(),
+    );
+    clock.advance(86400000);
+    await getParseQueue(c).resume();
+    await settle(
+      async () =>
+        (await c.repos.parts.get('accepted', 1))?.stage === 'done' &&
+        (await c.repos.parts.get('book', 1))?.stage === 'done' &&
+        (await c.repos.parts.get('queued', 1))?.stage === 'waiting',
+    );
+    expect(runtime.mineru.requestUpload).toHaveBeenCalledTimes(1);
+    expect(runtime.mineru.query).toHaveBeenCalledWith(
+      'accepted-b',
+      expect.any(Object),
+    );
+  },
+);
 test('oversized actual split bisects before requesting, and priority ranges are uploaded first', async () => {
   await book();
   await part();
@@ -538,6 +603,40 @@ test('ready page is contiguous while priority-only completed blocks remain learn
     '1': expect.stringContaining('扫描版'),
   });
 });
+test('persists a locally rendered original for a page whose detected content could not be read', async () => {
+  await book();
+  jest.mocked(runtime.adapt).mockResolvedValueOnce({
+    blocks: [
+      {
+        seq: 2001,
+        page: 2,
+        type: 'image',
+        text: '此页文字未能识别，已保留原页图像。',
+        bbox: [0, 0, 1, 1],
+        sourcePage: true,
+      },
+    ],
+    pageNumbers: [],
+    pagesWithContent: [2],
+  });
+  await importPdfResult(c, await part(), '/result');
+  expect(runtime.pdf.render).toHaveBeenCalledWith(
+    '/docs/books/book/source.pdf',
+    2,
+    1600,
+  );
+  expect(runtime.files.copy).toHaveBeenCalledWith(
+    '/cache/pages/front page.png',
+    '/docs/books/book/images/p2_original.png',
+  );
+  expect(runtime.pdf.close).toHaveBeenCalledWith('/docs/books/book/source.pdf');
+  expect(await c.repos.blocks.get('book', 2001)).toMatchObject({
+    type: 'image',
+    image_path: 'images/p2_original.png',
+    section_id: expect.any(String),
+  });
+});
+
 test('reparse migrates citations and highlights; unmatched annotations become visible notes instead of reused seq', async () => {
   await book();
   const p = await part();

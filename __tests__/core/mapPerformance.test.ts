@@ -83,7 +83,11 @@ const privateOutline = path.join(privateRoot, 'benchmark-outline.json');
       // 1170 → 1053: run-in subheadings the bookmarks skip (`What you observe`) stay inside
       // their unit; each chapter's opening is its own `本章导读` unit.
       expect(result.sections).toHaveLength(1053);
-      expect(result.parts).toHaveLength(215);
+      // The short title page now stays separate from the copyright reference unit.
+      expect(result.parts).toHaveLength(216);
+      expect(
+        result.sections.find(s => s.title === 'Copyrightpage')?.block_from,
+      ).toBe(3001);
       expect(compare.mock.calls.length).toBeLessThan(12000);
     } finally {
       compare.mockRestore();

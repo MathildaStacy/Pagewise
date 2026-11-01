@@ -161,6 +161,8 @@ export interface RawBlock {
   latex?: string;
   html?: string;
   imageFile?: string;
+  /** The parser detected a page's content but returned none; render the local original. */
+  sourcePage?: boolean;
   caption?: string;
 }
 export interface PrintedPageNumber {

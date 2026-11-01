@@ -1,0 +1,482 @@
+{
+  "name": "ml-trading-full",
+  "blocks": 8859,
+  "pages": [
+    1,
+    825
+  ],
+  "runtimeMs": 378,
+  "sections": 1079,
+  "roots": 38,
+  "leaves": 868,
+  "emptyLeaves": 2,
+  "chars": {
+    "min": 221,
+    "p50": 1853,
+    "p90": 4061,
+    "max": 56390,
+    "under1000": 140,
+    "over10000": 3
+  },
+  "uncovered": [],
+  "overlapping": [],
+  "flagCounts": {
+    "missing": 5,
+    "merged": 5,
+    "split": 91
+  },
+  "longest": [
+    {
+      "id": "bookmark1030",
+      "title": "Index",
+      "chars": 56390,
+      "words": 7533,
+      "parts": 19,
+      "page_from": 800,
+      "page_to": 825
+    },
+    {
+      "id": "u10001",
+      "title": "Table of Contents",
+      "chars": 41486,
+      "words": 6554,
+      "parts": 14,
+      "page_from": 10,
+      "page_to": 33
+    },
+    {
+      "id": "u372001",
+      "title": "Time series foundation models",
+      "chars": 10440,
+      "words": 1405,
+      "parts": 4,
+      "page_from": 372,
+      "page_to": 375
+    },
+    {
+      "id": "u74005",
+      "title": "Finance-specific failure modes",
+      "chars": 9370,
+      "words": 1326,
+      "parts": 4,
+      "page_from": 74,
+      "page_to": 78
+    },
+    {
+      "id": "u277008",
+      "title": "Transformer architectures",
+      "chars": 9363,
+      "words": 1231,
+      "parts": 4,
+      "page_from": 277,
+      "page_to": 281
+    },
+    {
+      "id": "u105001",
+      "title": "Information-driven bars",
+      "chars": 8895,
+      "words": 1355,
+      "parts": 3,
+      "page_from": 105,
+      "page_to": 108
+    },
+    {
+      "id": "u445005",
+      "title": "Empirical method comparison",
+      "chars": 8606,
+      "words": 1204,
+      "parts": 3,
+      "page_from": 445,
+      "page_to": 448
+    },
+    {
+      "id": "u236011",
+      "title": "Interaction diagnostics",
+      "chars": 8013,
+      "words": 1155,
+      "parts": 3,
+      "page_from": 236,
+      "page_to": 239
+    },
+    {
+      "id": "u170008",
+      "title": "Sources of edge as durability filters",
+      "chars": 7944,
+      "words": 1079,
+      "parts": 3,
+      "page_from": 170,
+      "page_to": 173
+    },
+    {
+      "id": "u609003",
+      "title": "The cost survival landscape",
+      "chars": 7783,
+      "words": 1192,
+      "parts": 3,
+      "page_from": 608,
+      "page_to": 611
+    },
+    {
+      "id": "u286007",
+      "title": "Text signal families and factor construction",
+      "chars": 7613,
+      "words": 1054,
+      "parts": 3,
+      "page_from": 286,
+      "page_to": 289
+    },
+    {
+      "id": "u518001",
+      "title": "DeePM – Structural priors and a regime-robust loss",
+      "chars": 7595,
+      "words": 1122,
+      "parts": 3,
+      "page_from": 518,
+      "page_to": 520
+    }
+  ],
+  "rootsList": [
+    {
+      "id": "bookmark1",
+      "no": null,
+      "title": "Cover",
+      "page_from": 1,
+      "page_to": 1,
+      "chars": 0,
+      "parts": 0
+    },
+    {
+      "id": "u1001",
+      "no": null,
+      "title": "Machine Learning for Trading",
+      "page_from": 1,
+      "page_to": 1,
+      "chars": 221,
+      "parts": 1
+    },
+    {
+      "id": "bookmark2",
+      "no": null,
+      "title": "FM",
+      "page_from": 2,
+      "page_to": 2,
+      "chars": 0,
+      "parts": 0
+    },
+    {
+      "id": "u2001",
+      "no": null,
+      "title": "Machine Learning for Trading Third Edition",
+      "page_from": 2,
+      "page_to": 2,
+      "chars": 147,
+      "parts": 1
+    },
+    {
+      "id": "bookmark3",
+      "no": null,
+      "title": "Copyrightpage",
+      "page_from": 2,
+      "page_to": 4,
+      "chars": 1834,
+      "parts": 1
+    },
+    {
+      "id": "u5001",
+      "no": null,
+      "title": "Foreword",
+      "page_from": 5,
+      "page_to": 6,
+      "chars": 3067,
+      "parts": 1
+    },
+    {
+      "id": "bookmark5",
+      "no": null,
+      "title": "Contributors",
+      "page_from": 7,
+      "page_to": 8,
+      "chars": 2055,
+      "parts": 1
+    },
+    {
+      "id": "u10001",
+      "no": null,
+      "title": "Table of Contents",
+      "page_from": 10,
+      "page_to": 33,
+      "chars": 41486,
+      "parts": 14
+    },
+    {
+      "id": "u34001",
+      "no": null,
+      "title": "Preface",
+      "page_from": 34,
+      "page_to": 41,
+      "chars": 15293,
+      "parts": 1
+    },
+    {
+      "id": "u42001",
+      "no": "1",
+      "title": "The Process Is Your Edge",
+      "page_from": 42,
+      "page_to": 61,
+      "chars": 53094,
+      "parts": 1
+    },
+    {
+      "id": "u62001",
+      "no": "2",
+      "title": "The Financial Data Universe",
+      "page_from": 62,
+      "page_to": 86,
+      "chars": 56530,
+      "parts": 1
+    },
+    {
+      "id": "u88001",
+      "no": "3",
+      "title": "Market Microstructure",
+      "page_from": 88,
+      "page_to": 115,
+      "chars": 67820,
+      "parts": 1
+    },
+    {
+      "id": "u116001",
+      "no": "4",
+      "title": "Fundamental and Alternative Data",
+      "page_from": 116,
+      "page_to": 136,
+      "chars": 51042,
+      "parts": 1
+    },
+    {
+      "id": "u138001",
+      "no": "5",
+      "title": "Synthetic Financial Data",
+      "page_from": 138,
+      "page_to": 162,
+      "chars": 60731,
+      "parts": 1
+    },
+    {
+      "id": "u164001",
+      "no": "6",
+      "title": "Strategy Research Framework",
+      "page_from": 164,
+      "page_to": 186,
+      "chars": 58647,
+      "parts": 1
+    },
+    {
+      "id": "u188001",
+      "no": "7",
+      "title": "Defining the Learning Task",
+      "page_from": 188,
+      "page_to": 214,
+      "chars": 63021,
+      "parts": 1
+    },
+    {
+      "id": "u216001",
+      "no": "8",
+      "title": "Financial Feature Engineering",
+      "page_from": 216,
+      "page_to": 241,
+      "chars": 63562,
+      "parts": 1
+    },
+    {
+      "id": "u242001",
+      "no": "9",
+      "title": "Model-Based Feature Extraction",
+      "page_from": 242,
+      "page_to": 268,
+      "chars": 70717,
+      "parts": 1
+    },
+    {
+      "id": "u268002",
+      "no": "10",
+      "title": "Text Feature Engineering",
+      "page_from": 268,
+      "page_to": 291,
+      "chars": 63763,
+      "parts": 1
+    },
+    {
+      "id": "u292001",
+      "no": "11",
+      "title": "11 The ML Pipeline",
+      "page_from": 292,
+      "page_to": 326,
+      "chars": 89500,
+      "parts": 1
+    },
+    {
+      "id": "u328001",
+      "no": "12",
+      "title": "Advanced Models for Tabular Data",
+      "page_from": 328,
+      "page_to": 355,
+      "chars": 74087,
+      "parts": 1
+    },
+    {
+      "id": "u356001",
+      "no": "13",
+      "title": "Deep Learning for Time Series",
+      "page_from": 356,
+      "page_to": 386,
+      "chars": 83696,
+      "parts": 1
+    },
+    {
+      "id": "u388001",
+      "no": "14",
+      "title": "Latent Factor Models",
+      "page_from": 388,
+      "page_to": 420,
+      "chars": 88316,
+      "parts": 1
+    },
+    {
+      "id": "u422001",
+      "no": "15",
+      "title": "Causal Machine Learning",
+      "page_from": 422,
+      "page_to": 451,
+      "chars": 83115,
+      "parts": 1
+    },
+    {
+      "id": "u452001",
+      "no": "16",
+      "title": "Strategy Simulation",
+      "page_from": 452,
+      "page_to": 487,
+      "chars": 90948,
+      "parts": 1
+    },
+    {
+      "id": "u488001",
+      "no": "17",
+      "title": "Portfolio Construction",
+      "page_from": 488,
+      "page_to": 522,
+      "chars": 90113,
+      "parts": 1
+    },
+    {
+      "id": "u524001",
+      "no": "18",
+      "title": "Transaction Costs",
+      "page_from": 524,
+      "page_to": 552,
+      "chars": 68501,
+      "parts": 1
+    },
+    {
+      "id": "u554001",
+      "no": "19",
+      "title": "Risk Management",
+      "page_from": 554,
+      "page_to": 581,
+      "chars": 68468,
+      "parts": 1
+    },
+    {
+      "id": "u582001",
+      "no": "20",
+      "title": "Strategy Synthesis",
+      "page_from": 582,
+      "page_to": 618,
+      "chars": 78916,
+      "parts": 1
+    },
+    {
+      "id": "u620001",
+      "no": "21",
+      "title": "Reinforcement Learning",
+      "page_from": 620,
+      "page_to": 650,
+      "chars": 69777,
+      "parts": 1
+    },
+    {
+      "id": "u650002",
+      "no": "22",
+      "title": "RAG for Financial Research",
+      "page_from": 650,
+      "page_to": 674,
+      "chars": 70276,
+      "parts": 1
+    },
+    {
+      "id": "u676001",
+      "no": "23",
+      "title": "Knowledge Graphs",
+      "page_from": 676,
+      "page_to": 698,
+      "chars": 61742,
+      "parts": 1
+    },
+    {
+      "id": "u700001",
+      "no": "24",
+      "title": "Autonomous Agents",
+      "page_from": 700,
+      "page_to": 734,
+      "chars": 102835,
+      "parts": 1
+    },
+    {
+      "id": "u736001",
+      "no": "25",
+      "title": "Live Trading Systems",
+      "page_from": 736,
+      "page_to": 764,
+      "chars": 71337,
+      "parts": 1
+    },
+    {
+      "id": "u764002",
+      "no": "26",
+      "title": "MLOps and Governance",
+      "page_from": 764,
+      "page_to": 785,
+      "chars": 52501,
+      "parts": 1
+    },
+    {
+      "id": "u786001",
+      "no": "27",
+      "title": "The Systematic Edge",
+      "page_from": 786,
+      "page_to": 794,
+      "chars": 18051,
+      "parts": 1
+    },
+    {
+      "id": "u796001",
+      "no": null,
+      "title": "Other Books You May Enjoy",
+      "page_from": 796,
+      "page_to": 799,
+      "chars": 2280,
+      "parts": 1
+    },
+    {
+      "id": "bookmark1030",
+      "no": null,
+      "title": "Index",
+      "page_from": 800,
+      "page_to": 825,
+      "chars": 56390,
+      "parts": 19
+    }
+  ]
+}

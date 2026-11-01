@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
-import { Icon, makeStyles, useTokens, usePresentation } from '@ui/kit';
+import {
+  Gradient,
+  Icon,
+  makeStyles,
+  useTokens,
+  usePresentation,
+} from '@ui/kit';
 import type { AboutState, AboutIntents } from '@features/settings/types';
 import {
   SettingsFrame,
@@ -26,9 +32,12 @@ export function AboutView({
     <SettingsFrame title="关于" state={state} back={intents.back}>
       <View style={s.hero}>
         {groupedLists ? (
-          <View style={s.logo}>
+          <Gradient
+            colors={[t.color.brandStart, t.color.brandEnd]}
+            style={s.logo}
+          >
             <Icon name="logo" size={44} color={t.color.continueInk} />
-          </View>
+          </Gradient>
         ) : null}
         <Text style={s.brand}>Pagewise</Text>
         <Pressable
@@ -91,7 +100,6 @@ const useStyles = (g: boolean) =>
       backgroundColor: g ? undefined : t.color.surface,
     },
     logo: {
-      backgroundImage: `linear-gradient(140deg, ${t.color.brandStart}, ${t.color.brandEnd})`,
       width: 84,
       height: 84,
       borderRadius: t.shape.md,

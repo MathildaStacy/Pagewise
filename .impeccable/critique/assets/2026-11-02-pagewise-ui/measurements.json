@@ -1,0 +1,51 @@
+{
+  "density_dpi": 480,
+  "pixels_per_dp": 3,
+  "resolution_px": [
+    1280,
+    2856
+  ],
+  "method": "ADB UI hierarchy bounds; scrollable answer viewport. Percentages exclude status/navigation bars and the keyboard.",
+  "paper_font100_no_keyboard": {
+    "app_content_y_px": [
+      156,
+      2784
+    ],
+    "answer_y_px": [
+      575,
+      2329
+    ],
+    "answer_height_dp": 584.6666666666666,
+    "answer_share": 0.6674,
+    "quick_action_height_dp": 32
+  },
+  "paper_dark_font130_keyboard": {
+    "app_content_y_px": [
+      156,
+      1776
+    ],
+    "answer_y_px": [
+      648,
+      1302
+    ],
+    "answer_height_dp": 218,
+    "answer_share": 0.4037
+  },
+  "google_font130_keyboard": {
+    "app_content_y_px": [
+      156,
+      1776
+    ],
+    "answer_y_px": [
+      752,
+      1284
+    ],
+    "answer_height_dp": 177.33,
+    "answer_share": 0.3284
+  },
+  "limitations": [
+    "Single phone emulator in portrait; not a tablet/landscape/TalkBack/performance certification.",
+    "Study, review and theme screenshots use the built-in demo library; actual imported Alice EPUB screenshots are retained in the preceding review assets.",
+    "Ratios describe the captured states, not all possible conversations."
+  ]
+}

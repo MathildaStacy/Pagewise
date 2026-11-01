@@ -133,6 +133,18 @@ export function ShelfView({
             onPress={intents.openContinue}
             style={({ pressed }) => [s.continueCard, pressed && s.pressed]}
           >
+            {!t.brand ? (
+              <View pointerEvents="none" style={s.continueBackdrop}>
+                <Gradient
+                  colors={[
+                    t.color.continueStart,
+                    t.color.continueMid,
+                    t.color.continueEnd,
+                  ]}
+                  style={s.fill}
+                />
+              </View>
+            ) : null}
             {t.brand?.kind === 'meta' ? (
               <>
                 <View pointerEvents="none" style={s.continueStripe}>
@@ -148,11 +160,7 @@ export function ShelfView({
             <Text style={s.continueTitle}>{state.continueCard.title}</Text>
             <Text style={s.continueMeta}>{state.continueCard.meta}</Text>
             {state.continueCard.recap ? (
-              <Text style={s.continueRecap}>
-                {groupedLists
-                  ? state.continueCard.recap
-                  : state.continueCard.recap.replace(/步/gu, '段')}
-              </Text>
+              <Text style={s.continueRecap}>{state.continueCard.recap}</Text>
             ) : null}
             <View style={s.continueFooter}>
               <View style={s.stepDots}>
@@ -167,11 +175,7 @@ export function ShelfView({
                     ]}
                   />
                 ))}
-                <Text style={s.stepLabel}>
-                  {groupedLists
-                    ? state.continueCard.stepLabel
-                    : state.continueCard.stepLabel.replace(/步/gu, '段')}
-                </Text>
+                <Text style={s.stepLabel}>{state.continueCard.stepLabel}</Text>
               </View>
               <View style={s.continueButton}>
                 <Text style={s.continueAction}>
@@ -319,8 +323,12 @@ export function ShelfView({
                       size={win ? 'sm' : 'md'}
                     />
                     <View style={s.bookContent}>
-                      <Text style={s.bookTitle}>{book.title}</Text>
-                      <Text style={s.bookMeta}>{book.meta}</Text>
+                      <Text numberOfLines={2} style={s.bookTitle}>
+                        {book.title}
+                      </Text>
+                      <Text numberOfLines={2} style={s.bookMeta}>
+                        {book.meta}
+                      </Text>
                       <View style={s.bookStatus}>
                         <StatusDot tone={book.status.tone} />
                         <Text
@@ -586,6 +594,15 @@ const useStyles = makeStyles(t => ({
     padding: t.space.pageX,
     gap: t.space.gap,
   },
+  continueBackdrop: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    borderRadius: t.layout.groupedLists ? t.shape.lg + 2 : t.shape.lg,
+    overflow: 'hidden',
+  },
   continueCard: {
     marginHorizontal: t.layout.groupedLists ? 16 : 12,
     marginTop: t.layout.groupedLists ? 0 : 12,
@@ -595,9 +612,6 @@ const useStyles = makeStyles(t => ({
     paddingBottom: 16,
     borderRadius: t.layout.groupedLists ? t.shape.lg + 2 : t.shape.lg,
     backgroundColor: t.color.continueStart,
-    backgroundImage: t.layout.groupedLists
-      ? `linear-gradient(140deg, ${t.color.continueStart} 0%, ${t.color.continueMid} 45%, ${t.color.continueEnd} 100%)`
-      : `linear-gradient(135deg, ${t.color.continueStart}, ${t.color.continueEnd})`,
     boxShadow: t.layout.groupedLists
       ? `0 14px 34px ${
           t.scheme === 'dark'

@@ -1,0 +1,73 @@
+{
+  "tests": {
+    "suites": 113,
+    "tests": 2081,
+    "snapshots": 15,
+    "lint": "pass",
+    "typecheck": "pass"
+  },
+  "device": "emulator-5590",
+  "package": "com.pagewise.pminspect",
+  "buildType": "release",
+  "abi": "arm64-v8a",
+  "metroDisconnected": true,
+  "skins": [
+    {
+      "skin": "苹果风",
+      "scheme": "dark",
+      "reader": true,
+      "listenThenRead": true,
+      "epubControls": true
+    },
+    {
+      "skin": "Meta 风",
+      "scheme": "dark",
+      "reader": true,
+      "listenThenRead": true,
+      "epubControls": true
+    },
+    {
+      "skin": "新谷歌风",
+      "scheme": "dark",
+      "reader": true,
+      "listenThenRead": true,
+      "epubControls": true
+    },
+    {
+      "skin": "纸感",
+      "scheme": "dark",
+      "reader": true,
+      "listenThenRead": true,
+      "epubControls": true
+    },
+    {
+      "skin": "Win11 风",
+      "scheme": "dark",
+      "reader": true,
+      "listenThenRead": true,
+      "epubControls": true
+    }
+  ],
+  "readingViewportDp": {
+    "font100": {
+      "before": 585,
+      "after": 674
+    },
+    "font130WithKeyboard": {
+      "before": 218,
+      "after": 408
+    }
+  },
+  "apkSha256": "026553b6edf5c0e56383f7c41768dcab4538852c4377998ae737cdb972d5aebb",
+  "nativeCrashCheck": {
+    "sinceDeviceTime": "11-02 01:08:26.000",
+    "package": "com.pagewise.pminspect",
+    "matchingCrashFound": false
+  },
+  "cleanup": {
+    "inspectionAppRemoved": true,
+    "temporaryCopiesRemoved": true,
+    "systemFontScale": 1.0,
+    "originalAppRestored": true
+  }
+}

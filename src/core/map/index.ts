@@ -1,6 +1,8 @@
 import { figureLabel, marginNotes, PRIVATE_USE, tocPages } from '../layout';
+import { sectionRole } from '../learningScope';
 import type { Block, JsonValue, Section, SectionPart } from '../types';
 import { normalizeText, textSimilarity } from './migration';
+import { prepareOutline } from './outline';
 import type {
   MapFlag,
   MapOptions,
@@ -39,14 +41,16 @@ interface Heading {
 const CHAPTER_END =
   /^(?:summary|exercises|problems|questions|bibliographical and historical notes|historical notes|notes|further reading|references|本章小结|小结|习题|思考题|练习|参考文献|延伸阅读)$/i;
 const BOOK_END =
-  /^(?:bibliography|index|glossary|afterword|epilogue|索引|术语表|后记|参考书目)$/i;
+  /^(?:bibliography|index|glossary|afterword|epilogue|索引|术语表|后记|参考书目|注释)$/i;
+const PART_TITLE =
+  /^(?:Part\s+[\dIVXLC]+\b|第\s*[0-9一二三四五六七八九十]+\s*部(?:分)?)/i;
 /**
  * A long chapter or section opening becomes its own study unit, so `21.1.1` does not start with
  * three pages of chapter overview. A chapter opening spans pages; a section lead-in is shorter.
  */
 const INTRO_UNIT_CHARS: Record<number, number> = { 1: 1500, 2: 3000 };
 const CHAPTER_LABEL =
-  /^(?:(?:chapter|part|appendix)\s+(?:\d+|[ivxlc]+|[A-Z])|第\s*[0-9一二三四五六七八九十百零〇]+\s*[章部篇])$/i;
+  /^(?:(?:chapter|part|appendix)\s+(?:\d+|[ivxlc]+|[A-Z])|第\s*[0-9一二三四五六七八九十百零〇]+\s*(?:章|部分?|篇))$/i;
 const cnDigits: Record<string, number> = {
   零: 0,
   〇: 0,
@@ -135,6 +139,7 @@ const levelOf = (value: number): 1 | 2 | 3 =>
 const headingText = (text: string) =>
   normalizeText(
     text
+      .replace(/^Part\s+[\dIVXLC]+\s*[:：]?\s*/i, '')
       .replace(/^第\s*[0-9一二三四五六七八九十百零〇]+\s*章\s*/, '')
       .replace(/^Chapter\s+\d+\s*[:：—–-]?\s*/i, '')
       .replace(/^(?:Chapter\s+)?\d+(?:\.\d+)*\s*[.:：]?\s*/i, '')
@@ -183,8 +188,17 @@ export function inferPageOffset(
     ? { pageOffset: best.value, reliable: true }
     : { pageOffset: 0, reliable: false };
 }
-function recognize(blocks: readonly Block[]): Heading[] {
+function recognize(
+  blocks: readonly Block[],
+  outline: readonly OutlineItem[],
+): Heading[] {
   const result: Heading[] = [];
+  const listed = new Map<number, Set<string>>();
+  for (const item of outline) {
+    const titles = listed.get(item.page) ?? new Set<string>();
+    titles.add(headingText(item.title));
+    listed.set(item.page, titles);
+  }
   const chapterChildren = new Map<number, Block[]>();
   const chapterStarts = new Set(
     blocks.flatMap(block => {
@@ -210,7 +224,8 @@ function recognize(blocks: readonly Block[]): Heading[] {
         numbered(block.text, true)?.level === 1),
   );
   /** Level of the deepest numbered heading so far in this chapter, for unnumbered headings. */
-  let context: number | null = null;
+  let context: number | null = null,
+    exercises = false;
   for (let index = 0; index < blocks.length; index++) {
     const block = blocks[index];
     // Link icons in the Private Use Area would end up in titles and hide trailing punctuation.
@@ -282,6 +297,8 @@ function recognize(blocks: readonly Block[]): Heading[] {
       )
     )
       continue;
+    // Exercise numbers are question labels, even when they resemble section numbers.
+    if (exercises && block.type !== 'title') continue;
     const previous = result.at(-1),
       hasNumber = !!value;
     if (
@@ -291,7 +308,11 @@ function recognize(blocks: readonly Block[]): Heading[] {
       endSeq === block.seq &&
       block.page !== null &&
       block.page === previous.page &&
-      block.type === 'title'
+      block.type === 'title' &&
+      !listed.get(block.page)?.has(headingText(text)) &&
+      !listed.get(block.page)?.has(headingText(previous.title)) &&
+      !CHAPTER_END.test(previous.title) &&
+      !BOOK_END.test(previous.title)
     ) {
       previous.title = `${previous.title} ${text}`.trim();
       previous.endSeq = block.seq;
@@ -313,7 +334,7 @@ function recognize(blocks: readonly Block[]): Heading[] {
     if (value) {
       level = value.level;
       context = value.level;
-    } else if (BOOK_END.test(text)) {
+    } else if (BOOK_END.test(text) || PART_TITLE.test(text)) {
       level = 1;
       context = null;
     } else if (!numberedChapters && block.level === 1) {
@@ -329,6 +350,9 @@ function recognize(blocks: readonly Block[]): Heading[] {
       level = levelOf(
         block.level ?? (previous ? Math.min(previous.level + 1, 3) : 1),
       );
+    if (/^(?:exercises|problems|questions|习题|练习|思考题)$/i.test(text))
+      exercises = true;
+    else if (value || BOOK_END.test(text)) exercises = false;
     result.push({
       ...value,
       id: value?.id ?? `u${block.seq}`,
@@ -345,6 +369,79 @@ function recognize(blocks: readonly Block[]): Heading[] {
     });
   }
   return result;
+}
+
+/** Numbered descendants follow the chapter's actual outline depth, including chapters in Parts. */
+function alignHierarchy(headings: Heading[]) {
+  let chapter: Heading | undefined,
+    appendix: Heading | undefined,
+    end: Heading | undefined;
+  let depth = 1;
+  const ordered = [...headings].sort(
+    (a, b) => effectiveSeq(a) - effectiveSeq(b) || a.level - b.level,
+  );
+  for (const [index, heading] of ordered.entries()) {
+    const anchored = heading.confirmed || heading.source === 'bookmark';
+    if (anchored && /^\d+$/.test(heading.no ?? '')) {
+      appendix = undefined;
+      end = undefined;
+    }
+    if (
+      chapter &&
+      /^bibliography$/i.test(heading.title) &&
+      ordered.slice(index + 1).some(h => /^\d+$/.test(h.no ?? ''))
+    ) {
+      heading.level = levelOf(chapter.level + 1);
+      continue;
+    }
+    if (
+      (anchored && heading.level === 1) ||
+      /^[A-Z]$/.test(heading.no ?? '') ||
+      BOOK_END.test(heading.title) ||
+      PART_TITLE.test(heading.title)
+    ) {
+      chapter = undefined;
+      appendix = /^[A-Z]$/.test(heading.no ?? '') ? heading : undefined;
+      end = BOOK_END.test(heading.title) ? heading : undefined;
+      depth = 1;
+      heading.level = 1;
+      if (!/^\d+$/.test(heading.no ?? '')) continue;
+    }
+    if (appendix || end) {
+      if (!anchored) {
+        const numberedAppendix =
+          appendix && heading.no?.startsWith(`${appendix.no}.`);
+        heading.level = numberedAppendix
+          ? levelOf(heading.no!.split('.').length)
+          : levelOf(heading.level + 1);
+        if (/^\d+$/.test(heading.no ?? ''))
+          heading.id = `${(appendix ?? end)!.id}-${heading.id}`;
+        delete heading.deep;
+      }
+      continue;
+    }
+    if (/^\d+$/.test(heading.no ?? '')) {
+      chapter = heading;
+      depth = heading.level;
+      continue;
+    }
+    if (!chapter) continue;
+    if (heading.no?.startsWith(`${chapter.no}.`)) {
+      const level = heading.no.split('.').length + chapter.level - 1;
+      if (!anchored) {
+        heading.level = levelOf(level);
+        heading.deep = level > 3;
+      }
+      depth = heading.level;
+    } else if (!anchored) {
+      const level =
+        CHAPTER_END.test(heading.title) || heading.intro
+          ? chapter.level + 1
+          : depth + 1;
+      heading.level = levelOf(level);
+      heading.deep = level > 3;
+    }
+  }
 }
 function reconcile(
   headings: Heading[],
@@ -372,8 +469,10 @@ function reconcile(
     normalizedTitles.set(heading, headingText(heading.title));
   };
   headings.forEach(indexHeading);
+  let partDepth = 0;
   for (const [index, item] of (outline ?? []).entries()) {
     if (item.level < 1 || item.level > 3 || !item.title.trim()) continue;
+    if (item.level === 1) partDepth = PART_TITLE.test(item.title) ? 1 : 0;
     const normalized = headingText(item.title),
       parsed = numbered(item.title, true);
     const candidates = [
@@ -422,7 +521,7 @@ function reconcile(
       if (match.level !== item.level) {
         // An unnumbered title's MinerU level describes typography. A matching
         // bookmark supplies its hierarchy; only explicit numbering disagrees.
-        if (numberedLevel)
+        if (numberedLevel && match.level + partDepth !== item.level)
           match.flags.push({
             kind: 'level',
             detail: { recognized: match.level, outline: item.level },
@@ -683,12 +782,14 @@ export function buildMap(
     )
   )
     throw new Error('地图需要同一本书中唯一且有效的块序号');
-  const headings = recognize(blocks);
-  reconcile(headings, outline, blocks);
+  const preparedOutline = prepareOutline(outline, blocks);
+  const headings = recognize(blocks, preparedOutline);
+  reconcile(headings, preparedOutline, blocks);
+  alignHierarchy(headings);
   // Headings below the deepest section level stay inside their unit unless a bookmark lists them.
   for (let index = headings.length - 1; index >= 0; index--)
     if (headings[index].deep) headings.splice(index, 1);
-  dropUnlisted(headings, outline);
+  dropUnlisted(headings, preparedOutline);
   const manual = prev.filter(section => section.source === 'manual');
   for (const section of manual) {
     const existing = headings.findIndex(
@@ -731,6 +832,17 @@ export function buildMap(
       a.level - b.level ||
       a.id.localeCompare(b.id),
   );
+  // Preserve author names and other text before the first recognized heading in its first unit.
+  const first = headings.find(heading => heading.seq !== null);
+  if (
+    first &&
+    blocks[0] &&
+    first.seq! > blocks[0].seq &&
+    first.page !== null &&
+    blocks[0].page !== null &&
+    first.page - blocks[0].page <= 1
+  )
+    first.seq = blocks[0].seq;
   addIntroductionUnits(headings, blocks);
   const ids = new Set<string>();
   for (const heading of headings) {
@@ -814,6 +926,7 @@ export function buildMap(
       target = next ?? siblings.filter(value => value.ord < section.ord).at(-1);
     if (
       !target ||
+      sectionRole(section) !== sectionRole(target) ||
       target.block_from === null ||
       target.block_to === null ||
       section.block_to === null

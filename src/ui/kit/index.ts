@@ -10,6 +10,7 @@ export type { SkinId } from './skin';
 export { useStickToBottom } from './useStickToBottom';
 export type { StickToBottomOptions } from './useStickToBottom';
 export { useStableHandlers } from './useStableHandlers';
+export { useKeyboardVisible } from './useKeyboardVisible';
 export {
   useReveal,
   RevealContext,

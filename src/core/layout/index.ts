@@ -70,7 +70,8 @@ export function marginNotes(
   return notes.size >= min ? notes : new Set();
 }
 
-const TOC_LINE = /\p{L}.*\s(?:\d{1,4}|[ivxlc]{1,6})\s*$/iu;
+const TOC_LINE = /\p{L}.*(?:\s|[/／])(?:\d{1,4}|[ivxlc]{1,6})\s*$/iu;
+const CHAPTER_TOC_LINE = /^Chapter\s+\d+\s*:\s*.+,\s*\d+$/iu;
 // E-book PDFs append link icons in the Private Use Area (AIMA's U+E606) after page numbers.
 export const PRIVATE_USE = new RegExp(
   `[${String.fromCharCode(0xe000)}-${String.fromCharCode(0xf8ff)}]`,
@@ -78,27 +79,33 @@ export const PRIVATE_USE = new RegExp(
 );
 /** Contents pages: most short lines end in a page number (`5.1 Game Theory 146`). */
 export function tocPages(blocks: readonly Block[]): Set<number> {
-  const lines = new Map<number, { all: number; toc: number }>();
+  const lines = new Map<
+    number,
+    { all: number; toc: number; chapters: number }
+  >();
   for (const b of blocks) {
     if (b.page === null || !['text', 'title'].includes(b.type)) continue;
-    const count = lines.get(b.page) ?? { all: 0, toc: 0 };
+    const count = lines.get(b.page) ?? { all: 0, toc: 0, chapters: 0 };
     for (const raw of b.text.split('\n')) {
       const line = raw.replace(PRIVATE_USE, '').trim();
       if (!line || line.length > 120) continue;
       count.all++;
       if (TOC_LINE.test(line)) count.toc++;
+      if (CHAPTER_TOC_LINE.test(line)) count.chapters++;
     }
     lines.set(b.page, count);
   }
   return new Set(
     [...lines]
-      .filter(([, n]) => n.toc >= 5 && n.toc >= n.all * 0.6)
+      .filter(
+        ([, n]) => (n.toc >= 5 || n.chapters >= 3) && n.toc >= n.all * 0.6,
+      )
       .map(([page]) => page),
   );
 }
 
 /** Figure, table and algorithm labels or pseudocode signatures, which are never sections. */
 export const figureLabel = (text: string) =>
-  /^(?:(?:figure|fig\.|table|algorithm|listing|exhibit)\s+(?:[A-Z][.-])?\d+(?:[.-]\d+)*\b|[图表]\s*\d+(?:[.-]\d+)*|(?:function|procedure)\s+[A-Z][\w?-]*\s*\()/i.test(
+  /^(?:(?:figure|fig\.|table|algorithm|listing|exhibit|snippet)\s+(?:[A-Z][.-])?\d+(?:[.-]\d+)*\b|[图表]\s*\d+(?:[.-]\d+)*|(?:function|procedure)\s+[A-Z][\w?-]*\s*\()/i.test(
     text.trim(),
   );

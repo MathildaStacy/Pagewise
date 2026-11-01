@@ -1,10 +1,19 @@
-import { useLayoutEffect, useRef } from 'react';
-import { Animated, Easing, Pressable, Text, View } from 'react-native';
+import { useLayoutEffect, useRef, useState } from 'react';
+import {
+  Animated,
+  Easing,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
 import {
   AppBar,
   Button,
   Empty,
   Icon,
+  IconButton,
+  Sheet,
   Note,
   Screen,
   makeStyles,
@@ -65,6 +74,7 @@ export function ReviewSessionView({
     rotation,
     t.motion.easing,
   ]);
+  const [managing, setManaging] = useState(false);
   const card = state.card;
   const source = card ? (
     <View style={s.sourceRow}>
@@ -93,42 +103,121 @@ export function ReviewSessionView({
     </View>
   );
   return (
-    <Screen scroll>
+    <Screen>
       <AppBar
         title={state.title}
         variant="push"
         backLabel="复习"
         onBack={intents.back}
+        right={
+          card && intents.editCard && intents.suspendCard ? (
+            <IconButton
+              icon="more"
+              label="管理卡片"
+              onPress={() => setManaging(true)}
+            />
+          ) : undefined
+        }
       />
-      {state.error ? (
-        <View style={s.message}>
-          <Note tone="bad">{state.error}</Note>
-          <Button variant="text" onPress={intents.retry}>
-            重试
-          </Button>
-        </View>
-      ) : null}
-      {state.loading ? <Empty body="正在读取卡片…" /> : null}
-      {state.notice ? (
-        <View style={s.message}>
-          <Note tone="neutral">{state.notice}</Note>
-          {intents.undoSuspend ? (
-            <Button
-              variant="text"
-              disabled={state.busy}
-              onPress={intents.undoSuspend}
-            >
-              撤回暂停
+      <ScrollView style={s.content} contentContainerStyle={s.scrollContent}>
+        {state.error ? (
+          <View style={s.message}>
+            <Note tone="bad">{state.error}</Note>
+            <Button variant="text" onPress={intents.retry}>
+              重试
             </Button>
-          ) : null}
-        </View>
-      ) : null}
-      {card ? (
-        <>
-          {flip ? (
-            <View style={s.flipWrap}>
+          </View>
+        ) : null}
+        {state.loading ? <Empty body="正在读取卡片…" /> : null}
+        {state.notice ? (
+          <View style={s.message}>
+            <Note tone="neutral">{state.notice}</Note>
+            {intents.undoSuspend ? (
+              <Button
+                variant="text"
+                disabled={state.busy}
+                onPress={intents.undoSuspend}
+              >
+                撤回暂停
+              </Button>
+            ) : null}
+          </View>
+        ) : null}
+        {card ? (
+          <>
+            {flip ? (
+              <View style={s.flipWrap}>
+                <Pressable
+                  style={s.flipCard}
+                  onPress={flipped ? undefined : intents.flip}
+                  accessibilityRole={flipped ? 'none' : 'button'}
+                  accessibilityLabel={
+                    flipped ? '闪卡答案' : `${card.front}，点卡片看答案`
+                  }
+                  accessibilityState={{ expanded: flipped }}
+                  accessible={!flipped}
+                >
+                  <Animated.View
+                    testID="flashcard-front"
+                    pointerEvents={flipped ? 'none' : 'auto'}
+                    accessibilityElementsHidden={flipped}
+                    importantForAccessibility={
+                      flipped ? 'no-hide-descendants' : 'auto'
+                    }
+                    style={[
+                      s.face,
+                      flipped ? s.hiddenFace : undefined,
+                      {
+                        transform: [
+                          { perspective: 1400 },
+                          {
+                            rotateY: rotation.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: ['0deg', '180deg'],
+                            }),
+                          },
+                        ],
+                      },
+                    ]}
+                  >
+                    {source}
+                    <Text style={s.front}>{card.front}</Text>
+                    <Text style={s.tip}>{card.tip}</Text>
+                  </Animated.View>
+                  <Animated.View
+                    testID="flashcard-back"
+                    pointerEvents={flipped ? 'auto' : 'none'}
+                    accessibilityElementsHidden={!flipped}
+                    importantForAccessibility={
+                      flipped ? 'auto' : 'no-hide-descendants'
+                    }
+                    style={[
+                      s.face,
+                      !flipped ? s.hiddenFace : undefined,
+                      {
+                        transform: [
+                          { perspective: 1400 },
+                          {
+                            rotateY: rotation.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: ['180deg', '360deg'],
+                            }),
+                          },
+                        ],
+                      },
+                    ]}
+                  >
+                    {source}
+                    <Text style={s.backQuestion}>{card.front}</Text>
+                    <Text style={s.back}>{card.back}</Text>
+                    {actions}
+                  </Animated.View>
+                </Pressable>
+              </View>
+            ) : (
               <Pressable
-                style={s.flipCard}
+                testID="flashcard-expanded"
+                style={s.card}
                 onPress={flipped ? undefined : intents.flip}
                 accessibilityRole={flipped ? 'none' : 'button'}
                 accessibilityLabel={
@@ -137,105 +226,44 @@ export function ReviewSessionView({
                 accessibilityState={{ expanded: flipped }}
                 accessible={!flipped}
               >
-                <Animated.View
-                  testID="flashcard-front"
-                  pointerEvents={flipped ? 'none' : 'auto'}
-                  accessibilityElementsHidden={flipped}
-                  importantForAccessibility={
-                    flipped ? 'no-hide-descendants' : 'auto'
-                  }
-                  style={[
-                    s.face,
-                    flipped ? s.hiddenFace : undefined,
-                    {
-                      transform: [
-                        { perspective: 1400 },
-                        {
-                          rotateY: rotation.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: ['0deg', '180deg'],
-                          }),
-                        },
-                      ],
-                    },
-                  ]}
-                >
-                  {source}
-                  <Text style={s.front}>{card.front}</Text>
+                {source}
+                <Text style={s.front}>{card.front}</Text>
+                {flipped ? (
+                  <>
+                    <Text style={s.back}>{card.back}</Text>
+                    {actions}
+                  </>
+                ) : (
                   <Text style={s.tip}>{card.tip}</Text>
-                </Animated.View>
-                <Animated.View
-                  testID="flashcard-back"
-                  pointerEvents={flipped ? 'auto' : 'none'}
-                  accessibilityElementsHidden={!flipped}
-                  importantForAccessibility={
-                    flipped ? 'auto' : 'no-hide-descendants'
-                  }
-                  style={[
-                    s.face,
-                    !flipped ? s.hiddenFace : undefined,
-                    {
-                      transform: [
-                        { perspective: 1400 },
-                        {
-                          rotateY: rotation.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: ['180deg', '360deg'],
-                          }),
-                        },
-                      ],
-                    },
-                  ]}
-                >
-                  {source}
-                  <Text style={s.backQuestion}>{card.front}</Text>
-                  <Text style={s.back}>{card.back}</Text>
-                  {actions}
-                </Animated.View>
+                )}
               </Pressable>
-            </View>
-          ) : (
-            <Pressable
-              testID="flashcard-expanded"
-              style={s.card}
-              onPress={flipped ? undefined : intents.flip}
-              accessibilityRole={flipped ? 'none' : 'button'}
-              accessibilityLabel={
-                flipped ? '闪卡答案' : `${card.front}，点卡片看答案`
-              }
-              accessibilityState={{ expanded: flipped }}
-              accessible={!flipped}
-            >
-              {source}
-              <Text style={s.front}>{card.front}</Text>
-              {flipped ? (
-                <>
-                  <Text style={s.back}>{card.back}</Text>
-                  {actions}
-                </>
-              ) : (
-                <Text style={s.tip}>{card.tip}</Text>
-              )}
-            </Pressable>
-          )}
-          {intents.editCard && intents.suspendCard ? (
-            <View style={s.manageActions}>
-              <Button
-                variant="text"
-                disabled={state.busy || !!state.editor}
-                onPress={intents.editCard}
-              >
-                编辑卡片
-              </Button>
-              <Button
-                variant="text"
-                disabled={state.busy || !!state.editor}
-                onPress={intents.suspendCard}
-              >
-                暂停这张卡
+            )}
+          </>
+        ) : null}
+        {intents.editor ? (
+          <CardEditorSheet state={state.editor} intents={intents.editor} />
+        ) : null}
+        {state.finished ? (
+          <View style={s.finished}>
+            {flip ? (
+              <View style={s.finishedBadge}>
+                <Icon name="check" size={36} color={t.color.onAccent} />
+              </View>
+            ) : (
+              <Text style={s.finishedMark}>✓</Text>
+            )}
+            <Text style={s.finishedTitle}>{state.finished.title}</Text>
+            <Text style={s.finishedText}>{state.finished.text}</Text>
+            <View style={s.done}>
+              <Button size="block" onPress={intents.done}>
+                完成
               </Button>
             </View>
-          ) : null}
+          </View>
+        ) : null}
+      </ScrollView>
+      {card && state.rate ? (
+        <View style={s.ratingFooter}>
           {state.rate ? (
             <Animated.View
               testID="flashcard-ratings"
@@ -312,29 +340,34 @@ export function ReviewSessionView({
           ) : flip ? (
             <View style={s.ratingSpace} />
           ) : null}
-        </>
-      ) : null}
-      {intents.editor ? (
-        <CardEditorSheet state={state.editor} intents={intents.editor} />
-      ) : null}
-      {state.finished ? (
-        <View style={s.finished}>
-          {flip ? (
-            <View style={s.finishedBadge}>
-              <Icon name="check" size={36} color={t.color.onAccent} />
-            </View>
-          ) : (
-            <Text style={s.finishedMark}>✓</Text>
-          )}
-          <Text style={s.finishedTitle}>{state.finished.title}</Text>
-          <Text style={s.finishedText}>{state.finished.text}</Text>
-          <View style={s.done}>
-            <Button size="block" onPress={intents.done}>
-              完成
-            </Button>
-          </View>
         </View>
       ) : null}
+      <Sheet
+        visible={managing && !!card}
+        title="管理卡片"
+        onClose={() => setManaging(false)}
+      >
+        <Button
+          variant="text"
+          disabled={state.busy || !!state.editor}
+          onPress={() => {
+            setManaging(false);
+            intents.editCard?.();
+          }}
+        >
+          编辑卡片
+        </Button>
+        <Button
+          variant="text"
+          disabled={state.busy || !!state.editor}
+          onPress={() => {
+            setManaging(false);
+            intents.suspendCard?.();
+          }}
+        >
+          暂停这张卡
+        </Button>
+      </Sheet>
     </Screen>
   );
 }
@@ -342,6 +375,13 @@ const useStyles = makeStyles(t => {
   const flip = t.layout.flashcards === 'flip',
     scale = t.type.body.fontSize / (flip ? 17 : 14);
   return {
+    content: { flex: 1 },
+    scrollContent: { paddingBottom: 20 },
+    ratingFooter: {
+      paddingTop: 12,
+      paddingBottom: 16,
+      backgroundColor: t.color.bg,
+    },
     message: { padding: t.space.pageX, gap: t.space.gap },
     manageActions: {
       flexDirection: 'row',

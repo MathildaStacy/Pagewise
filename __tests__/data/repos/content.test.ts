@@ -66,6 +66,45 @@ beforeEach(async () => {
 });
 afterEach(async () => db.close());
 
+it('skips reference material in automatic next-section navigation, persists overrides and preserves content on rebuilding', async () => {
+  await sections.replaceAll('book', [
+    sectionInput('one', 1, {
+      block_from: 1,
+      block_to: 5,
+      status: 'done',
+      summary: 'kept',
+    }),
+    sectionInput('refs', 2, {
+      title: 'Bibliography',
+      block_from: 6,
+      block_to: 8,
+    }),
+    sectionInput('two', 3, { block_from: 9, block_to: 12 }),
+  ]);
+  expect((await sections.nextLeaf('book', 'one'))?.id).toBe('two');
+  await sections.setLearningScope('book', 'refs', 'include');
+  expect((await createSectionsRepo(db).nextLeaf('book', 'one'))?.id).toBe(
+    'refs',
+  );
+  await sections.replaceAll('book', await sections.tree('book'));
+  expect((await sections.learningLeaves('book')).map(s => s.id)).toEqual([
+    'one',
+    'refs',
+    'two',
+  ]);
+  expect(await sections.get('book', 'one')).toMatchObject({
+    status: 'done',
+    summary: 'kept',
+  });
+  await sections.setLearningScope('book', 'refs', 'exclude');
+  expect((await sections.tree('book')).map(s => s.id)).toEqual([
+    'one',
+    'refs',
+    'two',
+  ]);
+  expect(await sections.nextLeaf('book', 'two')).toBeUndefined();
+});
+
 async function seedLearning(bookId = 'book') {
   await sections.replaceAll(bookId, [
     sectionInput('1.1', 1, { status: 'learning', summary: '已保存摘要' }),
@@ -550,12 +589,13 @@ describe('sections repository', () => {
   it('reads an ordered flat tree, leaf successors, booleans, and JSON flag details', async () => {
     await sections.replaceAll('book', [
       sectionInput('1.2', 3, {
+        block_from: 3,
         parent_id: 'ch1',
         flag: 'level',
         flag_detail: { old_level: 2 },
       }),
       sectionInput('ch1', 1, { level: 1, is_leaf: false }),
-      sectionInput('1.1', 2, { parent_id: 'ch1' }),
+      sectionInput('1.1', 2, { parent_id: 'ch1', block_from: 1 }),
     ]);
     await sections.replaceAll('other', [sectionInput('x', 1)]);
     expect((await sections.tree('book')).map(section => section.id)).toEqual([

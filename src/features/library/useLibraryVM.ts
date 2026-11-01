@@ -13,9 +13,11 @@ import {
   searchBook,
   splitMapSection,
   startSection,
+  setSectionLearningScope,
   type MapRecord,
 } from '@app/usecases/library';
 import { useAppNav } from '@features/nav';
+import { learningSelection, roleLabel } from '@core/learningScope';
 import {
   confirmImportDraft,
   describeImportParts,
@@ -287,6 +289,7 @@ export function useBookMapVM(bookId: string) {
   const nav = useAppNav();
   const [record, setRecord] = useState<MapRecord | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [scopeView, setScopeView] = useState<'learning' | 'all'>('learning');
   const [local, setLocal] = useState<
     Pick<BookMapState, 'loading' | 'error' | 'toast' | 'overlay'>
   >({ loading: true, error: null, toast: null, overlay: null });
@@ -356,6 +359,13 @@ export function useBookMapVM(bookId: string) {
           return;
         }
         const current = study?.main_section === id;
+        const scope =
+          record &&
+          learningSelection(
+            record.sections,
+            record.learningScope,
+            record.book.title,
+          ).get(id);
         setLocal(s => ({
           ...s,
           error: null,
@@ -366,6 +376,18 @@ export function useBookMapVM(bookId: string) {
             subtitle: parent ? sectionName(parent) : '',
             facts: [
               { k: '页码', v: pageRange(section, record?.book) },
+              {
+                k: '学习范围',
+                v: `${roleLabel[scope?.role ?? 'body']} · ${
+                  scope?.included ? '计入学习进度' : '不计进度，仍可单独阅读'
+                }`,
+              },
+              {
+                k: '本节内容',
+                v: `${
+                  section.parts
+                } 段 · ${section.chars.toLocaleString()} 字符`,
+              },
               {
                 k: '状态',
                 v:
@@ -386,6 +408,10 @@ export function useBookMapVM(bookId: string) {
             summary: section.summary ?? undefined,
             stuck: stuck.map(item => item.text),
             actions: [
+              {
+                key: 'scope',
+                label: scope?.included ? '移出学习路线' : '纳入学习路线',
+              },
               ...(blocks.length
                 ? [{ key: 'read' as const, label: '看原文' }]
                 : []),
@@ -411,13 +437,28 @@ export function useBookMapVM(bookId: string) {
     startSection(c, bookId, id)
       .then(() => {
         closeOverlay();
-        nav.open({ name: 'Study', bookId, sectionId: id });
+        nav.open({ name: 'Study', bookId, sectionId: id, mode: 'listen' });
       })
       .catch(fail);
   };
-  const sectionAction = (key: 'read' | 'notes' | 'start') => {
+  const sectionAction = (key: 'read' | 'notes' | 'start' | 'scope') => {
     if (local.overlay?.kind !== 'section') return;
     const { id } = local.overlay;
+    if (key === 'scope' && record) {
+      const included =
+        learningSelection(
+          record.sections,
+          record.learningScope,
+          record.book.title,
+        ).get(id)?.included ?? true;
+      setSectionLearningScope(c, bookId, id, !included)
+        .then(() => {
+          closeOverlay();
+          refresh();
+        })
+        .catch(fail);
+      return;
+    }
     if (key === 'read') {
       closeOverlay();
       nav.open({ name: 'Reader', bookId, sectionId: id });
@@ -445,7 +486,7 @@ export function useBookMapVM(bookId: string) {
     ...local,
     demo: c.mode === 'demo',
     ...(record
-      ? presentMap(record, expanded)
+      ? presentMap(record, expanded, scopeView)
       : {
           title: '书的地图',
           check: { ok: true, text: '正在读取地图', tone: 'muted' as const },
@@ -455,6 +496,12 @@ export function useBookMapVM(bookId: string) {
   return {
     state,
     intents: {
+      setScopeView,
+      inspectStructure: (sectionId: string) =>
+        nav.open({ name: 'Reader', bookId, sectionId }),
+      startLearning: () => {
+        if (state.start) openSection(state.start.id);
+      },
       back: nav.back,
       refresh,
       toggle: (id: string) => {

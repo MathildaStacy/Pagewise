@@ -1,0 +1,284 @@
+{
+  "aima": {
+    "sections": [
+      {
+        "book_id": "mvwr3zi6-2-w5wze4dt",
+        "id": "13.4.2",
+        "parent_id": "13.4",
+        "level": 3,
+        "ord": 338,
+        "no": "13.4.2",
+        "title": "Inference by Markov chain simulation",
+        "is_leaf": true,
+        "block_from": 831006,
+        "block_to": 842007,
+        "page_from": 831,
+        "page_to": 842,
+        "chars": 24852,
+        "parts": 9,
+        "status": "new",
+        "summary": null,
+        "guide": null,
+        "source": "auto",
+        "flag": "split",
+        "flag_detail": {
+          "parts": 9
+        },
+        "merged_into": null
+      },
+      {
+        "book_id": "mvwr3zi6-2-w5wze4dt",
+        "id": "20.3",
+        "parent_id": "ch20",
+        "level": 2,
+        "ord": 530,
+        "no": "20.3",
+        "title": "Learning with Hidden Variables: The EM Algorithm",
+        "is_leaf": false,
+        "block_from": 1358001,
+        "block_to": 1370004,
+        "page_from": 1358,
+        "page_to": 1370,
+        "chars": 25744,
+        "parts": 1,
+        "status": "new",
+        "summary": null,
+        "guide": null,
+        "source": "auto",
+        "flag": null,
+        "flag_detail": null,
+        "merged_into": null
+      },
+      {
+        "book_id": "mvwr3zi6-2-w5wze4dt",
+        "id": "20.3-intro",
+        "parent_id": "20.3",
+        "level": 3,
+        "ord": 531,
+        "no": null,
+        "title": "本节导读",
+        "is_leaf": true,
+        "block_from": 1358001,
+        "block_to": 1363007,
+        "page_from": 1358,
+        "page_to": 1363,
+        "chars": 9949,
+        "parts": 4,
+        "status": "new",
+        "summary": null,
+        "guide": null,
+        "source": "auto",
+        "flag": "split",
+        "flag_detail": {
+          "parts": 4
+        },
+        "merged_into": null
+      },
+      {
+        "book_id": "mvwr3zi6-2-w5wze4dt",
+        "id": "20.3.2",
+        "parent_id": "20.3",
+        "level": 3,
+        "ord": 532,
+        "no": "20.3.2",
+        "title": "Learning Bayes net parameter values for hidden variables",
+        "is_leaf": true,
+        "block_from": 1363008,
+        "block_to": 1367005,
+        "page_from": 1363,
+        "page_to": 1367,
+        "chars": 8694,
+        "parts": 3,
+        "status": "new",
+        "summary": null,
+        "guide": null,
+        "source": "auto",
+        "flag": "split",
+        "flag_detail": {
+          "parts": 3
+        },
+        "merged_into": null
+      },
+      {
+        "book_id": "mvwr3zi6-2-w5wze4dt",
+        "id": "26.2",
+        "parent_id": "ch26",
+        "level": 2,
+        "ord": 674,
+        "no": "26.2",
+        "title": "Robot Hardware",
+        "is_leaf": false,
+        "block_from": 1692001,
+        "block_to": 1692002,
+        "page_from": 1692,
+        "page_to": 1692,
+        "chars": 296,
+        "parts": 1,
+        "status": "new",
+        "summary": null,
+        "guide": null,
+        "source": "auto",
+        "flag": "merged",
+        "flag_detail": {
+          "into": "26.2_b1692003",
+          "reason": "short-section"
+        },
+        "merged_into": "26.2_b1692003"
+      },
+      {
+        "book_id": "mvwr3zi6-2-w5wze4dt",
+        "id": "26.2_b1692003",
+        "parent_id": "ch26",
+        "level": 2,
+        "ord": 675,
+        "no": "26.2",
+        "title": "Types of robots from the hardware perspective",
+        "is_leaf": false,
+        "block_from": 1692001,
+        "block_to": 1701005,
+        "page_from": 1692,
+        "page_to": 1701,
+        "chars": 10443,
+        "parts": 1,
+        "status": "new",
+        "summary": null,
+        "guide": null,
+        "source": "auto",
+        "flag": null,
+        "flag_detail": null,
+        "merged_into": null
+      },
+      {
+        "book_id": "mvwr3zi6-2-w5wze4dt",
+        "id": "u1885001",
+        "parent_id": null,
+        "level": 1,
+        "ord": 747,
+        "no": null,
+        "title": "Bibliography",
+        "is_leaf": true,
+        "block_from": 1885001,
+        "block_to": 2124014,
+        "page_from": 1885,
+        "page_to": 2124,
+        "chars": 306174,
+        "parts": 103,
+        "status": "new",
+        "summary": null,
+        "guide": null,
+        "source": "auto",
+        "flag": "split",
+        "flag_detail": {
+          "parts": 103
+        },
+        "merged_into": null
+      }
+    ],
+    "parts": [
+      {
+        "book_id": "mvwr3zi6-2-w5wze4dt",
+        "section_id": "13.4.2",
+        "part_no": 0,
+        "block_from": 831006,
+        "block_to": 833003,
+        "name": "第 1 段"
+      },
+      {
+        "book_id": "mvwr3zi6-2-w5wze4dt",
+        "section_id": "13.4.2",
+        "part_no": 1,
+        "block_from": 833004,
+        "block_to": 834006,
+        "name": "第 2 段"
+      },
+      {
+        "book_id": "mvwr3zi6-2-w5wze4dt",
+        "section_id": "13.4.2",
+        "part_no": 2,
+        "block_from": 834007,
+        "block_to": 836003,
+        "name": "Analysis of Markov chains"
+      },
+      {
+        "book_id": "mvwr3zi6-2-w5wze4dt",
+        "section_id": "13.4.2",
+        "part_no": 3,
+        "block_from": 836004,
+        "block_to": 837007,
+        "name": "Detailed balance"
+      },
+      {
+        "book_id": "mvwr3zi6-2-w5wze4dt",
+        "section_id": "13.4.2",
+        "part_no": 4,
+        "block_from": 837008,
+        "block_to": 838003,
+        "name": "第 5 段"
+      },
+      {
+        "book_id": "mvwr3zi6-2-w5wze4dt",
+        "section_id": "13.4.2",
+        "part_no": 5,
+        "block_from": 838004,
+        "block_to": 839006,
+        "name": "Complexity of Gibbs sampling"
+      },
+      {
+        "book_id": "mvwr3zi6-2-w5wze4dt",
+        "section_id": "13.4.2",
+        "part_no": 6,
+        "block_from": 839007,
+        "block_to": 840006,
+        "name": "第 7 段"
+      },
+      {
+        "book_id": "mvwr3zi6-2-w5wze4dt",
+        "section_id": "13.4.2",
+        "part_no": 7,
+        "block_from": 840007,
+        "block_to": 841008,
+        "name": "Acceptance probability"
+      },
+      {
+        "book_id": "mvwr3zi6-2-w5wze4dt",
+        "section_id": "13.4.2",
+        "part_no": 8,
+        "block_from": 841009,
+        "block_to": 842007,
+        "name": "第 9 段"
+      },
+      {
+        "book_id": "mvwr3zi6-2-w5wze4dt",
+        "section_id": "20.3-intro",
+        "part_no": 0,
+        "block_from": 1358001,
+        "block_to": 1359003,
+        "name": "第 1 段"
+      },
+      {
+        "book_id": "mvwr3zi6-2-w5wze4dt",
+        "section_id": "20.3-intro",
+        "part_no": 1,
+        "block_from": 1360001,
+        "block_to": 1361009,
+        "name": "第 2 段"
+      },
+      {
+        "book_id": "mvwr3zi6-2-w5wze4dt",
+        "section_id": "20.3-intro",
+        "part_no": 2,
+        "block_from": 1361010,
+        "block_to": 1362005,
+        "name": "第 3 段"
+      },
+      {
+        "book_id": "mvwr3zi6-2-w5wze4dt",
+        "section_id": "20.3-intro",
+        "part_no": 3,
+        "block_from": 1362006,
+        "block_to": 1363007,
+        "name": "第 4 段"
+      }
+    ]
+  }
+}

@@ -8,6 +8,7 @@ const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
  */
 const config = {
   resolver: {
+    blockList: /[/\\]\.claude[/\\]/,
     resolveRequest(context, moduleName, platform) {
       // htmlparser2's ESM entry exports a namespace unsupported by the RN preset.
       if (moduleName === 'htmlparser2') {

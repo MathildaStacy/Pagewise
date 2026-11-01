@@ -8,7 +8,7 @@ import {
   ReviewScreen,
   ReviewSessionScreen,
 } from '@features/review/ReviewScreens';
-import { Button, Segmented, Sheet, SkinProvider } from '@ui/kit';
+import { Button, IconButton, Segmented, Sheet, SkinProvider } from '@ui/kit';
 
 jest.mock('@app/ContainerProvider', () => ({ useContainer: jest.fn() }));
 jest.mock('@features/nav', () => ({ useAppNav: jest.fn() }));
@@ -114,8 +114,20 @@ it.each(appearances)(
       );
       await settle();
     });
+    await act(async () =>
+      renderer.root
+        .findAllByType(IconButton)
+        .find(item => item.props.label === '管理卡片')!
+        .props.onPress(),
+    );
     await press('编辑卡片');
     await press('取消');
+    await act(async () =>
+      renderer.root
+        .findAllByType(IconButton)
+        .find(item => item.props.label === '管理卡片')!
+        .props.onPress(),
+    );
     await press('暂停这张卡');
     expect((await c.repos.cards.get(card.id))?.suspended).toBe(true);
     await press('撤回暂停');

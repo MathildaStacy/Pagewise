@@ -18,6 +18,8 @@ import {
   QuizCard,
   ResumeCard,
   Screen,
+  Sheet,
+  Row,
   StepHeader,
   StepProgress,
   SysDivider,
@@ -28,6 +30,7 @@ import {
   makeStyles,
   usePresentation,
   useStableHandlers,
+  useKeyboardVisible,
   useStickToBottom,
   BottomFade,
 } from '@ui/kit';
@@ -37,7 +40,6 @@ import type {
   ThreadItem,
 } from '@features/study/types';
 import { ReaderContent, StudyOverlays } from './ReaderView';
-import { AiOptionsControl } from './AiOptionsControl';
 import { RefinementSheet } from './RefinementSheet';
 export function StudyView({
   state,
@@ -49,6 +51,10 @@ export function StudyView({
   const { groupedLists, floatingChrome, brand } = usePresentation();
   const [dockHeight, setDockHeight] = useState(0);
   const [previousOpen, setPreviousOpen] = useState(false);
+  const keyboardOpen = useKeyboardVisible();
+  const [moreActions, setMoreActions] = useState(false);
+  const visibleActions = state.listen.quickActions.slice(0, 2);
+  const extraActions = state.listen.quickActions.slice(2);
   const s = useStyles(),
     list = useRef<FlatList<ThreadItem>>(null),
     lastScroll = useRef<number | undefined>(undefined),
@@ -123,9 +129,7 @@ export function StudyView({
           backLabel={paperReader ? '返回' : state.header.backLabel}
           right={
             <View style={s.headerActions}>
-              {brand?.kind !== 'win11' ? (
-                <ModeSwitch value={state.mode} onChange={intents.setMode} />
-              ) : null}
+              <ModeSwitch value={state.mode} onChange={intents.setMode} />
               {paperReader ? (
                 <View
                   testID="reader-header-spacer"
@@ -141,104 +145,57 @@ export function StudyView({
             </View>
           }
         />
-        {brand?.kind === 'win11' ? (
-          <View style={s.selectorRow}>
-            <ModeSwitch value={state.mode} onChange={intents.setMode} />
-            {state.mode === 'listen' ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="AI 看到的内容"
-                hitSlop={6}
-                onPress={intents.openContext}
-                style={({ pressed }) => [
-                  s.winContext,
-                  pressed && s.winContextPressed,
-                ]}
-              >
-                <View style={s.contextDot} />
-                <Text style={s.winContextLabel}>AI 看到的内容</Text>
-                <Icon name="chev" size={13} color={s.winContextLabel.color} />
-              </Pressable>
+        {state.mode === 'read' ? (
+          <View style={s.conversations}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`本节对话，${
+                state.conversationTitle ?? '选择对话'
+              }`}
+              onPress={() => intents.openConversations?.()}
+              style={({ pressed }) => [
+                s.conversationSwitch,
+                state.mode === 'read' && s.readConversationSwitch,
+                pressed && s.conversationPressed,
+              ]}
+            >
+              <Icon name="listen" size={18} color={s.conversationTitle.color} />
+              <Icon
+                name="arrowDown"
+                size={16}
+                color={s.conversationTitle.color}
+              />
+            </Pressable>
+            {state.mode === 'read' ? (
+              <>
+                <Button
+                  variant="text"
+                  label="精修本节"
+                  disabled={state.read.loading || !state.read.items.length}
+                  onPress={() => intents.openRefinement?.()}
+                />
+                <Button
+                  variant="text"
+                  label="翻译本节"
+                  disabled={!state.read.canTranslate}
+                  onPress={() => intents.translateSection?.()}
+                />
+              </>
             ) : null}
           </View>
         ) : null}
-        <View style={s.conversations}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`本节对话，${
-              state.conversationTitle ?? '选择对话'
-            }`}
-            onPress={() => intents.openConversations?.()}
-            style={({ pressed }) => [
-              s.conversationSwitch,
-              state.mode === 'read' && s.readConversationSwitch,
-              pressed && s.conversationPressed,
-            ]}
-          >
-            <Icon name="listen" size={18} color={s.conversationTitle.color} />
-            {state.mode === 'listen' ? (
-              <Text numberOfLines={1} style={s.conversationTitle}>
-                {state.conversationTitle ?? '本节对话'}
-              </Text>
-            ) : null}
-            <Icon
-              name="arrowDown"
-              size={16}
-              color={s.conversationTitle.color}
-            />
-          </Pressable>
-          {state.mode === 'read' ? (
-            <>
-              <Button
-                variant="text"
-                label="精修本节"
-                disabled={state.read.loading || !state.read.items.length}
-                onPress={() => intents.openRefinement?.()}
-              />
-              <Button
-                variant="text"
-                label="翻译本节"
-                disabled={!state.read.canTranslate}
-                onPress={() => intents.translateSection?.()}
-              />
-            </>
-          ) : null}
-          {state.mode === 'listen' ? (
-            <IconButton
-              icon="add"
-              onPress={() => intents.newConversation?.()}
-              disabled={state.listen.busy}
-              label="新建对话"
-            />
-          ) : null}
-        </View>
         {state.mode === 'read' ? (
           <ReaderContent state={state.read} intents={intents} />
         ) : (
           <>
-            <StepProgress
-              steps={state.listen.progress.steps}
-              label={
-                groupedLists
-                  ? state.listen.progress.label
-                  : state.listen.progress.label.replace('步', '段')
-              }
-              onPressStep={intents.pressStep}
-              onPressBar={intents.openRoadmap}
-              right={
-                brand?.kind !== 'win11' ? (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="AI 看到的内容"
-                    hitSlop={12}
-                    onPress={intents.openContext}
-                    style={s.context}
-                  >
-                    <Text style={s.contextLabel}>AI 看到的内容 ›</Text>
-                  </Pressable>
-                ) : undefined
-              }
-            />
+            {!keyboardOpen ? (
+              <StepProgress
+                steps={state.listen.progress.steps}
+                label={state.listen.progress.label}
+                onPressStep={intents.pressStep}
+                onPressBar={intents.openRoadmap}
+              />
+            ) : null}
             {state.listen.detour ? (
               <DetourBanner
                 {...state.listen.detour}
@@ -255,6 +212,7 @@ export function StudyView({
                     ? { paddingBottom: dockHeight + 8 + 24 }
                     : undefined,
                 ]}
+                removeClippedSubviews={false}
                 maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
                 ListHeaderComponent={
                   state.listen.history?.canLoad ? (
@@ -313,22 +271,23 @@ export function StudyView({
                 pointerEvents="box-none"
               >
                 {floatingChrome ? <BottomFade /> : null}
-                <AiOptionsControl
-                  state={state.aiOptions}
-                  onChange={intents.setAiOptions}
-                  disabled={state.listen.busy}
-                />
-                {state.listen.quickActions.length ? (
+                {!keyboardOpen && visibleActions.length ? (
                   <QuickActions
-                    items={state.listen.quickActions.map(item =>
-                      !groupedLists &&
-                      (item.key === 'next' || item.key === 'nextPart')
-                        ? { ...item, label: '懂了，继续' }
-                        : groupedLists && item.kind === 'primary'
-                        ? { ...item, icon: 'next' as const }
-                        : item,
-                    )}
-                    onPress={intents.quick}
+                    items={[
+                      ...visibleActions,
+                      ...(extraActions.length
+                        ? [
+                            {
+                              key: 'more',
+                              label: '更多',
+                              icon: 'more' as const,
+                            },
+                          ]
+                        : []),
+                    ]}
+                    onPress={key =>
+                      key === 'more' ? setMoreActions(true) : intents.quick(key)
+                    }
                   />
                 ) : null}
                 <Composer
@@ -357,6 +316,22 @@ export function StudyView({
           </>
         )}
       </View>
+      <Sheet
+        visible={moreActions}
+        title="更多学习方式"
+        onClose={() => setMoreActions(false)}
+      >
+        {extraActions.map(action => (
+          <Row
+            key={action.key}
+            title={action.label}
+            onPress={() => {
+              setMoreActions(false);
+              intents.quick(action.key);
+            }}
+          />
+        ))}
+      </Sheet>
       <RefinementSheet state={state.read.refinement} intents={intents} />
       <StudyOverlays
         overlay={state.overlay}

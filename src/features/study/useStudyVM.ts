@@ -510,9 +510,10 @@ export function useStudyVM(
       busy: raw.busy,
     },
     read: {
+      format: raw.book?.format,
       refinement: refinement.state,
       canTranslate: Boolean(reader?.blocks.length),
-      view: raw.readerView,
+      view: raw.book?.format === 'epub' ? 'flow' : raw.readerView,
       hint:
         readSection?.status === 'done'
           ? '已学 · 点段落可解释、提问'

@@ -186,6 +186,20 @@ export function ReaderContent({
   const [headerHeight, setHeaderHeight] = useState(0);
   const [footerHeight, setFooterHeight] = useState(0);
   const rows = useMemo(() => {
+    if (state.format === 'epub') {
+      const blocks = state.items.filter(
+        (item): item is Extract<ReaderItem, { kind: 'block' }> =>
+          item.kind === 'block',
+      );
+      return blocks.map(
+        (block, index): FlowRow => ({
+          id: block.ref,
+          block,
+          start: index === 0,
+          end: index === blocks.length - 1,
+        }),
+      );
+    }
     const pages: {
       id: string;
       label: string;
@@ -215,7 +229,7 @@ export function ReaderContent({
         end: !t.layout.groupedLists || pageIndex === pages.length - 1,
       },
     ]);
-  }, [state.items, t.layout.groupedLists]);
+  }, [state.items, state.format, t.layout.groupedLists]);
   const latest = useRef({ rows, reportAnchor: intents.reportAnchor });
   latest.current = { rows, reportAnchor: intents.reportAnchor };
   const settleTarget = useRef(() => {});
@@ -293,24 +307,26 @@ export function ReaderContent({
   return (
     <View style={s.grow}>
       <View style={s.toolbar}>
-        <View
-          style={[
-            s.segmentWidth,
-            fontScale > 1 && { width: Math.min(width - 32, 140 * fontScale) },
-          ]}
-        >
-          <Segmented
-            options={[
-              { key: 'orig', label: '原版' },
-              { key: 'flow', label: '重排' },
+        {state.format !== 'epub' ? (
+          <View
+            style={[
+              s.segmentWidth,
+              fontScale > 1 && { width: Math.min(width - 32, 140 * fontScale) },
             ]}
-            value={state.view}
-            onChange={value =>
-              intents.setView(value === 'orig' ? 'orig' : 'flow')
-            }
-            accessibilityLabel="原文排版"
-          />
-        </View>
+          >
+            <Segmented
+              options={[
+                { key: 'orig', label: '原版' },
+                { key: 'flow', label: '重排' },
+              ]}
+              value={state.view}
+              onChange={value =>
+                intents.setView(value === 'orig' ? 'orig' : 'flow')
+              }
+              accessibilityLabel="原文排版"
+            />
+          </View>
+        ) : null}
         <Text style={s.hint}>{state.hint}</Text>
       </View>
       {state.view === 'orig' ? (
@@ -1029,8 +1045,14 @@ export function StudyOverlays({
           onNew={() => intents.newConversation?.()}
         />
       ) : null}
-      {overlay.kind === 'menu'
-        ? overlay.rows.map(row => (
+      {overlay.kind === 'menu' ? (
+        <>
+          <AiOptionsControl
+            state={aiOptions}
+            onChange={intents.setAiOptions}
+            compact
+          />
+          {overlay.rows.map(row => (
             <Row
               key={row.key}
               title={row.title}
@@ -1038,8 +1060,9 @@ export function StudyOverlays({
               chevron
               onPress={() => intents.menuSelect(row.key)}
             />
-          ))
-        : null}
+          ))}
+        </>
+      ) : null}
       {overlay.kind === 'roadmap' ? (
         <ListSection title={overlay.title}>
           {overlay.steps.map((step, i) => (
@@ -1123,12 +1146,6 @@ export function StudyOverlays({
       ) : null}
       {overlay.kind === 'explain' ? (
         <View style={s.overlayBody}>
-          <AiOptionsControl
-            state={aiOptions}
-            onChange={intents.setAiOptions}
-            disabled={overlay.streaming}
-            inline
-          />
           {'quote' in overlay ? (
             <View style={s.sheetQuote}>
               <RichView doc={overlay.quote} typography="sheetQuote" />
@@ -1143,6 +1160,12 @@ export function StudyOverlays({
             />
           ) : null}
           {overlay.error ? <Note tone="bad">{overlay.error}</Note> : null}
+          <AiOptionsControl
+            state={aiOptions}
+            onChange={intents.setAiOptions}
+            disabled={overlay.streaming}
+            compact
+          />
           {!overlay.streaming ? (
             <Button
               variant="secondary"

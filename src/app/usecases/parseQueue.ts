@@ -304,7 +304,26 @@ function createParseQueue(c: Container): ParseQueue {
         next_poll_at: null,
       };
       await update(part, patch);
-      await c.repos.books.update(part.book_id, { status: 'paused' });
+      // Authentication and account limits stop the whole queue. Every waiting book
+      // must explain that shared blocker instead of continuing to say “parsing”.
+      const pausedBooks = await c.db.transaction(async tx => {
+        const repos = createRepos(tx);
+        const pending = (await repos.parts.pending()).filter(
+          pendingPart => pendingPart.stage !== 'failed',
+        );
+        const bookIds = new Set(
+          pending.map(pendingPart => pendingPart.book_id),
+        );
+        for (const pendingPart of pending)
+          await repos.parts.update(pendingPart.book_id, pendingPart.part_no, {
+            error_code: error.code,
+            error_msg: error.message,
+            next_poll_at: null,
+          });
+        for (const bookId of bookIds)
+          await repos.books.update(bookId, { status: 'paused' });
+        return [...bookIds];
+      });
       if (error.code === 'A0211') {
         const settings = await c.repos.settings.get<Record<string, unknown>>(
           'mineru',
@@ -321,7 +340,7 @@ function createParseQueue(c: Container): ParseQueue {
           'parseQueue.dailyLimitDate',
           c.clock.today(),
         );
-      await notify(part.book_id);
+      for (const bookId of pausedBooks) await notify(bookId);
       return;
     }
     if (error.kind === 'network' || error.kind === 'timeout')

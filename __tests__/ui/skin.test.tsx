@@ -225,7 +225,7 @@ it.each(['paper', 'glass'] as const)(
         typeof control.props.hitSlop === 'number' ? control.props.hitSlop : 0;
       expect(height + inset * 2).toBeGreaterThanOrEqual(48);
     }
-    const expected = skinId === 'paper' ? ['伴读', '原文'] : ['读书', '听讲'];
+    const expected = ['伴读', '原文'];
     for (const label of expected)
       expect(
         renderer.root.findAll(
@@ -250,7 +250,7 @@ it.each([1, 2])(
     const read = mode.findAll(
       n =>
         n.props.accessibilityRole === 'radio' &&
-        n.props.accessibilityLabel === '读书' &&
+        n.props.accessibilityLabel === '原文' &&
         typeof n.props.onPress === 'function',
     )[0];
     await act(async () => read.props.onPress());

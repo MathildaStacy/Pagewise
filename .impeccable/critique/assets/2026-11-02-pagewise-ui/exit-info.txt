@@ -1,0 +1,22 @@
+ACTIVITY MANAGER PROCESS EXIT INFO (dumpsys activity exit-info)
+Last Timestamp of Persistence Into Persistent Storage: 2026-11-02 00:04:06.965
+  package: com.pagewise.pminspect
+    Historical Process Exit for uid=10232
+        ApplicationExitInfo #0:
+          timestamp=2026-11-02 00:03:34.296 pid=14821 realUid=99009 packageUid=10232 definingUid=10175 user=0 startSeq=2497
+          process=com.pagewise.pminspect:com.google.android.webview:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:1 reason=1 (EXIT_SELF) subreason=17 (ISOLATED NOT NEEDED) status=0
+          importance=400 pss=0.00 rss=0.00 state=empty trace=null
+          description=isolated not needed
+          anrInfo=null
+        ApplicationExitInfo #1:
+          timestamp=2026-11-02 00:03:34.262 pid=11392 realUid=10232 packageUid=10232 definingUid=10232 user=0 startSeq=2388
+          process=com.pagewise.pminspect reason=4 (APP CRASH(EXCEPTION)) subreason=0 (UNKNOWN) status=0
+          importance=100 pss=0.00 rss=742MB state=70 bytes trace=null
+          description=crash
+          anrInfo=null
+        ApplicationExitInfo #2:
+          timestamp=2026-11-01 23:51:10.574 pid=12568 realUid=99008 packageUid=10232 definingUid=10175 user=0 startSeq=2426
+          process=com.pagewise.pminspect:com.google.android.webview:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0 reason=13 (OTHER KILLS BY SYSTEM) subreason=17 (ISOLATED NOT NEEDED) status=0
+          importance=300 pss=0.00 rss=0.00 state=empty trace=null
+          description=isolated not needed
+          anrInfo=null

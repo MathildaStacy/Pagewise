@@ -146,6 +146,7 @@ export interface ReaderOriginalPage {
   blocks: (PageOrigProps['blocks'][number] & { pinId?: string })[];
 }
 export interface ReaderState {
+  format?: 'pdf' | 'epub';
   refinement?: RefinementState;
   canTranslate?: boolean;
   view: 'orig' | 'flow';

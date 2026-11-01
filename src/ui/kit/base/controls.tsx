@@ -1461,7 +1461,7 @@ const useStyles = makeStyles(t => ({
     borderTopColor: t.color.line,
   },
   quickViewport: { flexGrow: 0, flexShrink: 0 },
-  quickTarget: { minHeight: 32, minWidth: 48, justifyContent: 'center' },
+  quickTarget: { minHeight: 48, minWidth: 48, justifyContent: 'center' },
   quickChip: {
     minHeight: 32,
     flexDirection: 'row',

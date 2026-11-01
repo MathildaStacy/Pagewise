@@ -7,6 +7,74 @@ import {
 import fixture from '../../../fixtures/mineru-synthetic/sample_content_list.json';
 import layout from '../../../fixtures/mineru-synthetic/layout.json';
 
+it('retains bibliography and page footnotes, including pages made entirely of these blocks', () => {
+  const result = adaptContentList(
+    [
+      {
+        type: 'ref_text',
+        page_idx: 0,
+        text: 'Author (2023). Research reference.',
+        bbox: [100, 80, 900, 160],
+      },
+      {
+        type: 'page_footnote',
+        page_idx: 1,
+        text: '[1] This note continues from the preceding page.',
+        bbox: [100, 80, 900, 220],
+      },
+      { type: 'header', page_idx: 1, text: 'Repeated running header' },
+      { type: 'aside_text', page_idx: 1, text: 'A margin definition' },
+      { type: 'page_number', page_idx: 1, text: '42' },
+    ],
+    { pageFrom: 401 },
+  );
+  expect(result.pagesWithContent).toEqual([401, 402]);
+  expect(result.blocks).toEqual([
+    expect.objectContaining({
+      seq: 401001,
+      page: 401,
+      type: 'text',
+      text: 'Author (2023). Research reference.',
+    }),
+    expect.objectContaining({
+      seq: 402001,
+      page: 402,
+      type: 'footnote',
+      text: '[1] This note continues from the preceding page.',
+    }),
+    expect.objectContaining({
+      seq: 402002,
+      type: 'footnote',
+      text: 'A margin definition',
+    }),
+  ]);
+  expect(result.pageNumbers).toEqual([{ page: 402, printed: 42 }]);
+});
+
+it('retains an original-page image when detected content has no OCR payload, while leaving blank pages empty', () => {
+  const result = adaptContentList(
+    [
+      { type: 'text', text: '', bbox: [100, 70, 900, 120], page_idx: 0 },
+      { type: 'table', img_path: '', bbox: [100, 100, 900, 900], page_idx: 1 },
+      { type: 'page_number', text: '3', page_idx: 2 },
+      { type: 'text', text: '', bbox: [0, 0, 997, 998], page_idx: 2 },
+      { type: 'header', text: 'Journal 10 (2014): 177–243.', page_idx: 3 },
+      { type: 'text', text: 'Normal body', page_idx: 4 },
+      { type: 'text', text: '', bbox: [100, 100, 200, 200], page_idx: 4 },
+    ],
+    { pageFrom: 201 },
+  );
+  expect(result.blocks.filter(b => b.sourcePage).map(b => b.page)).toEqual([
+    201, 202, 204,
+  ]);
+  expect(result.pagesWithContent).toEqual([201, 202, 204, 205]);
+  expect(result.blocks.find(b => b.page === 201)).toMatchObject({
+    seq: 201001,
+    type: 'image',
+    bbox: [0, 0, 1, 1],
+  });
+});
+
 it('adapts the synthetic package into stable original-page blocks and retains referenceable captions', () => {
   const result = adaptContentList(fixture, { pageFrom: 13, layout });
   expect(result.pagesWithContent).toEqual([13, 14, 16]);

@@ -87,7 +87,7 @@ export interface MapNode {
   status: 'new' | 'learning' | 'done';
   current: boolean;
   pageLabel: string;
-  tags: { tone: 'stuck'; label: string }[];
+  tags: { tone: 'stuck' | 'muted'; label: string }[];
   flagged: boolean;
   expandable: boolean;
   expanded: boolean;
@@ -112,7 +112,7 @@ export interface SectionSheetState {
   summary?: string;
   stuck: string[];
   actions: {
-    key: 'read' | 'notes' | 'start';
+    key: 'read' | 'notes' | 'start' | 'scope';
     label: string;
     primary?: boolean;
   }[];
@@ -131,6 +131,9 @@ export interface SearchSheetState {
   busy: boolean;
 }
 export interface BookMapState extends PageState {
+  structureIssues?: { id: string; message: string; sectionId: string }[];
+  scope?: { view: 'learning' | 'all'; included: number; excluded: number };
+  start?: { id: string; label: string } | null;
   title: string;
   demo: boolean;
   check: { ok: boolean; text: string; sub?: string; tone: 'muted' | 'stuck' };
@@ -158,11 +161,14 @@ export interface BookMapState extends PageState {
     | SearchSheetState;
 }
 export interface BookMapIntents {
+  inspectStructure?(sectionId: string): void;
+  setScopeView?(view: 'learning' | 'all'): void;
+  startLearning?(): void;
   back(): void;
   refresh(): void;
   toggle(id: string): void;
   openSection(id: string): void;
-  sectionAction(key: 'read' | 'notes' | 'start'): void;
+  sectionAction(key: 'read' | 'notes' | 'start' | 'scope'): void;
   confirmFlag(): void;
   rejectFlag(): void;
   confirmStart(): void;

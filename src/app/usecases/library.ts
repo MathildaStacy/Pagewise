@@ -24,11 +24,12 @@ export async function loadShelf(c: Container) {
   );
   return Promise.all(
     books.map(async book => {
-      const [sections, study, parts, stuck] = await Promise.all([
+      const [sections, study, parts, stuck, learningScope] = await Promise.all([
         c.repos.sections.tree(book.id),
         c.repos.study.get(book.id),
         c.repos.parts.list(book.id),
         c.repos.notes.stuck.list(book.id, undefined, { resolved: false }),
+        c.repos.sections.learningScope(book.id),
       ]);
       const [plan, recentQuestion] = study?.main_section
         ? await Promise.all([
@@ -39,7 +40,16 @@ export async function loadShelf(c: Container) {
             ),
           ])
         : [undefined, undefined];
-      return { book, sections, study, parts, stuck, plan, recentQuestion };
+      return {
+        book,
+        sections,
+        study,
+        parts,
+        stuck,
+        plan,
+        recentQuestion,
+        learningScope,
+      };
     }),
   );
 }
@@ -53,11 +63,12 @@ export async function openLibraryBook(c: Container, id: string) {
   return book;
 }
 export async function loadBookMap(c: Container, id: string) {
-  const [book, sections, study, stuck] = await Promise.all([
+  const [book, sections, study, stuck, learningScope] = await Promise.all([
     c.repos.books.get(id),
     c.repos.sections.tree(id),
     c.repos.study.get(id),
     c.repos.notes.stuck.list(id, undefined, { resolved: false }),
+    c.repos.sections.learningScope(id),
   ]);
   if (!book) throw new Error('这本书已经不在书架上了');
   return {
@@ -65,9 +76,29 @@ export async function loadBookMap(c: Container, id: string) {
     sections: sections.map(mapSectionForReview),
     study,
     stuck,
+    learningScope,
   };
 }
 export type MapRecord = Awaited<ReturnType<typeof loadBookMap>>;
+export async function setSectionLearningScope(
+  c: Container,
+  bookId: string,
+  id: string,
+  included: boolean,
+) {
+  const section = await c.repos.sections.get(bookId, id);
+  if (!section) throw new Error('找不到这个小节');
+  await c.repos.sections.setLearningScope(
+    bookId,
+    id,
+    included ? 'include' : 'exclude',
+  );
+  c.events.emit('section.status', {
+    bookId,
+    sectionId: id,
+    status: section.status,
+  });
+}
 export async function loadSection(c: Container, bookId: string, id: string) {
   const [section, study, qa, stuck, blocks, userText] = await Promise.all([
     c.repos.sections.get(bookId, id),

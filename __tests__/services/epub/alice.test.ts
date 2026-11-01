@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createEpubParser } from '@services/epub';
 import { pageLabel } from '@core/ids';
+import { learningLeaves } from '@core/learningScope';
 const execute = promisify(execFile);
 it('parses the public Gutenberg Alice EPUB with the real ZIP, OPF, nav, XHTML and image files', async () => {
   const folder = await mkdtemp(path.join(os.tmpdir(), 'pagewise-alice-'));
@@ -47,6 +48,18 @@ it('parses the public Gutenberg Alice EPUB with the real ZIP, OPF, nav, XHTML an
       result.sections.every(section => section.source === 'bookmark'),
     ).toBe(true);
     expect(result.parts.length).toBeGreaterThan(10);
+    const route = learningLeaves(result.sections, {}, info.title);
+    expect(route).toHaveLength(12);
+    expect(route[0].title).toContain('CHAPTER I.');
+    expect(route[11].title).toContain('CHAPTER XII.');
+    expect(route.every(section => /^CHAPTER /u.test(section.title))).toBe(true);
+    const license = result.sections.find(section =>
+      /GUTENBERG.*LICENSE/u.test(section.title),
+    )!;
+    expect(license).toBeDefined();
+    expect(
+      learningLeaves(result.sections, { [license.id]: 'include' }, info.title),
+    ).toHaveLength(13);
     expect(
       pageLabel({ format: 'epub', page_offset: 0 }, null, result.blocks[0].loc),
     ).toContain(' · ');

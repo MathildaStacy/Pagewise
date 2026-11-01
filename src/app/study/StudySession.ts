@@ -296,21 +296,22 @@ export class StudySession implements StudySessionApi {
       this.set({ loading: true });
       let previous = await this.c.repos.study.get(this.bookId);
       if (!this.initialized) {
-        const [book, sections, prefs] = await Promise.all([
+        const [book, sections, prefs, learning] = await Promise.all([
           this.c.repos.books.get(this.bookId),
           this.c.repos.sections.tree(this.bookId),
           readPrefs(this.c),
+          this.c.repos.sections.learningLeaves(this.bookId),
         ]);
         if (!book) throw new Error('找不到这本书');
         const leaf =
           sections.find(section => section.id === previous?.main_section) ||
-          sections.find(
+          learning.find(
             section =>
               section.is_leaf &&
               section.status !== 'done' &&
               section.block_from !== null,
           ) ||
-          sections.find(
+          learning.find(
             section => section.is_leaf && section.block_from !== null,
           );
         this.set({
@@ -325,7 +326,8 @@ export class StudySession implements StudySessionApi {
           phase: previous?.phase ?? 'idle',
           detours: previous?.detours ?? [],
           mode: previous?.mode ?? 'listen',
-          readerView: previous?.reader_view ?? 'orig',
+          readerView:
+            book.format === 'epub' ? 'flow' : previous?.reader_view ?? 'orig',
           readAnchor: previous?.read_anchor ?? leaf?.block_from ?? null,
         });
         this.initialized = true;
@@ -356,8 +358,14 @@ export class StudySession implements StudySessionApi {
             main: { sectionId: options.sectionId, part: 0, step: 0 },
             phase: 'idle',
             detours: [],
+            readAnchor:
+              this.state.sections.find(s => s.id === options.sectionId)
+                ?.block_from ?? null,
+            pendingQuote: null,
           });
         }
+        // An explicit chapter entry must leave any previous source peek behind.
+        this.set({ readerSectionId: null });
       }
       if (options.mode) this.set({ mode: options.mode });
       if (options.preserveMain && options.sectionId)
@@ -2009,7 +2017,9 @@ export class StudySession implements StudySessionApi {
     if (index >= 0) await this.jumpInternal(index);
   }
   async setReaderView(readerView: 'orig' | 'flow') {
-    this.set({ readerView });
+    this.set({
+      readerView: this.state.book?.format === 'epub' ? 'flow' : readerView,
+    });
     await this.checkpoint();
   }
   reportAnchor(seq: number) {

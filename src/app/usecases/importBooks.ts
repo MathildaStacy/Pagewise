@@ -7,6 +7,7 @@ import type {
   Section,
 } from '@core/types';
 import { createRepos } from '@data/repos';
+import { cleanBookAuthor, cleanBookTitle } from '@core/bookMetadata';
 import { planPdfParts } from '@services/mineru/split';
 import { MINERU_DAILY_PRIORITY_PAGES } from '@services/mineru/types';
 import type { Container } from '../container';
@@ -291,8 +292,8 @@ export function confirmImportDraft(
         await repos.books.insert({
           id,
           sha256: String(info.sha256),
-          title: String(info.title),
-          author: String(info.author ?? ''),
+          title: cleanBookTitle(String(info.title)),
+          author: cleanBookAuthor(String(info.author ?? '')),
           format,
           pages: format === 'pdf' ? pages : null,
           size_bytes: size,

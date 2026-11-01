@@ -235,7 +235,8 @@ export function adaptContentList(
         type: 'equation',
         latex: string(row.latex) || rawText,
       };
-    else if (type === 'text') block = { ...base, type: 'text' };
+    else if (type === 'text' || type === 'ref_text')
+      block = { ...base, type: 'text' };
     else if (type === 'image' || type === 'chart')
       block = { ...base, type: 'image', imageFile: relativePath(row.img_path) };
     else if (type === 'table')
@@ -258,7 +259,15 @@ export function adaptContentList(
       };
     else if (['caption', 'image_caption', 'table_caption'].includes(type))
       block = { ...base, type: 'caption' };
-    else if (['footnote', 'image_footnote', 'table_footnote'].includes(type))
+    else if (
+      [
+        'footnote',
+        'page_footnote',
+        'aside_text',
+        'image_footnote',
+        'table_footnote',
+      ].includes(type)
+    )
       block = { ...base, type: 'footnote' };
     else continue;
     if (
@@ -316,6 +325,46 @@ export function adaptContentList(
         addNumber(row, options.pageFrom + Number(page.page_idx ?? index));
     }
   });
+  // A blank page has no detected content. A page with empty OCR blocks (or only a detected
+  // header) may contain a footnote continuation or a table: retain its original image.
+  const present = new Set(blocks.map(block => block.page));
+  for (const { row, idx } of rows) {
+    const page = options.pageFrom + idx;
+    if (
+      present.has(page) ||
+      [
+        'page_number',
+        'page_num',
+        'page-number',
+        'footer',
+        'page_footer',
+      ].includes(string(row.type))
+    )
+      continue;
+    if (!textOf(row) && !box(row.bbox)) continue;
+    const bounds = normalizeBox(row, idx, options, pages);
+    // MinerU emits this full-canvas empty text sentinel for blank interleaf pages.
+    if (
+      row.type === 'text' &&
+      !textOf(row) &&
+      bounds &&
+      bounds[0] === 0 &&
+      bounds[1] === 0 &&
+      bounds[2] >= 0.995 &&
+      bounds[3] >= 0.995
+    )
+      continue;
+    blocks.push({
+      seq: 0,
+      page,
+      type: 'image',
+      bbox: [0, 0, 1, 1],
+      text: '此页文字未能识别，已保留原页图像。',
+      sourcePage: true,
+    });
+    present.add(page);
+  }
+  blocks.sort((a, b) => a.page - b.page);
   const perPage = new Map<number, number>();
   for (const block of blocks) {
     const ordinal = (perPage.get(block.page) ?? 0) + 1;
