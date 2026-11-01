@@ -237,7 +237,14 @@ export function ReaderContent({
     [],
   );
   const target = state.scrollTo?.ref;
-  const index = target ? rows.findIndex(row => row.block?.ref === target) : -1;
+  // A paragraph continued across a page answers for every source block it holds.
+  const index = target
+    ? rows.findIndex(
+        row =>
+          row.block?.ref === target ||
+          row.block?.joined?.some(seq => `b${seq}` === target),
+      )
+    : -1;
   useEffect(() => {
     // Returning from original mode mounts a new list with new header geometry.
     geometry.current.clear();
@@ -733,6 +740,9 @@ function ReaderBlockRow({
 }) {
   const s = useStyles(),
     view = useRef<ComponentRef<typeof View>>(null);
+  const noteText = item.note
+    ? item.doc.map(part => (part.t === 'p' ? titleText(part.c) : '')).join(' ')
+    : '';
   const select = () => {
     if (item.type === 'title') return;
     view.current?.measureInWindow((x, y, w, h) =>
@@ -750,13 +760,28 @@ function ReaderBlockRow({
         item.marks.includes('flash') ? s.flash : undefined,
       ]}
     >
-      {item.refined ? (
+      {item.refined || item.joined?.length ? (
         <Button
           variant="text"
           size="sm"
-          label={`AI 精修${item.continuesFrom != null ? ' · 接续上段' : ''}`}
+          label={
+            item.joined?.length
+              ? `${item.refined ? 'AI 精修 · ' : ''}已接续跨页段落`
+              : `AI 精修${item.continuesFrom != null ? ' · 接续上段' : ''}`
+          }
           onPress={() => intents.openRefinement?.()}
         />
+      ) : null}
+      {item.runIn ? (
+        <Text
+          accessibilityRole="header"
+          style={[
+            s.runInHeading,
+            item.runIn.level <= 3 ? s.refinedHeadingMinor : undefined,
+          ]}
+        >
+          {item.runIn.text}
+        </Text>
       ) : null}
       {item.type === 'title' ? (
         <View style={s.readerTitle}>
@@ -797,6 +822,12 @@ function ReaderBlockRow({
             </Button>
           </View>
         </Pressable>
+      ) : item.note ? (
+        <View style={s.note}>
+          <Text style={s.noteText} accessibilityLabel={`页边术语 ${noteText}`}>
+            {noteText}
+          </Text>
+        </View>
       ) : (
         <BlockView
           doc={item.doc}
@@ -1348,11 +1379,36 @@ const useStyles = makeStyles(t => ({
     paddingVertical: t.layout.groupedLists ? 3 : 2,
   },
   titleBlock: { marginBottom: t.layout.groupedLists ? 12 : 8 },
-  refinedHeadingMajor: { ...t.type.title, color: t.color.paperInk },
+  // Scaled from the reader heading so a chapter reads larger than a section, and a
+  // subsection still stands above body text.
+  refinedHeadingMajor: {
+    fontSize: t.type.bookBody.fontSize * 1.5,
+    lineHeight: t.type.bookBody.fontSize * 1.5 * 1.35,
+  },
   refinedHeadingMinor: {
+    fontSize: t.type.bookBody.fontSize * 1.1,
+    lineHeight: t.type.bookBody.fontSize * 1.1 * 1.6,
+  },
+  runInHeading: {
     ...t.type.bookBody,
+    fontFamily: t.type.sansFamily,
     fontWeight: '700',
     color: t.color.paperInk,
+    paddingHorizontal: t.layout.groupedLists ? 10 : 4,
+    marginBottom: 2,
+  },
+  note: {
+    marginLeft: t.layout.groupedLists ? 10 : 4,
+    paddingLeft: 8,
+    borderLeftWidth: 2,
+    borderLeftColor: t.color.line,
+  },
+  noteText: {
+    ...t.type.bookBody,
+    fontSize: t.type.bookBody.fontSize * 0.85,
+    lineHeight: t.type.bookBody.fontSize * 0.85 * 1.5,
+    fontStyle: 'italic',
+    color: t.color.ink2,
   },
   readerTitleText: {
     ...t.type.bookBody,

@@ -1,0 +1,83 @@
+{
+  "installed_version": "0.0.13",
+  "version_code": 13,
+  "device": "Pagewise_Refine / emulator-5590",
+  "cold_restart": true,
+  "counts_and_applied_runs_match": true,
+  "state": {
+    "counts": {
+      "books": 3,
+      "blocks": 25368,
+      "sections": 2109,
+      "refinements": 9
+    },
+    "applied": [
+      {
+        "id": 2,
+        "section_id": "ch21-intro",
+        "mode": "structure",
+        "status": "applied",
+        "completed": 4,
+        "input_tokens": 3150,
+        "output_tokens": 3884
+      },
+      {
+        "id": 5,
+        "section_id": "21.1.1",
+        "mode": "vision",
+        "status": "applied",
+        "completed": 6,
+        "input_tokens": 34246,
+        "output_tokens": 1634
+      },
+      {
+        "id": 8,
+        "section_id": "19.6.2",
+        "mode": "vision",
+        "status": "applied",
+        "completed": 3,
+        "input_tokens": 20401,
+        "output_tokens": 1675
+      },
+      {
+        "id": 9,
+        "section_id": "21.3-intro",
+        "mode": "structure",
+        "status": "applied",
+        "completed": 5,
+        "input_tokens": 6334,
+        "output_tokens": 738
+      }
+    ],
+    "reader": {
+      "notes": 5,
+      "joined": [
+        {
+          "seq": 1398007,
+          "joined": [
+            1399001
+          ]
+        },
+        {
+          "seq": 1400007,
+          "joined": [
+            1401001
+          ]
+        }
+      ]
+    }
+  },
+  "undo_reapply": {
+    "section": "21.3-intro",
+    "undone": {
+      "notes": 0,
+      "joined": 0,
+      "stride_type": "title"
+    },
+    "reapplied": {
+      "notes": 5,
+      "joined": 2,
+      "stride_type": "text"
+    }
+  }
+}

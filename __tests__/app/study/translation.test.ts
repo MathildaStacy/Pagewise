@@ -101,8 +101,16 @@ it('preserves original code and standalone equations between translated paragrap
       chars: 6,
       section_id: '3.5.2',
     },
+    // MinerU keeps the delimiters in the text; they are not doubled.
     {
       seq: 4,
+      type: 'equation',
+      text: '$$ a=b\\tag{1} $$',
+      chars: 16,
+      section_id: '3.5.2',
+    },
+    {
+      seq: 5,
       type: 'text',
       text: 'After the code.',
       chars: 15,
@@ -119,7 +127,7 @@ it('preserves original code and standalone equations between translated paragrap
       ),
     );
   expect(await session.translateSection('3.5.2')).toBe(
-    `代码之前。\n\n${code}\n\n$$\nE=mc^2\n$$\n\n代码之后。`,
+    `代码之前。\n\n${code}\n\n$$\nE=mc^2\n$$\n\n$$\na=b\\qquad\\text{(1)}\n$$\n\n代码之后。`,
   );
   expect(complete).toHaveBeenCalledTimes(2);
 });

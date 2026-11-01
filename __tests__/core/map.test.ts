@@ -91,10 +91,11 @@ it('builds a deterministic three-chapter tree with appendix, ranges, short merge
       .filter(section => section.level === 1)
       .map(section => section.id),
   ).toEqual(['ch1', 'ch2', 'ch3', 'appA']);
+  // The chapter title opens its first unit so the reader shows it.
   expect(byId.get('1.1')).toMatchObject({
     parent_id: 'ch1',
     level: 3,
-    block_from: 13002,
+    block_from: 13001,
     block_to: 14001,
   });
   expect(byId.get('1.2')).toMatchObject({
@@ -263,7 +264,7 @@ it('adopts matching bookmark hierarchy for unnumbered typography without hiding 
     level: 3,
     parent_id: '1.1',
     flag: null,
-    block_from: 43002,
+    block_from: 42001,
     block_to: 43004,
   });
   expect(map.flags).toEqual([]);
@@ -524,7 +525,7 @@ it('passes chapter introductions through section parents into the first learning
   const map = buildMap(blocks);
   expect(map.sections.find(section => section.id === 'ch10')).toBeTruthy();
   expect(map.sections.find(section => section.id === '10.1.1')).toMatchObject({
-    block_from: 1002,
+    block_from: 1001,
     block_to: 1005,
   });
 });
@@ -548,7 +549,7 @@ it('merges a named introduction into the first section, and follows short-sectio
     map.sections.find(section => section.id === 'u2001')?.merged_into,
   ).toBe('1.1');
   expect(map.sections.find(section => section.id === '1.1.1')?.block_from).toBe(
-    2001,
+    1001,
   );
   expect(map.sections.find(section => section.id === '1.2')).toMatchObject({
     merged_into: '1.4',

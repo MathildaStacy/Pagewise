@@ -286,7 +286,9 @@ export function presentMap(
 ): Pick<BookMapState, 'title' | 'check' | 'chapters' | 'scrollToSectionId'> {
   const { book, sections, study, stuck } = record;
   const current = sections.find(s => s.id === study?.main_section);
-  const flagged = sections.filter(s => s.flag);
+  // Splitting a long unit into parts is routine and needs no review; only doubts do.
+  const review = (s: Section) => !!s.flag && s.flag !== 'split';
+  const flagged = sections.filter(review);
   const roots = sections.filter(s => !s.parent_id);
   const chapterCount =
     roots.filter(s => /^\d+$/.test(s.no ?? '')).length || roots.length;
@@ -314,12 +316,12 @@ export function presentMap(
         ? pageLabel(book, s.page_from)
         : '章节',
       tags: [
-        ...(s.flag ? [{ tone: 'stuck' as const, label: '需确认' }] : []),
+        ...(review(s) ? [{ tone: 'stuck' as const, label: '需确认' }] : []),
         ...(stuck.some(value => value.section_id === s.id)
           ? [{ tone: 'stuck' as const, label: '卡点' }]
           : []),
       ],
-      flagged: Boolean(s.flag),
+      flagged: review(s),
       expandable: kids.length > 0,
       expanded: expanded[s.id] ?? descendant(s),
       children: kids.map(node),

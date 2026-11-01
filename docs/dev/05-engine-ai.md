@@ -69,7 +69,7 @@ interface MathRenderer { render(tex: string, display: boolean): Promise<{ svg: s
 - 实现：一个**常驻隐藏 WebView**（App 根部挂载，0×0），加载离线打包的 `android/app/src/main/assets/math/index.html` + MathJax 3 `tex-svg` 组件（构建时从 npm `mathjax@3` 复制，脚本 `scripts/copy-mathjax.js`）。RN 通过 `postMessage({id, tex, display})` 请求，WebView 回 `{id, svg, w, h, baseline}`（单位 ex，RN 侧按字号换算成 dp）。
 - SVG 用 `currentColor`，`MathView` 渲染时传皮肤的文字颜色。
 - 缓存：内存 LRU 500 → `math_cache` 表 → WebView。同一 tex 并发请求合并。
-- 失败（超时 3s / MathJax 报错）：显示 TeX 原文（等宽、ink2 色），不阻塞消息。
+- 等待及失败时显示 TeX 原文（等宽、ink2 色），不阻塞消息。离线 WebView 冷启动最多等待 15s，就绪后单公式渲染限时 3s；仍在显示的公式收到迟到的成功结果时自动恢复 SVG，已切换的公式不接受旧结果。
 - 可选的后续优化（不在 V1 范围）：在 Hermes 里直接跑 `mathjax-full` 去掉 WebView；接口不变即可替换。
 
 ## 3. AI 网关（从 AShareSim 复制）

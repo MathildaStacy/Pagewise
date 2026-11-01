@@ -113,6 +113,10 @@ export interface Block {
     originalType: BlockType;
     reason: string;
     continuesFrom: number | null;
+    /** Run-in heading: the first `length` UTF-16 units of `text`. */
+    heading?: { length: number; level: number } | null;
+    /** `note`: a margin term shown beside, not inside, the body. */
+    role?: 'note' | null;
   };
   id: number;
   book_id: string;

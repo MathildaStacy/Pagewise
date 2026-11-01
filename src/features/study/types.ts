@@ -118,6 +118,12 @@ export interface ReaderBlock {
   refined?: boolean;
   continuesFrom?: number;
   headingLevel?: number;
+  /** Source blocks whose text was joined into this paragraph (continued across a page or figure). */
+  joined?: number[];
+  /** A heading that starts this paragraph in the book; `doc` holds the rest. */
+  runIn?: { text: string; level: number };
+  /** A margin term or side note, shown muted instead of as a heading. */
+  note?: boolean;
   kind: 'block';
   ref: string;
   seq: number;

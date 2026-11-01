@@ -1,3 +1,4 @@
+import { figureLabel, marginNotes, PRIVATE_USE, tocPages } from '../layout';
 import type { Block, JsonValue, Section, SectionPart } from '../types';
 import { normalizeText, textSimilarity } from './migration';
 import type {
@@ -28,7 +29,24 @@ interface Heading {
   intro: boolean;
   endSeq: number | null;
   flags: { kind: MapFlag['kind']; detail: Record<string, unknown> }[];
+  /** Below the deepest section level; kept only if a bookmark confirms it. */
+  deep?: boolean;
+  /** Matched a bookmark. */
+  confirmed?: boolean;
 }
+// End matter is placed by name: per chapter it sits under the chapter, at the end of the book
+// it is a top-level entry.
+const CHAPTER_END =
+  /^(?:summary|exercises|problems|questions|bibliographical and historical notes|historical notes|notes|further reading|references|本章小结|小结|习题|思考题|练习|参考文献|延伸阅读)$/i;
+const BOOK_END =
+  /^(?:bibliography|index|glossary|afterword|epilogue|索引|术语表|后记|参考书目)$/i;
+/**
+ * A long chapter or section opening becomes its own study unit, so `21.1.1` does not start with
+ * three pages of chapter overview. A chapter opening spans pages; a section lead-in is shorter.
+ */
+const INTRO_UNIT_CHARS: Record<number, number> = { 1: 1500, 2: 3000 };
+const CHAPTER_LABEL =
+  /^(?:(?:chapter|part|appendix)\s+(?:\d+|[ivxlc]+|[A-Z])|第\s*[0-9一二三四五六七八九十百零〇]+\s*[章部篇])$/i;
 const cnDigits: Record<string, number> = {
   零: 0,
   〇: 0,
@@ -59,7 +77,8 @@ function numbered(
   chapterAllowed: boolean,
 ): Pick<Heading, 'id' | 'no' | 'title' | 'level'> | null {
   const value = text.trim();
-  let match = /^(\d+)\.(\d+)\.(\d+)(?!\d|\.\d)\s*(.+)$/.exec(value);
+  // Appendix sections are numbered `A.1`, `A.1.1`.
+  let match = /^(\d+|[A-Z])\.(\d+)\.(\d+)(?!\d|\.\d)\s*(.+)$/.exec(value);
   if (match)
     return {
       id: `${match[1]}.${match[2]}.${match[3]}`,
@@ -67,7 +86,7 @@ function numbered(
       title: match[4].trim(),
       level: 3,
     };
-  match = /^(\d+)\.(\d+)(?!\d|\.\d)\s*(.+)$/.exec(value);
+  match = /^(\d+|[A-Z])\.(\d+)(?!\d|\.\d)\s*(.+)$/.exec(value);
   if (match)
     return {
       id: `${match[1]}.${match[2]}`,
@@ -179,10 +198,50 @@ function recognize(blocks: readonly Block[]): Heading[] {
       return match ? [Number(match[1])] : [];
     }),
   );
+  // Contents pages, margin glossary terms and figure labels look like headings but never start
+  // a section; a heading-shaped TOC line would also take the real section's ID.
+  const toc = tocPages(blocks),
+    notes = marginNotes(blocks, { min: 5 });
+  const numberedChapters = blocks.some(
+    block =>
+      block.type === 'title' &&
+      !toc.has(block.page ?? -1) &&
+      (CHAPTER_LABEL.test(block.text.trim()) ||
+        numbered(block.text, true)?.level === 1),
+  );
+  /** Level of the deepest numbered heading so far in this chapter, for unnumbered headings. */
+  let context: number | null = null;
   for (let index = 0; index < blocks.length; index++) {
-    const block = blocks[index],
-      text = block.text.trim();
-    if (!text) continue;
+    const block = blocks[index];
+    // Link icons in the Private Use Area would end up in titles and hide trailing punctuation.
+    let text = block.text.replace(PRIVATE_USE, '').trim(),
+      endSeq = block.seq;
+    // `Chapter 6` and `Constraint Satisfaction Problems` often arrive as two blocks, and the
+    // parser may type either one as body text.
+    const following = blocks[index + 1];
+    const labelled =
+      ['title', 'text'].includes(block.type) &&
+      CHAPTER_LABEL.test(text) &&
+      !!following &&
+      ['title', 'text'].includes(following.type) &&
+      following.page === block.page &&
+      !!following.text.trim() &&
+      Array.from(following.text.trim()).length <= 80 &&
+      !/[.:;。：；]\s*$/.test(following.text.trim());
+    if (labelled) {
+      text = `${text} ${following!.text.replace(PRIVATE_USE, '').trim()}`;
+      endSeq = following!.seq;
+      index++;
+    }
+    if (
+      !text ||
+      (block.page !== null &&
+        toc.has(block.page) &&
+        !/^(?:(?:table of )?contents|目\s*录)$/i.test(text)) ||
+      notes.has(block.seq) ||
+      figureLabel(text)
+    )
+      continue;
     const chapter = /^(?:Chapter\s+)?(\d+)\s/i.exec(text);
     const chapterAllowed =
       chapter &&
@@ -197,13 +256,29 @@ function recognize(blocks: readonly Block[]): Heading[] {
             child.page <= block.page + 1,
         ));
     const value = numbered(text, Boolean(chapterAllowed));
+    // A body-typed line is a heading only when numbered and shaped like one; a dotted number
+    // allows a longer title (`20.3.2 Learning Bayes net parameter values for hidden variables`).
+    const limit = value && value.level > 1 ? 100 : 40;
+    // CJK characters count double, so a long Chinese sentence is not taken for a title.
+    const width = Array.from(text).reduce(
+      (sum, char) => sum + (/[㐀-鿿豈-﫿]/u.test(char) ? 2 : 1),
+      0,
+    );
+    // A sentence the parser typed as a title (`Chapter 2 described several agent designs. …:`).
     if (
+      /[:;：；]\s*$/.test(text) ||
+      (/[.。]\s*$/.test(text) && text.length > 50)
+    )
+      continue;
+    if (
+      !labelled &&
       block.type !== 'title' &&
       !(
         block.type === 'text' &&
         value &&
-        Array.from(text).length <= 40 &&
-        !text.includes('\n')
+        (limit === 40 ? Array.from(text).length : width) <= limit &&
+        !text.includes('\n') &&
+        !/[.:;。：；]\s*$/.test(text)
       )
     )
       continue;
@@ -213,6 +288,7 @@ function recognize(blocks: readonly Block[]): Heading[] {
       !hasNumber &&
       previous &&
       blocks[index - 1]?.seq === previous.endSeq &&
+      endSeq === block.seq &&
       block.page !== null &&
       block.page === previous.page &&
       block.type === 'title'
@@ -228,24 +304,44 @@ function recognize(blocks: readonly Block[]): Heading[] {
         });
       continue;
     }
-    const level =
-      value?.level ??
-      levelOf(block.level ?? (previous ? Math.min(previous.level + 1, 3) : 1));
+    const intro =
+      /^(?:本章引言|本章导读|引言|Chapter\s+Introduction|Introduction)$/i.test(
+        text,
+      );
+    let level: number,
+      deep = false;
+    if (value) {
+      level = value.level;
+      context = value.level;
+    } else if (BOOK_END.test(text)) {
+      level = 1;
+      context = null;
+    } else if (!numberedChapters && block.level === 1) {
+      // Without chapter numbers the parser's top level is the only chapter signal.
+      level = 1;
+      context = null;
+    } else if (context !== null) {
+      // In a numbered book an unnumbered heading belongs under the last numbered one,
+      // except end matter and named introductions, which belong to the chapter.
+      level = CHAPTER_END.test(text) || intro ? 2 : context + 1;
+      deep = level > 3;
+    } else
+      level = levelOf(
+        block.level ?? (previous ? Math.min(previous.level + 1, 3) : 1),
+      );
     result.push({
       ...value,
       id: value?.id ?? `u${block.seq}`,
       no: value?.no ?? null,
       title: value?.title ?? text,
-      level,
+      level: levelOf(level),
       seq: block.seq,
       page: block.page,
       source: 'auto',
-      intro:
-        /^(?:本章引言|本章导读|引言|Chapter\s+Introduction|Introduction)$/i.test(
-          text,
-        ),
-      endSeq: block.seq,
+      intro,
+      endSeq,
       flags: [],
+      ...(deep ? { deep } : {}),
     });
   }
   return result;
@@ -308,6 +404,8 @@ function reconcile(
           headingOrder.get(a.heading)! - headingOrder.get(b.heading)!,
       )[0]?.heading;
     if (match) {
+      delete match.deep;
+      match.confirmed = true;
       const numberedLevel = match.no !== null;
       if (parsed?.no) {
         if (!match.no) match.no = parsed.no;
@@ -454,6 +552,86 @@ export function buildSectionParts(
   });
 }
 
+/**
+ * When a chapter's bookmarks reach a level but skip an unnumbered subheading at that level, the
+ * subheading is a run-in heading (ML4T's repeated `What you observe`) and stays in its unit.
+ * Chapters whose bookmarks stop above it are too shallow to judge, so their headings remain.
+ */
+function dropUnlisted(
+  headings: Heading[],
+  outline: readonly OutlineItem[] | null,
+) {
+  const items = (outline ?? [])
+    .filter(item => item.level >= 1 && item.level <= 3 && item.title.trim())
+    .sort((a, b) => a.page - b.page);
+  const chapters = items.filter(item => item.level === 1);
+  if (!chapters.length) return;
+  for (let index = headings.length - 1; index >= 0; index--) {
+    const heading = headings[index];
+    if (
+      heading.source !== 'auto' ||
+      heading.no !== null ||
+      heading.confirmed ||
+      heading.page === null ||
+      heading.level < 2
+    )
+      continue;
+    const start = chapters.filter(item => item.page <= heading.page!).at(-1);
+    if (!start) continue;
+    const end = chapters.find(item => item.page > start.page)?.page ?? Infinity;
+    const listed = Math.max(
+      ...items
+        .filter(item => item.page >= start.page && item.page < end)
+        .map(item => item.level),
+    );
+    if (heading.level <= listed) headings.splice(index, 1);
+  }
+}
+/** Gives a long chapter or section opening a unit of its own; `headings` must be sorted. */
+function addIntroductionUnits(headings: Heading[], blocks: readonly Block[]) {
+  // In a book with numbered chapters an unnumbered parent is front or end matter, not a
+  // chapter, and its body is not an introduction to its children.
+  const numberedBook = headings.some(
+    heading => heading.no && heading.level === 1,
+  );
+  for (let index = headings.length - 1; index >= 0; index--) {
+    const parent = headings[index],
+      threshold = INTRO_UNIT_CHARS[parent.level];
+    const child = headings[index + 1];
+    if (
+      !threshold ||
+      parent.seq === null ||
+      parent.intro ||
+      (numberedBook && !parent.no && !parent.confirmed) ||
+      !child ||
+      child.level <= parent.level ||
+      child.intro ||
+      child.seq === null
+    )
+      continue;
+    const from = parent.endSeq ?? parent.seq,
+      to = effectiveSeq(child);
+    const chars = blocks
+      .filter(block => block.seq > from && block.seq < to)
+      .reduce(
+        (sum, block) => sum + (block.chars || Array.from(block.text).length),
+        0,
+      );
+    if (chars < threshold) continue;
+    headings.splice(index + 1, 0, {
+      id: `${parent.id}-intro`,
+      no: null,
+      title: parent.level === 1 ? '本章导读' : '本节导读',
+      level: levelOf(parent.level + 1),
+      seq: parent.seq,
+      page: parent.page,
+      source: 'auto',
+      intro: false,
+      endSeq: parent.endSeq,
+      flags: [],
+    });
+  }
+}
 function extendIntroductions(
   sections: Section[],
   headings: Heading[],
@@ -476,14 +654,9 @@ function extendIntroductions(
       section.block_from < heading.seq
         ? section.block_from
         : null;
-    const prefix =
-      inherited ??
-      blocks.find(
-        block =>
-          heading.endSeq !== null &&
-          block.seq > heading.endSeq &&
-          block.seq < first.block_from!,
-      )?.seq;
+    // The parent's own heading opens its first unit, so `Chapter 21` precedes `21.1`;
+    // otherwise that title block belongs to no unit and never shows in the reader.
+    const prefix = inherited ?? heading.seq;
     if (prefix !== undefined && prefix !== null && prefix < first.block_from!) {
       first.block_from = prefix;
       stats(first, blocks);
@@ -512,6 +685,10 @@ export function buildMap(
     throw new Error('地图需要同一本书中唯一且有效的块序号');
   const headings = recognize(blocks);
   reconcile(headings, outline, blocks);
+  // Headings below the deepest section level stay inside their unit unless a bookmark lists them.
+  for (let index = headings.length - 1; index >= 0; index--)
+    if (headings[index].deep) headings.splice(index, 1);
+  dropUnlisted(headings, outline);
   const manual = prev.filter(section => section.source === 'manual');
   for (const section of manual) {
     const existing = headings.findIndex(
@@ -554,6 +731,7 @@ export function buildMap(
       a.level - b.level ||
       a.id.localeCompare(b.id),
   );
+  addIntroductionUnits(headings, blocks);
   const ids = new Set<string>();
   for (const heading of headings) {
     if (ids.has(heading.id))

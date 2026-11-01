@@ -214,6 +214,10 @@ export function useRefinementVM(
             reason: [
               e.reason,
               e.type === 'title' ? `标题层级 ${e.level}` : null,
+              e.heading
+                ? `段首小标题「${e.text.slice(0, e.heading.length).trim()}」`
+                : null,
+              e.role === 'note' ? '页边术语，弱化显示' : null,
               e.continuesFrom != null ? '接续上一段，保留原页定位' : null,
             ]
               .filter(Boolean)

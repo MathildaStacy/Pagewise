@@ -66,16 +66,34 @@ it('queues until ready, correlates out-of-order replies and ignores unrelated me
   expect(await one).toEqual(result);
   bridge.close();
 });
-it('times out after 3s even when a WebView never becomes ready', async () => {
+it('bounds the cold-start wait when a WebView never becomes ready', async () => {
   jest.useFakeTimers();
   const bridge = createMathBridge();
   const request = bridge.render('x', false);
   const rejected = request.catch(error => error);
-  jest.advanceTimersByTime(2999);
+  jest.advanceTimersByTime(14999);
   expect(jest.getTimerCount()).toBe(1);
   jest.advanceTimersByTime(1);
   expect(await rejected).toMatchObject({ reason: 'timeout' });
   bridge.receive(response('1'));
+  bridge.close();
+});
+it('renders after a slow cold start and gives dispatched formulas their own 3s deadline', async () => {
+  jest.useFakeTimers();
+  const bridge = createMathBridge(),
+    send = jest.fn();
+  bridge.attach(send);
+  const request = bridge.render('x', false);
+  jest.advanceTimersByTime(4000);
+  expect(send).not.toHaveBeenCalled();
+  bridge.receive('{"type":"ready"}');
+  const id = JSON.parse(send.mock.calls[0][0]).id;
+  jest.advanceTimersByTime(2999);
+  bridge.receive(response(id));
+  expect(await request).toEqual(result);
+  const stalled = bridge.render('y', true).catch(error => error);
+  jest.advanceTimersByTime(3000);
+  expect(await stalled).toMatchObject({ reason: 'timeout' });
   bridge.close();
 });
 it.each([

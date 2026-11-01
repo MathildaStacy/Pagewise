@@ -279,27 +279,22 @@ export function MathView({
   useEffect(() => {
     if (svg || !renderer) return;
     let active = true;
-    const deadline = setTimeout(() => {
-      active = false;
-      setRendered(null);
-    }, 3000);
+    // TeX is already visible while loading. A slow cold start or cache read must
+    // still replace that fallback when the current formula finishes rendering.
     renderer
       .render(tex, !!display)
       .then(value => {
         if (active) {
-          clearTimeout(deadline);
           setRendered({ tex, display: !!display, renderer, value });
         }
       })
       .catch(() => {
         if (active) {
-          clearTimeout(deadline);
           setRendered(null);
         }
       });
     return () => {
       active = false;
-      clearTimeout(deadline);
     };
   }, [tex, display, svg, renderer]);
   const result =

@@ -1,6 +1,8 @@
+import { PRIVATE_USE } from '@core/layout';
 import type { Block, Book, Message, Section } from '@core/types';
 import { sectionName } from '@features/sectionName';
 import {
+  displayTex,
   parse,
   parseSourceCode,
   stableStreamText,
@@ -16,6 +18,7 @@ import {
 import type { RichDoc, RichInline } from '@ui/kit';
 import type {
   QuickKey,
+  ReaderBlock,
   ReaderItem,
   RefinementContent,
   ThreadItem,
@@ -94,11 +97,13 @@ export function messageDoc(
   });
   return enrichDoc(checked.doc, blocks, book);
 }
-export function blockDoc(block: Block, book: Book | null): RichDoc {
+export function blockDoc(source: Block, book: Book | null): RichDoc {
+  // E-book link icons in the Private Use Area have no glyph and render as boxes.
+  const block = { ...source, text: source.text.replace(PRIVATE_USE, '') };
   if (block.type === 'title')
     return [{ t: 'p', c: [{ t: 'b', c: [{ t: 'text', v: block.text }] }] }];
   if (block.type === 'equation')
-    return [{ t: 'math', tex: block.latex ?? block.text }];
+    return [{ t: 'math', tex: displayTex(block.latex ?? block.text) }];
   if (block.type === 'code') return [parseSourceCode(block.text)];
   if (block.type === 'image')
     return [
@@ -494,7 +499,7 @@ export function presentRefinementContent(
   block: Pick<Block, 'type' | 'text' | 'latex' | 'html'>,
 ): RefinementContent {
   if (block.type === 'equation')
-    return { kind: 'equation', tex: block.latex ?? block.text };
+    return { kind: 'equation', tex: displayTex(block.latex ?? block.text) };
   if (block.type === 'table')
     return { kind: 'table', rows: tableRows(block.html, block.text) };
   return { kind: 'text', text: block.text };
@@ -509,10 +514,17 @@ export function presentReaderItems(
   flash?: number,
 ): ReaderItem[] {
   const result: ReaderItem[] = [];
+  /** Reader blocks that a later source block may continue, by every seq they already hold. */
+  const open = new Map<number, ReaderBlock>();
   let page = '';
   for (const b of blocks) {
     const label = blockPage(b, book);
-    if (page !== label) {
+    const into =
+      b.refinement?.continuesFrom != null
+        ? open.get(b.refinement.continuesFrom)
+        : undefined;
+    // A continued paragraph keeps the page number after it, as in the printed book.
+    if (!into && page !== label) {
       page = label;
       result.push({ kind: 'pageBreak', page: label, id: `page-${b.seq}` });
     }
@@ -530,32 +542,91 @@ export function presentReaderItems(
       b.seq >= current.block_from &&
       b.seq <= current.block_to &&
       raw.phase !== 'ready';
-    result.push({
+    const marks: ReaderBlock['marks'] = [
+      ...(done ? ['heard' as const] : []),
+      ...(now ? ['now' as const] : []),
+      ...(highlights.has(b.seq) ? ['highlight' as const] : []),
+      ...(selected === b.seq ? ['selected' as const] : []),
+      ...(flash === b.seq || (raw.flashRef === flash && now)
+        ? ['flash' as const]
+        : []),
+    ];
+    const heading = b.refinement?.heading;
+    const doc = heading
+      ? blockDoc({ ...b, text: b.text.slice(heading.length).trimStart() }, book)
+      : blockDoc(b, book);
+    if (into) {
+      into.doc = joinDocs(into.doc, doc, b.type === 'title' ? '\n' : ' ');
+      into.joined = [...(into.joined ?? []), b.seq];
+      into.marks = [...new Set([...into.marks, ...marks])];
+      into.pin ??= pins.get(b.seq);
+      open.set(b.seq, into);
+      continue;
+    }
+    const item: ReaderBlock = {
       kind: 'block',
-      refined: Boolean(b.refinement),
+      refined: reworded(b),
       continuesFrom: b.refinement?.continuesFrom ?? undefined,
-      headingLevel:
-        b.refinement && b.type === 'title' ? b.level ?? undefined : undefined,
+      headingLevel: b.type === 'title' ? b.level ?? undefined : undefined,
+      ...(heading
+        ? {
+            runIn: {
+              text: b.text.slice(0, heading.length).trim(),
+              level: heading.level,
+            },
+          }
+        : {}),
+      ...(b.refinement?.role === 'note' ? { note: true } : {}),
       ref: `b${b.seq}`,
       seq: b.seq,
       type: b.type,
-      doc: blockDoc(b, book),
+      doc,
       page: label,
-      marks: [
-        ...(done ? ['heard' as const] : []),
-        ...(now ? ['now' as const] : []),
-        ...(highlights.has(b.seq) ? ['highlight' as const] : []),
-        ...(selected === b.seq ? ['selected' as const] : []),
-        ...(flash === b.seq || (raw.flashRef === flash && now)
-          ? ['flash' as const]
-          : []),
-      ],
+      marks,
       pin: pins.get(b.seq),
       uri: b.image_path ?? undefined,
       table: b.type === 'table' ? tableRows(b.html, b.text) : undefined,
-    });
+    };
+    result.push(item);
+    if (b.type === 'text' || b.type === 'title') open.set(b.seq, item);
   }
   return result;
+}
+/** Structure changes show on their own; badge only blocks whose wording the AI changed. */
+const reworded = (b: Block) => {
+  // Spacing and e-book link icons are invisible in the reader either way.
+  const visible = (text: string) =>
+    text.replace(PRIVATE_USE, '').replace(/\s+/g, '');
+  return (
+    !!b.refinement && visible(b.refinement.originalText) !== visible(b.text)
+  );
+};
+/** Joins the last paragraph of `a` with the first paragraph of `b` into one printed paragraph. */
+export function joinDocs(a: RichDoc, b: RichDoc, gap: string): RichDoc {
+  const last = a.at(-1),
+    first = b[0];
+  if (last?.t !== 'p' || first?.t !== 'p') return [...a, ...b];
+  const tail = last.c.at(-1),
+    head = first.c[0];
+  const glue =
+    gap === ' ' &&
+    tail?.t === 'text' &&
+    head?.t === 'text' &&
+    (/[-㐀-鿿]$/u.test(tail.v) || /^[\s,.;:)\]，。；：）、㐀-鿿]/u.test(head.v))
+      ? ''
+      : gap;
+  return [
+    ...a.slice(0, -1),
+    {
+      t: 'p',
+      c: [
+        ...last.c,
+        ...(glue ? [{ t: 'text' as const, v: glue }] : []),
+        ...first.c,
+      ],
+    },
+    ...b.slice(1),
+  ];
 }
 
 export function presentOriginalPages(

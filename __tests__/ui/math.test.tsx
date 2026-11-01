@@ -92,7 +92,7 @@ it('preserves provided SVG compatibility and shows TeX when rendering fails', as
     color: paperDark.color.ink,
   });
 });
-it('has a 3s UI fallback deadline even if an injected renderer stalls, and ignores late or outdated results', async () => {
+it('shows TeX while waiting, recovers from a slow render, and ignores outdated results', async () => {
   jest.useFakeTimers();
   let finish!: (value: FormulaRender) => void;
   const service = {
@@ -107,8 +107,10 @@ it('has a 3s UI fallback deadline even if an injected renderer stalls, and ignor
     renderer = Renderer.create(content(service));
   });
   await act(async () => jest.advanceTimersByTime(3000));
-  await act(async () => finish(result));
   expect(renderer!.root.findAllByType(SvgXml)).toHaveLength(0);
+  expect(JSON.stringify(renderer!.toJSON())).toContain('x');
+  await act(async () => finish(result));
+  expect(renderer!.root.findByType(SvgXml).props.xml).toBe(result.svg);
   const ready = { render: jest.fn().mockResolvedValue(result) };
   await act(async () => renderer!.update(content(ready, 'y')));
   expect(renderer!.root.findByType(SvgXml).props.xml).toBe(result.svg);

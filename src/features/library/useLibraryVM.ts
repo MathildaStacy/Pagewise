@@ -332,7 +332,8 @@ export function useBookMapVM(bookId: string) {
         if (!mounted.current) return;
         const { section, parent, study, qa, stuck, blocks, plan, userText } =
           value;
-        if (section.flag) {
+        // A unit split into parts opens normally; only doubts ask for confirmation.
+        if (section.flag && section.flag !== 'split') {
           setLocal(s => ({
             ...s,
             error: null,
