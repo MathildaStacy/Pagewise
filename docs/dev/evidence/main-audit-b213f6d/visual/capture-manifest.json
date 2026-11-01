@@ -1,0 +1,926 @@
+[
+  {
+    "file": "glass-dark-flashcard-answer.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "dark",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "cea2e90a3fd172dbfcc6a905ff40d57b86def9ad4bc3dc14a1a3e4af854cb981",
+    "hierarchy": "glass-dark-flashcard-answer.xml"
+  },
+  {
+    "file": "glass-dark-flashcard.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "dark",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "d629de62f63aad154e65a44999d7aaa67f887da7eb7477d3bf3610727ad759ce",
+    "hierarchy": "glass-dark-flashcard.xml"
+  },
+  {
+    "file": "glass-dark-listen.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "dark",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "99d2d4279e7dc136690d5c32edfc3ea6a0c5625a915cfc8b76655a03812d8d5f",
+    "hierarchy": "glass-dark-listen.xml"
+  },
+  {
+    "file": "glass-dark-note-detail.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "dark",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "f6770a6f24806336a8e075bab45ebf182cab9919ed3f963881ab6b2ec3e4ac45",
+    "hierarchy": "glass-dark-note-detail.xml"
+  },
+  {
+    "file": "glass-dark-notes-book.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "dark",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "a7afe49c2af1bd84bd9ce4085b975b3e5dede987184d03a2829d678981112936",
+    "hierarchy": "glass-dark-notes-book.xml"
+  },
+  {
+    "file": "glass-dark-read.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "dark",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "c7fe63c649eea702a9e2420388ae7c3a1efe56d73a131da671e150c7c97a10d3",
+    "hierarchy": "glass-dark-read.xml"
+  },
+  {
+    "file": "glass-dark-shelf.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "dark",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "5bf44279c0d7cbb567c816db7cfee0fc52eb66b0ab991f7319128de8783395ea",
+    "hierarchy": "glass-dark-shelf.xml"
+  },
+  {
+    "file": "glass-dark-translation.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "dark",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "c58f48425983435a7e1edaf81a09cbff7bac9dff631508efba818faec35180c6",
+    "hierarchy": "glass-dark-translation.xml"
+  },
+  {
+    "file": "glass-light-listen.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "0bac9fc17388ff5f3157532917ffe3939913f1aae03b5ad32c910068b06d54f6",
+    "hierarchy": "glass-light-listen.xml"
+  },
+  {
+    "file": "glass-light-map.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "1a5a496efe8090762999c7cddc303820560996ba72183b4aa604f64cc5ad0f95",
+    "hierarchy": "glass-light-map.xml"
+  },
+  {
+    "file": "glass-light-me.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "a92f2a8709733a82fdb8d93176436ffa7175c4adcb2d6a0c7aa7248d9a37d895",
+    "hierarchy": "glass-light-me.xml"
+  },
+  {
+    "file": "glass-light-notes.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "08976a655c984026fd21626973b5768637f0ca5e9fb3ef0e4e61019f09ce4b05",
+    "hierarchy": "glass-light-notes.xml"
+  },
+  {
+    "file": "glass-light-read.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "4cd038a0691ce9164c9217871d9ae13cd06aebcff9e75db463b8177588c51b25",
+    "hierarchy": "glass-light-read.xml"
+  },
+  {
+    "file": "glass-light-review.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "e708bc8479968ae42b5dc6880754529ee04c6cc42966fbb44be80980402a0656",
+    "hierarchy": "glass-light-review.xml"
+  },
+  {
+    "file": "glass-light-shelf.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "7e03fe8cfc0b2a6df300b00d6b70b079622f51eb99060c6d6580450d244a287d",
+    "hierarchy": "glass-light-shelf.xml"
+  },
+  {
+    "file": "google-dark-large-read.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.3,
+    "scheme": "dark",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "9d81a2b64548c261e2eb5db2e99f6742a1a87c59b201618c7b8495192507916d",
+    "hierarchy": "google-dark-large-read.xml"
+  },
+  {
+    "file": "google-dark-listen.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "dark",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "7f7ba7d1738bda4cf95fc01625388b66053c66e1cac355dc92a8d13248abbfd8",
+    "hierarchy": "google-dark-listen.xml"
+  },
+  {
+    "file": "google-dark-read.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "dark",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "c22cb0b644a9f037ce9ac8f5dd8d732e5d2c02b11f771a00ed7b4bc2036a2e96",
+    "hierarchy": "google-dark-read.xml"
+  },
+  {
+    "file": "google-dark-shelf-transient.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "dark",
+    "mode": "native demo",
+    "excluded_from_design_comparison": true,
+    "sha256": "c5b9f0a45d0d2875165179f5f3e3d078da1df60491392c586f765379ec641620",
+    "hierarchy": "google-dark-shelf-transient.xml"
+  },
+  {
+    "file": "google-dark-shelf.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "dark",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "7399de283a20c58605814b3a63e2efae0ff9b874c3c8996003b2441c3a1b0b4f",
+    "hierarchy": "google-dark-shelf.xml"
+  },
+  {
+    "file": "google-light-listen.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "f4d296fa7cb806c8c38d8d5758524a4bd78579c045a0c8ca9b4b06867e897ea4",
+    "hierarchy": "google-light-listen.xml"
+  },
+  {
+    "file": "google-light-map.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "d7cf9c040e8a8f314a9eb824edfe29890bad9500a3ec132f345d547d0ef25fd4",
+    "hierarchy": "google-light-map.xml"
+  },
+  {
+    "file": "google-light-me.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "f8bdc0af7dc37768d8d790f12a1b323f009c62e0ce330b40b76c04a6ccfb0168",
+    "hierarchy": "google-light-me.xml"
+  },
+  {
+    "file": "google-light-notes.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "9f94a7b3c42c9bf91fc5e507fb66439cc51ecd9cf8100c039f3f21a6a47af60b",
+    "hierarchy": "google-light-notes.xml"
+  },
+  {
+    "file": "google-light-read.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "44079028da8646447a8c4a5fa783974e778649b263f56b20cd670ead3fa82a89",
+    "hierarchy": "google-light-read.xml"
+  },
+  {
+    "file": "google-light-review.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "fd07bb707a0d8a78f60d9975330fc23a71b52992e633be30a1fd5d51592752b4",
+    "hierarchy": "google-light-review.xml"
+  },
+  {
+    "file": "google-light-shelf.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "b4dfb3bd1a957ce2e475562490fb5dabfa4e624d7c116b6eb334e3c4d403275b",
+    "hierarchy": "google-light-shelf.xml"
+  },
+  {
+    "file": "meta-dark-large-listen.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.3,
+    "scheme": "dark",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "5d28c5f9983f44e0058c8b166dcc437e8c2eb03afba97102381120e8eb51637c",
+    "hierarchy": "meta-dark-large-listen.xml"
+  },
+  {
+    "file": "meta-dark-large-read.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.3,
+    "scheme": "dark",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "e54a2bcc385e822342e00541d4e36321a18cf74d59b0fdbb334548fa787edc99",
+    "hierarchy": "meta-dark-large-read.xml"
+  },
+  {
+    "file": "meta-dark-listen.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "dark",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "16e48adc0e78e08a8137dfc5d47fd9ccd5aa62785cf1788d8c46dc3496c44c57",
+    "hierarchy": "meta-dark-listen.xml"
+  },
+  {
+    "file": "meta-dark-read.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "dark",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "1c615cf398eeae8bc0ad479326a7adc32849f68bb2a89099363f7997c24e3d46",
+    "hierarchy": "meta-dark-read.xml"
+  },
+  {
+    "file": "meta-dark-shelf-transient.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "dark",
+    "mode": "native demo",
+    "excluded_from_design_comparison": true,
+    "sha256": "fafb37fc7efefa3ee52349b4596099d7dea81e03e5ea38b1596acbd7a410cd27",
+    "hierarchy": "meta-dark-shelf-transient.xml"
+  },
+  {
+    "file": "meta-dark-shelf.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "dark",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "9cb4da5129cc8d246dd700129ea1fe429d483622fc19043fa359dad796677175",
+    "hierarchy": "meta-dark-shelf.xml"
+  },
+  {
+    "file": "meta-light-listen.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "8c48486d24650dd757bb4fbca74db5c0b69b65ef290eb2ee1d87c08d524d0ecc",
+    "hierarchy": "meta-light-listen.xml"
+  },
+  {
+    "file": "meta-light-map.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "4ecf75172244fe28a81b377bf18d08c6956e91cf9fe6825a3b7364fb93d9115a",
+    "hierarchy": "meta-light-map.xml"
+  },
+  {
+    "file": "meta-light-me.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "d9160cb8c33b57274246e6c35ada139c8dc9096f9803a8d0c3d1112d532e3e36",
+    "hierarchy": "meta-light-me.xml"
+  },
+  {
+    "file": "meta-light-notes.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "fff896115da8b49431f5c90a827b3321c58867866c203264bff789033e279df3",
+    "hierarchy": "meta-light-notes.xml"
+  },
+  {
+    "file": "meta-light-read.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "290868fbea67caf6691758fd18b7ee6c1edd66e58a0a84360257cd93a5f288e9",
+    "hierarchy": "meta-light-read.xml"
+  },
+  {
+    "file": "meta-light-review.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "f270296ca55064cd02923ae47ca9b6a57eeb79adc19dc7a2ac53d8d1ae2cc3a2",
+    "hierarchy": "meta-light-review.xml"
+  },
+  {
+    "file": "meta-light-shelf.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "ad07a41b2e67b6875b597afc4272dab5179b2c86cfc77482cae01658bcfb36e0",
+    "hierarchy": "meta-light-shelf.xml"
+  },
+  {
+    "file": "paper-dark-empty.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "dark",
+    "mode": "native empty audit database",
+    "excluded_from_design_comparison": false,
+    "sha256": "fade045d553f70375fa1abe84460a9ea8bdf030f1afcbaf87ffe797a64b18ebe",
+    "hierarchy": "paper-dark-empty.xml"
+  },
+  {
+    "file": "paper-dark-listen.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "dark",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "2d15a96f964bbb563fdea70d8b956851fdb615feeb4355bcb551ac5d6bdf2864",
+    "hierarchy": "paper-dark-listen.xml"
+  },
+  {
+    "file": "paper-dark-read.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "dark",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "9a16991520bc6bd94286ccaec4a87cdd287e9b042ddc93e123574da5fbac6986",
+    "hierarchy": "paper-dark-read.xml"
+  },
+  {
+    "file": "paper-dark-shelf.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "dark",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "e19701a3ce7d8dc532d13dd1a02c19670b2831cc4936361df2c3f9bb317304a7",
+    "hierarchy": "paper-dark-shelf.xml"
+  },
+  {
+    "file": "paper-light-appearance.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "e29e3195ead31f44f60b66fb01bb382692c7f2192f6cd8bd39d65a7dab48da43",
+    "hierarchy": "paper-light-appearance.xml"
+  },
+  {
+    "file": "paper-light-listen.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "0121ada4c501ff7044c234aaf3b31759a1d8bfe5192286299cdab9d7931e01a8",
+    "hierarchy": "paper-light-listen.xml"
+  },
+  {
+    "file": "paper-light-map.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "7c0e9205c5259e4496eb020d30e9861772533c57a08f7a2842fd917a2951b13c",
+    "hierarchy": "paper-light-map.xml"
+  },
+  {
+    "file": "paper-light-me.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "e920ee16564e58dec3447bf3b09daade78b304269705acfbd89f84c822be2c54",
+    "hierarchy": "paper-light-me.xml"
+  },
+  {
+    "file": "paper-light-notes.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "d9ead5bc8a4b771288b723f85683ebae051a7a091089ed836f7dc8e796cc8703",
+    "hierarchy": "paper-light-notes.xml"
+  },
+  {
+    "file": "paper-light-read.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "d53e25015cb3706ea75bf67bb502b6ddc8aa35d77de371f23bb9dcb1d5011050",
+    "hierarchy": "paper-light-read.xml"
+  },
+  {
+    "file": "paper-light-review.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "7403ad17e567f151336104d2fe4a4f387bb7c4d1cdaa15a10385b4dfcb336e84",
+    "hierarchy": "paper-light-review.xml"
+  },
+  {
+    "file": "paper-light-shelf.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "289641e6934590ce6589136e74198d31afc1a9f7ffd7fb6802d8d962de4175aa",
+    "hierarchy": "paper-light-shelf.xml"
+  },
+  {
+    "file": "win11-dark-large-read.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.3,
+    "scheme": "dark",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "73e969fc2de069d710bbcee2a9330c80bda70e14f0b78dc6d4f5dd090f67a2ed",
+    "hierarchy": "win11-dark-large-read.xml"
+  },
+  {
+    "file": "win11-dark-large-today.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.3,
+    "scheme": "dark",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "ff6e9260d37d1fef2a67bcc35e1fa0d197d98fa7d7267e4c48e84919f36b7a81",
+    "hierarchy": "win11-dark-large-today.xml"
+  },
+  {
+    "file": "win11-dark-listen.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "dark",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "867a8b874d0a8e3544d7243b349aa16b99027e02f52703ff3cd4e8dd0f401bd2",
+    "hierarchy": "win11-dark-listen.xml"
+  },
+  {
+    "file": "win11-dark-read.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "dark",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "9a1852eaf92c2c36a2a1a481da83ce2d7ebfbfda6c21f6979ba49f62deb0071b",
+    "hierarchy": "win11-dark-read.xml"
+  },
+  {
+    "file": "win11-dark-shelf.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "dark",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "3f7db8476b84b154587ae33ed3f256b8b0ab8ed615c36828f7f37a8cca8367cf",
+    "hierarchy": "win11-dark-shelf.xml"
+  },
+  {
+    "file": "win11-dark-today.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "dark",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "1144798a4230d827b0417ec38d093723c9ce0acf6897732ebfd154859a02b03a",
+    "hierarchy": "win11-dark-today.xml"
+  },
+  {
+    "file": "win11-light-listen.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "b9a2d38ee4285532c5c9988f5b4495fce5e96de96ead9e36dbb095ba6a9e8907",
+    "hierarchy": "win11-light-listen.xml"
+  },
+  {
+    "file": "win11-light-map.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "5ac958205a96c5e725224f581b38a002445e25edd1836c5718fe0a204ac790eb",
+    "hierarchy": "win11-light-map.xml"
+  },
+  {
+    "file": "win11-light-me.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "25cff5403fa158feef10391e00b93a69814fe4fdb2b44d4c5447c5fbff4e3fb8",
+    "hierarchy": "win11-light-me.xml"
+  },
+  {
+    "file": "win11-light-notes.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "3d61f2da5ce2b3f32007f8c2b5383ba0d967fe2ce5380d2c2eb3205cb682a2e7",
+    "hierarchy": "win11-light-notes.xml"
+  },
+  {
+    "file": "win11-light-read.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "c91d0325e09a8b95147c5ad1b16b66f8342028a54b2d25218e4f6373db8f054d",
+    "hierarchy": "win11-light-read.xml"
+  },
+  {
+    "file": "win11-light-review.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "c9a3f1151066fc550db4e8c8622e89b0e2c5f9c8cf107db134eb72458ecf1ad1",
+    "hierarchy": "win11-light-review.xml"
+  },
+  {
+    "file": "win11-light-shelf.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "64d18c5326a8826af326980fc1fdfa53fbac589f7e8f003e3f3c9d35919e49c8",
+    "hierarchy": "win11-light-shelf.xml"
+  },
+  {
+    "file": "win11-light-today.png",
+    "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+    "size": [
+      1280,
+      2856
+    ],
+    "font_scale": 1.0,
+    "scheme": "light",
+    "mode": "native demo",
+    "excluded_from_design_comparison": false,
+    "sha256": "c27c6aa59b3b23a0d5f1a9b34c4f215e1b8cd93edb787e2c903d0c08978263e4",
+    "hierarchy": "win11-light-today.xml"
+  }
+]

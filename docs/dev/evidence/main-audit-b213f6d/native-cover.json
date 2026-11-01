@@ -1,0 +1,17 @@
+{
+  "commit": "b213f6d83063eca67584db0be8c2b7cee74ccc93",
+  "package": "com.pagewise.audit",
+  "nativeVersion": "0.0.11",
+  "seededReadyBooks": 2,
+  "priorityFrom": 2,
+  "coverWidth": 360,
+  "coverHeight": 500,
+  "coverSha256": "924c4578d29c896b9d79c1b234e46a8706c6f9b8795d94e3d4eae39fbe449cc2",
+  "fontScaleBefore": "1.0",
+  "nightModeBefore": "no",
+  "persistedCoverUnchangedAfterPageCacheClear": true,
+  "restoredSettings": {
+    "fontScale": "1.0",
+    "nightMode": "Night mode: no"
+  }
+}

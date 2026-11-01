@@ -1,0 +1,42 @@
+[
+  {
+    "skin": "paper",
+    "first_paragraph_text_top_px": 621,
+    "app_content_top_px": 156,
+    "density": 3,
+    "fixed_controls_and_top_padding_dp": 155.0,
+    "note": "同一小节可见段落，滚动位置不同，不作为整节首屏可读面积测量"
+  },
+  {
+    "skin": "glass",
+    "first_paragraph_text_top_px": 612,
+    "app_content_top_px": 156,
+    "density": 3,
+    "fixed_controls_and_top_padding_dp": 152.0,
+    "note": "同一小节可见段落，滚动位置不同，不作为整节首屏可读面积测量"
+  },
+  {
+    "skin": "meta",
+    "first_paragraph_text_top_px": 629,
+    "app_content_top_px": 156,
+    "density": 3,
+    "fixed_controls_and_top_padding_dp": 157.7,
+    "note": "同一小节可见段落，滚动位置不同，不作为整节首屏可读面积测量"
+  },
+  {
+    "skin": "google",
+    "first_paragraph_text_top_px": 654,
+    "app_content_top_px": 156,
+    "density": 3,
+    "fixed_controls_and_top_padding_dp": 166.0,
+    "note": "同一小节可见段落，滚动位置不同，不作为整节首屏可读面积测量"
+  },
+  {
+    "skin": "win11",
+    "first_paragraph_text_top_px": 750,
+    "app_content_top_px": 156,
+    "density": 3,
+    "fixed_controls_and_top_padding_dp": 198.0,
+    "note": "同一小节可见段落，滚动位置不同，不作为整节首屏可读面积测量"
+  }
+]
