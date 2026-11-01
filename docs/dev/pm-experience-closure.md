@@ -99,3 +99,17 @@
 远程 AI 回答质量、MinerU 成功解析、实体机性能、真人连续两周 / 隔三天续学、Anki 实际导入仍未验收。真实设备上的长对话分页滚动、五皮肤全页面视觉回归也不由入口抽查替代。基线的 Reanimated 开发警告仍可在 Debug 包出现；本次没有把依赖升级纳入范围。
 
 原始日志、截图、UI 层级、合成数据及测试脚本保存在仓库外：`/Users/boren.fang/.codex/worktrees/pm-experience-closure/artifacts/`。关键日志为 `final-check.log`、`final-lint.log`、`final-types.log`、`final-focused.log`、`android-build.log`、`native-steps.log`；小型拼图 `acceptance-contact-sheet.png` 便于查看，完整截图保留原始分辨率。
+
+
+## v0.0.14 发布前集成复核 · 2026-11-01
+
+用户确认合并、推送并发布新 tag 后，先将最新 `origin/main@ae00c7b`（v0.0.13 结构精修）合入 feature 分支。无合并冲突，复核了共同修改的阅读呈现、精修 VM、库入口及类型，保留双方行为。版本号同步到 package.json、锁文件和 Android versionCode 14。
+
+集成后重新执行 `npm run check`：ESLint、TypeScript、111 个套件、2060 项测试、15 个快照通过，2 项既有跳过；本次链接本机私有 AIMA 夹具并实际执行对应回归。arm64 Release 构建通过（654 个 Gradle 任务），发布 APK 内置 JS，不依赖 Metro。
+
+发布前新证据保存在原 artifacts 下的 `release-v0.0.14/`；`check.log`、`android-release.log`、`checks-summary.json`、APK 与 `SHA256SUMS` 均在仓库外，私有夹具不提交。
+
+
+发布包实际验收：在专用模拟器安装 GitHub 已发布的 v0.0.11 APK，使用原生备份恢复流程载入一份合成书库，再以 `adb install -r` 覆盖安装本次 v0.0.14 Release。包签名摘要一致，versionCode 11 → 14；重启不依赖 Metro，测试书、章节进度、对话及 `PM_NOTE_KEEP` 段落批注仍在。新包的备份下载、文件选择器、PDF 缺 Token 设置跳转与 pipeline 选项返回均通过。未发现 Pagewise 进程的原生崩溃或 JS 错误。
+
+APK SHA-256：`3a3697f2f188aca987d567c975cd842c8dfffff8d0db72a319523a5fbf073d08`。详细记录见 `release-v0.0.14/checks-summary.json`、`signature.txt`、`badging.txt`、`native-runtime.log`、`v14-*.png/xml`。
