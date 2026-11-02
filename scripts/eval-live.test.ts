@@ -7,7 +7,7 @@ import type { FetchLike } from '@services/ai/http';
 import { toAppError } from '@app/errors';
 import type { AiService, StoredMessage } from '@services/ai/types';
 import {
-  buildTaskPrompt,
+  buildTaskContext,
   parseTaskJson,
   type StudyTask,
 } from '@app/study/prompts';
@@ -174,8 +174,7 @@ test('20 first-attempt structured tasks, real teaching/tool/draft flows, and rep
           const response = await gateway.complete(
             task === 'explain' ? 'teach' : 'tidy',
             {
-              system: buildTaskPrompt(task, inputs[task]),
-              contextBlocks: [],
+              ...buildTaskContext(task, inputs[task]),
               tools: [],
               noTools: true,
               history: [message('只输出要求的 JSON。')],

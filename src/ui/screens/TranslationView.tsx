@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import {
   Button,
@@ -42,7 +42,11 @@ export function TranslationView({
   const canExpand = docLength(quote) > 180;
   const source = expanded || !canExpand ? quote : revealDoc(quote, 180);
   const reveal = useReveal(overlay.answer ?? empty, overlay.streaming);
-  const busy = overlay.streaming || reveal.revealing;
+  const skipReveal = reveal.skip;
+  useLayoutEffect(() => {
+    if (overlay.fromCache) skipReveal();
+  }, [overlay.fromCache, skipReveal]);
+  const busy = overlay.streaming || (!overlay.fromCache && reveal.revealing);
   const status = overlay.error
     ? '翻译中断'
     : overlay.stopped
@@ -110,7 +114,7 @@ export function TranslationView({
         </View>
         <RevealContext.Provider value={busy}>
           <RichView
-            doc={reveal.doc}
+            doc={overlay.fromCache ? overlay.answer ?? empty : reveal.doc}
             onCite={intents.pressCite}
             onFigure={intents.pressFigure}
           />
@@ -120,7 +124,9 @@ export function TranslationView({
             label={overlay.answer?.length ? '正在翻译…' : '正在准备译文…'}
           />
         ) : null}
-        {reveal.canSkip ? <RevealSkip onPress={reveal.skip} /> : null}
+        {!overlay.fromCache && reveal.canSkip ? (
+          <RevealSkip onPress={reveal.skip} />
+        ) : null}
         {overlay.error ? (
           <>
             <Note tone="bad">{overlay.error}</Note>
@@ -133,7 +139,7 @@ export function TranslationView({
           </>
         ) : null}
         {overlay.stopped ? (
-          <Text style={s.status}>已保留当前译文，可重新翻译。</Text>
+          <Text style={s.status}>已保留当前译文，可继续翻译。</Text>
         ) : null}
       </View>
       <View style={s.footer}>
@@ -148,7 +154,13 @@ export function TranslationView({
           <Button
             variant="text"
             icon="sync"
-            label={overlay.error ? '重试翻译' : '重新翻译'}
+            label={
+              overlay.error
+                ? '重试翻译'
+                : overlay.stopped
+                ? '继续翻译'
+                : '重新翻译'
+            }
             onPress={() => intents.overlayAction('regenerate')}
           />
         )}

@@ -308,7 +308,9 @@ it('invalidates cached translations on adoption/undo and refreshes subsequent ch
     .mockImplementation(async (purpose, req, opts) => {
       if (req.system.includes('<task name="translate">')) {
         const input = JSON.parse(
-          /<input>\s*([\s\S]*?)\s*<\/input>/.exec(req.system)![1],
+          /<input>\s*([\s\S]*?)\s*<\/input>/.exec(
+            req.contextBlocks.at(-1)!.text,
+          )![1],
         );
         return response({
           answer: input.block.text.includes('\n') ? '原文译文' : '精修译文',

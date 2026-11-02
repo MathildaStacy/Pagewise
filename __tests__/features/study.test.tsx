@@ -189,6 +189,31 @@ it.each(['study', 'reader'] as const)(
   },
 );
 
+it.each(['translate', 'explain'] as const)(
+  'reopens a saved block %s and regenerates only on explicit request',
+  async kind => {
+    const vm = await mount(() => useReaderVM('aima', '3.5.2'));
+    const spy = jest.spyOn(c.ai, kind === 'translate' ? 'stream' : 'complete');
+    const block = vm().state.read.items.find(
+      item => item.kind === 'block' && item.type === 'text',
+    )!;
+    if (block.kind !== 'block') throw new Error('missing block');
+    const open = async () => {
+      await act(() =>
+        vm().intents.pressBlock(block.ref, { x: 0, y: 0, w: 100, h: 100 }),
+      );
+      await act(() => vm().intents.menuAction(kind));
+    };
+    await open();
+    await act(() => vm().intents.closeOverlay());
+    await open();
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(vm().state.overlay).toMatchObject({ kind, streaming: false });
+    await act(() => vm().intents.overlayAction('regenerate'));
+    expect(spy).toHaveBeenCalledTimes(2);
+  },
+);
+
 it('cancels a closed translation and ignores its late response after a new translation opens', async () => {
   const vm = await mount(() => useReaderVM('aima', '3.5.2'));
   const session = getStudySession(c, 'aima');
@@ -253,6 +278,28 @@ it('cancels a closed translation and ignores its late response after a new trans
     ai.mockRestore();
     translations.mockRestore();
   }
+});
+
+it('retries a failed chapter translation through the resume path instead of forcing finished chunks to run again', async () => {
+  const vm = await mount(() => useReaderVM('aima', '3.5.2'));
+  const session = getStudySession(c, 'aima');
+  const translate = jest
+    .spyOn(session, 'translateSection')
+    .mockRejectedValueOnce(new Error('network interrupted'))
+    .mockResolvedValue('完成的译文');
+  await act(() => vm().intents.translateSection?.());
+  expect(vm().state.overlay).toMatchObject({
+    kind: 'sectionTranslation',
+    error: 'network interrupted',
+  });
+  await act(() => vm().intents.overlayAction('regenerate'));
+  expect(translate.mock.calls[1][3]).toBe('resume');
+  expect(vm().state.overlay).toMatchObject({
+    kind: 'sectionTranslation',
+    streaming: false,
+  });
+  await act(() => vm().intents.overlayAction('regenerate'));
+  expect(translate.mock.calls[2][3]).toBe(true);
 });
 
 it('stops a translation while keeping the original and received Chinese visible', async () => {

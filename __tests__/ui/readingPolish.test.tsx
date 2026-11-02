@@ -12,6 +12,7 @@ import {
   ConversationPicker,
 } from '@ui/screens/ConversationList';
 import { StudyOverlays } from '@ui/screens/ReaderView';
+import { TranslationView } from '@ui/screens/TranslationView';
 import type { ConversationSummary } from '@features/library/types';
 import type { StudyIntents } from '@features/study/types';
 
@@ -38,6 +39,35 @@ const pressable = (testID: string) =>
     node =>
       node.props.testID === testID && typeof node.props.onPress === 'function',
   )[0];
+
+it('shows a cached translation in full immediately even when reading animations are enabled', async () => {
+  const intents = { overlayAction: jest.fn() } as unknown as StudyIntents;
+  const answer = doc('已经保存的完整中文译文。'.repeat(100));
+  const view = (cached: boolean) => (
+    <SkinProvider skinId="paper" scheme="light" reduceMotion={false}>
+      <TranslationView
+        intents={intents}
+        overlay={{
+          kind: 'sectionTranslation',
+          sectionId: '1',
+          subtitle: '1',
+          answer: cached ? answer : null,
+          streaming: !cached,
+          fromCache: cached,
+        }}
+      />
+    </SkinProvider>
+  );
+  await act(() => {
+    renderer = Renderer.create(view(false));
+  });
+  await act(() => renderer.update(view(true)));
+  expect(renderer.root.findByType(RichView).props.doc).toEqual(answer);
+  expect(
+    renderer.root.findByProps({ testID: 'translation-answer' }).props
+      .accessibilityState.busy,
+  ).toBe(false);
+});
 
 it('limits the recent list, expands all conversations and preserves navigation', async () => {
   const onOpen = jest.fn();

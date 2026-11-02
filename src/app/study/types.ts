@@ -199,14 +199,15 @@ export interface StudySessionApi {
     kind: 'explain' | 'translate',
     signal?: AbortSignal,
     config?: ConversationConfig,
-    onText?: (text: string) => void,
+    onText?: (text: string, fromCache?: boolean) => void,
+    refresh?: boolean,
   ): Promise<string>;
   translateSection(
     sectionId: string,
     signal?: AbortSignal,
     config?: ConversationConfig,
-    refresh?: boolean,
-    onText?: (text: string) => void,
+    refresh?: boolean | 'resume',
+    onText?: (text: string, fromCache?: boolean) => void,
   ): Promise<string>;
   generateGuide(): Promise<string>;
   clearNotice(): void;

@@ -35,6 +35,7 @@ export interface Container {
   mode: 'device' | 'test' | 'demo';
   secrets: KeyStore;
   ai: AiGateway;
+  aiConfiguration: AiConfiguration;
   clock: Clock;
   log: Logger;
   events: EventBus;
@@ -74,7 +75,9 @@ export async function createContainer(
     throw error;
   }
   const configuration =
-    options.aiConfiguration ?? createSqliteAiConfiguration(repos);
+    options.aiConfiguration ??
+    over.aiConfiguration ??
+    createSqliteAiConfiguration(repos);
   async function resolve(assignment: ModelAssignment | undefined) {
     if (!assignment) {
       throw new AiError(
@@ -119,6 +122,7 @@ export async function createContainer(
     log,
     secrets,
     ai,
+    aiConfiguration: configuration,
     events: over.events ?? createEventBus(),
     close:
       over.close ??

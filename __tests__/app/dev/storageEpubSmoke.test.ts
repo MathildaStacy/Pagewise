@@ -80,7 +80,9 @@ function response(value: unknown): ParsedResponse {
 function taskResult(req: GatewayRequest): ParsedResponse {
   const task = /<task name="([^"]+)">/.exec(req.system)?.[1];
   const input = JSON.parse(
-    /<input>\s*([\s\S]*?)\s*<\/input>/.exec(req.system)?.[1] ?? '{}',
+    /<input>\s*([\s\S]*?)\s*<\/input>/.exec(
+      req.contextBlocks.at(-1)?.text ?? '',
+    )?.[1] ?? '{}',
   ) as { seq?: number };
   if (task === 'guide')
     return response({

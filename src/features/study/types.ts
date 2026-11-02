@@ -190,6 +190,7 @@ export type StudyOverlay =
       streaming: boolean;
       error?: string;
       stopped?: boolean;
+      fromCache?: boolean;
       subtitle: string;
     }
   | {
@@ -239,6 +240,7 @@ export type StudyOverlay =
       subtitle: string;
       error?: string;
       stopped?: boolean;
+      fromCache?: boolean;
     }
   | {
       kind: 'pin';

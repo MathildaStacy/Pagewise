@@ -15,6 +15,7 @@ import { createMathRepo } from './math';
 import { createDraftsRepo } from './drafts';
 import { createRefinementsRepo } from './refinements';
 import { createConversationsRepo } from './conversations';
+import { createAiTaskCacheRepo } from './aiTaskCache';
 
 /** Recreate this collection with the transaction Db inside an atomic use case. */
 export function createRepos(db: Db, now = () => new Date().toISOString()) {
@@ -35,6 +36,7 @@ export function createRepos(db: Db, now = () => new Date().toISOString()) {
     math: createMathRepo(db, now),
     drafts: createDraftsRepo(db),
     refinements: createRefinementsRepo(db),
+    aiTaskCache: createAiTaskCacheRepo(db, now),
   };
 }
 

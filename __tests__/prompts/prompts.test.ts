@@ -1,6 +1,7 @@
 import {
   buildTeachPrompt,
   buildTaskPrompt,
+  buildTaskContext,
   parseTaskJson,
   type StudyTask,
 } from '@app/study/prompts';
@@ -10,6 +11,7 @@ import { demoRefBySourceId } from '@app/demo/seed';
 import type { GatewayRequest } from '@services/ai/gateway';
 import type { StoredMessage } from '@services/ai/types';
 import type { LessonBlock } from '@core/lesson';
+import { buildRequest } from '@services/ai/protocol';
 
 const req = (
   system: string,
@@ -62,6 +64,78 @@ const tasks: StudyTask[] = [
   'sectionDone',
   'qaSummary',
 ];
+test('non-dialogue calls keep stable rules and book map before changing source in every protocol', () => {
+  const map = [{ id: 'one', title: 'Terminology' }];
+  const first = buildTaskContext('translate', {
+    map,
+    block: { text: 'First source.' },
+    target_language: '简体中文',
+  });
+  const next = buildTaskContext('translate', {
+    target_language: '简体中文',
+    block: { text: 'Different source.' },
+    map,
+  });
+  expect(next.system).toBe(first.system);
+  expect(first.system).not.toContain('First source');
+  expect(next.contextBlocks[0]).toEqual(first.contextBlocks[0]);
+  expect(first.contextBlocks[0].text).toContain('Terminology');
+  expect(first.contextBlocks[1].text).toContain('First source.');
+  expect(first.contextBlocks[1].text).not.toContain('Terminology');
+  for (const protocol of ['anthropic', 'openai', 'chat'] as const) {
+    const body = buildRequest({
+      ...first,
+      service: { protocol, model: 'fixture', baseUrl: 'https://example.com' },
+      cache: true,
+      cacheKey: 'device',
+      effort: 'off',
+      tools: [],
+      history: [message('生成译文')],
+    }).body as any;
+    if (protocol === 'anthropic') {
+      expect(body.system[0].cache_control).toEqual({ type: 'ephemeral' });
+      expect(
+        body.messages[0].content.map((b: any) => !!b.cache_control),
+      ).toEqual([true, false, false]);
+    }
+    if (protocol === 'openai') expect(body.prompt_cache_key).toBe('device');
+    const serialized = JSON.stringify(body);
+    expect(serialized.indexOf('Terminology')).toBeLessThan(
+      serialized.indexOf('First source'),
+    );
+  }
+});
+test('block citation and plan constraints stay dynamic without changing the system prefix', () => {
+  const first = buildTaskContext('explain', {
+    block: { seq: 1, text: 'first' },
+  });
+  const second = buildTaskContext('explain', {
+    block: { seq: 2, text: 'second' },
+  });
+  expect(first.system).toBe(second.system);
+  expect(first.contextBlocks.at(-1)?.text).toContain('[[b:1]]');
+  expect(second.contextBlocks.at(-1)?.text).toContain('[[b:2]]');
+  const plan = buildTaskContext('plan', {
+    blocks: [{ seq: 17, type: 'text', text: 'source', chars: 6 }],
+  });
+  expect(plan.contextBlocks[0].text).toContain('第一步from=17，最后一步to=17');
+  expect(plan.system).not.toContain('from=17');
+});
+test.each(tasks)(
+  '%s split runtime prompt retains the Demo response contract',
+  async task => {
+    const context = buildTaskContext(task, {
+      block: { seq: 1, text: 'Source' },
+      blocks: [{ seq: 1, type: 'text', text: 'Source', chars: 6 }],
+    });
+    const result = await createDemoGateway({ delayMs: 0 }).complete('tidy', {
+      ...context,
+      tools: [],
+      history: [message('输出 JSON')],
+    });
+    expect(parseTaskJson(textOf(result.parts))).toEqual(expect.any(Object));
+  },
+);
 test.each(tasks)('%s prompt has parseable demo task response', async task => {
   const blocks = [
     { seq: demoRefBySourceId.b2, text: 'f(n)=g(n)+h(n)' },

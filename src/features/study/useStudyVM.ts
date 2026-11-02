@@ -600,7 +600,7 @@ export function useStudyVM(
     setOverlay(null);
     setSelection(null);
   };
-  const startTranslation = (refresh = false) => {
+  const startTranslation = (refresh: boolean | 'resume' = false) => {
     if (!readerId) return;
     const request = ++explainRequest.current;
     explanationController.current?.abort();
@@ -620,7 +620,7 @@ export function useStudyVM(
         controller.signal,
         aiOptions.state.config ?? undefined,
         refresh,
-        partial => {
+        (partial, fromCache) => {
           if (
             mounted.current &&
             !controller.signal.aborted &&
@@ -631,6 +631,7 @@ export function useStudyVM(
               current.sectionId === readerId
                 ? {
                     ...current,
+                    ...(fromCache ? { fromCache: true, streaming: false } : {}),
                     answer: messageDoc(
                       stableStreamText(partial),
                       [],
@@ -806,7 +807,7 @@ export function useStudyVM(
       );
     }
   };
-  const menuAction = (key: string) => {
+  const menuAction = (key: string, refresh = false) => {
     const seq =
       selection?.seq ??
       (overlay?.kind === 'explain' || overlay?.kind === 'translate'
@@ -861,7 +862,7 @@ export function useStudyVM(
         controller.signal,
         aiOptions.state.config ?? undefined,
         key === 'translate'
-          ? partial => {
+          ? (partial, fromCache) => {
               if (
                 mounted.current &&
                 !controller.signal.aborted &&
@@ -871,6 +872,9 @@ export function useStudyVM(
                   current?.kind === 'translate' && current.seq === seq
                     ? {
                         ...current,
+                        ...(fromCache
+                          ? { fromCache: true, streaming: false }
+                          : {}),
                         answer: messageDoc(
                           stableStreamText(partial),
                           [seq],
@@ -884,6 +888,7 @@ export function useStudyVM(
                 );
             }
           : undefined,
+        refresh,
       )
       .then(answer => {
         if (
@@ -1271,9 +1276,10 @@ export function useStudyVM(
         return;
       }
       if (key === 'regenerate') {
-        if (shown.kind === 'sectionTranslation') startTranslation(true);
+        if (shown.kind === 'sectionTranslation')
+          startTranslation(shown.error || shown.stopped ? 'resume' : true);
         else if (shown.kind === 'explain' || shown.kind === 'translate')
-          menuAction(shown.kind);
+          menuAction(shown.kind, true);
         return;
       }
       if (key === 'close') {

@@ -225,10 +225,18 @@ it('exports and restores each conversation, its options and progress, the select
     ['book', 'one', 'English source', '完整的章节译文', at],
   );
   const conversations = await c.repos.conversations.list();
+  const cachedTask = {
+    bookId: 'book',
+    task: 'translate',
+    scope: 'block-1',
+    requestKey: 'source/model/version identity',
+  };
+  await c.repos.aiTaskCache.put(cachedTask, '单段译文');
   const archive = await exportBackup(c);
   await expect(restoreBackup(c, archive)).resolves.toBe(true);
   const db = openDb(restored);
   try {
+    expect(await createRepos(db).aiTaskCache.get(cachedTask)).toBe('单段译文');
     expect(await createConversationsRepo(db, () => at).list()).toEqual(
       conversations,
     );
@@ -256,6 +264,7 @@ it('exports and restores each conversation, its options and progress, the select
         source_text: 'English source',
         content: '完整的章节译文',
         updated_at: at,
+        request_key: null,
       },
     ]);
     expect(await db.all('PRAGMA foreign_key_check')).toEqual([]);

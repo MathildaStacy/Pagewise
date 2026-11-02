@@ -35,7 +35,7 @@ import { toAppError } from '../errors';
 import { defaultPrefs, readPrefs } from '../usecases/settings';
 import { loadAiOptions, normalizeAiOptions } from '../usecases/aiOptions';
 import {
-  buildTaskPrompt,
+  buildTaskContext,
   buildTeachPrompt,
   parseTaskJson,
   streamedTaskAnswer,
@@ -44,6 +44,12 @@ import {
 import { finishSection } from './finishSection';
 import { deferQuizzes } from './quizSupport';
 import { translationChunks } from './translation';
+import {
+  TaskResultCache,
+  taskCacheContext,
+  taskResultKey,
+  type TaskCacheContext,
+} from './taskCache';
 import { executeReadTool, jsonObject, parseToolArgs } from './toolExec';
 import {
   asJson,
@@ -138,6 +144,7 @@ export class StudySession implements StudySessionApi {
   private lastStream = '';
   private disposed = false;
   private sequence = 0;
+  private taskResults = new TaskResultCache();
 
   constructor(private readonly c: Container, private readonly bookId: string) {
     this.store = createStore<StudyState>(() => ({
@@ -733,8 +740,7 @@ export class StudySession implements StudySessionApi {
     onAnswer?: (answer: string) => void,
   ): Promise<Record<string, JsonValue>> {
     const request: GatewayRequest = {
-      system: buildTaskPrompt(task, input),
-      contextBlocks: [],
+      ...buildTaskContext(task, input),
       tools: [],
       noTools: !config?.search,
       bookId: this.bookId,
@@ -765,8 +771,8 @@ export class StudySession implements StudySessionApi {
       if (timer) clearTimeout(timer);
     }
     if (signal?.aborted) throw new Error('已停止');
-    if (task === 'translate' && response.stop === 'max_tokens')
-      throw new Error('模型的译文未完整返回，请重试或切换模型');
+    if ((task === 'translate' || task === 'explain') && response.stop !== 'end')
+      throw new Error('模型未完整返回内容，请重试或切换模型');
     this.set({ lastUsage: response.usage });
     const data = jsonObject(parseTaskJson(textOf(response.parts))) ?? {};
     if (typeof data.answer === 'string') onAnswer?.(data.answer);
@@ -785,11 +791,10 @@ export class StudySession implements StudySessionApi {
     const response = await this.c.ai.complete(
       'tidy',
       {
-        system: buildTaskPrompt('plan', {
+        ...buildTaskContext('plan', {
           section: this.state.section?.title,
           blocks: this.state.partBlocks,
         }),
-        contextBlocks: [],
         history: [this.taskMessage()],
         tools: [],
         noTools: true,
@@ -2302,115 +2307,210 @@ export class StudySession implements StudySessionApi {
     });
     return next;
   }
-  async translateSection(
-    sectionId: string,
-    signal?: AbortSignal,
-    config?: ConversationConfig,
-    refresh = false,
-    onText?: (text: string) => void,
-  ): Promise<string> {
-    if (signal?.aborted) throw new Error('已停止翻译');
-    const blocks = await this.c.repos.blocks.reading.bySection(
-      this.bookId,
-      sectionId,
-    );
-    const chunks = translationChunks(blocks);
-    const source = chunks.map(chunk => chunk.source).join('\n\n');
-    if (!source.trim()) throw new Error('本节暂无可翻译的原文，请先完成解析');
-    const cached = await this.c.db.get<{
-      source_text: string;
-      content: string;
-    }>(
-      'SELECT source_text, content FROM section_translation WHERE book_id = ? AND section_id = ?',
-      [this.bookId, sectionId],
-    );
-    if (!refresh && cached?.source_text === source) {
-      if (signal?.aborted) throw new Error('已停止翻译');
-      onText?.(cached.content);
-      return cached.content;
-    }
+  private async withTaskSignal<T>(
+    signal: AbortSignal | undefined,
+    work: (signal: AbortSignal) => Promise<T>,
+  ): Promise<T> {
+    if (signal?.aborted || this.disposed) throw new Error('已停止');
     const controller = new AbortController();
     this.extraControllers.add(controller);
     const abort = () => controller.abort();
     signal?.addEventListener('abort', abort, { once: true });
-    if (signal?.aborted) controller.abort();
     try {
-      const answers: string[] = [];
-      for (const chunk of chunks) {
-        if (controller.signal.aborted) throw new Error('已停止翻译');
-        if (!chunk.translate) {
-          answers.push(chunk.source);
-          onText?.(answers.join('\n\n'));
-          continue;
-        }
-        const data = await this.task(
-          'translate',
-          {
-            block: { text: chunk.source },
-            target_language: '简体中文',
-            map: this.state.sections.map(s => ({ id: s.id, title: s.title })),
-          },
-          controller.signal,
-          'tidy',
-          config,
-          onText
-            ? answer => onText([...answers, answer].join('\n\n'))
-            : undefined,
-        );
-        const answer = stringValue(data.answer);
-        if (!answer.trim()) throw new Error('AI 未返回译文，请重试');
-        answers.push(answer);
-      }
-      if (controller.signal.aborted) throw new Error('已停止翻译');
-      const content = answers.join('\n\n');
-      await this.c.db.run(
-        'INSERT OR REPLACE INTO section_translation(book_id, section_id, source_text, content, updated_at) VALUES (?, ?, ?, ?, ?)',
-        [this.bookId, sectionId, source, content, this.now()],
-      );
-      return content;
+      return await work(controller.signal);
     } finally {
       signal?.removeEventListener('abort', abort);
       this.extraControllers.delete(controller);
     }
+  }
+  private async taskMap() {
+    return (await this.c.repos.sections.tree(this.bookId)).map(section => ({
+      id: section.id,
+      title: section.title,
+    }));
+  }
+  private cachedTaskAnswer(
+    kind: 'translate' | 'explain',
+    scope: string,
+    input: unknown,
+    context: TaskCacheContext,
+    signal: AbortSignal,
+    refresh: boolean,
+    onText?: (text: string, fromCache?: boolean) => void,
+    citation?: number,
+  ): Promise<string> {
+    const address = {
+      bookId: this.bookId,
+      task: kind,
+      scope,
+      requestKey: taskResultKey(context, kind, input),
+    };
+    return this.taskResults.run({
+      scope: JSON.stringify([kind, scope]),
+      key: address.requestKey,
+      refresh,
+      signal,
+      onText,
+      read: async () => {
+        const cached = context.persistent
+          ? await this.c.repos.aiTaskCache.get(address)
+          : null;
+        if (cached !== null)
+          this.c.log.debug('AI 本地结果命中', {
+            bookId: this.bookId,
+            task: kind,
+          });
+        return cached;
+      },
+      write: content =>
+        context.persistent &&
+        (citation === undefined ||
+          (content.includes(`[[b:${citation}]]`) &&
+            [...content.matchAll(/\[\[(?:b|q|fig):(\d+)\]\]/g)].every(
+              match => Number(match[1]) === citation,
+            )))
+          ? this.c.repos.aiTaskCache.put(address, content)
+          : Promise.resolve(),
+      generate: async (sharedSignal, publish) => {
+        const data = await this.task(
+          kind,
+          input,
+          sharedSignal,
+          kind === 'explain' ? 'teach' : 'tidy',
+          context.config,
+          onText ? publish : undefined,
+        );
+        const answer = stringValue(data.answer);
+        if (!answer.trim()) throw new Error('AI 未返回内容，请重试');
+        return answer;
+      },
+    });
+  }
+  async translateSection(
+    sectionId: string,
+    signal?: AbortSignal,
+    config?: ConversationConfig,
+    refresh: boolean | 'resume' = false,
+    onText?: (text: string, fromCache?: boolean) => void,
+  ): Promise<string> {
+    return this.withTaskSignal(signal, async taskSignal => {
+      const [blocks, map, context] = await Promise.all([
+        this.c.repos.blocks.reading.bySection(this.bookId, sectionId),
+        this.taskMap(),
+        taskCacheContext(this.c, 'tidy', config),
+      ]);
+      const chunks = translationChunks(blocks);
+      const source = chunks.map(chunk => chunk.source).join('\n\n');
+      if (!source.trim()) throw new Error('本节暂无可翻译的原文，请先完成解析');
+      const requestKey = taskResultKey(context, 'translate', {
+        chunks,
+        target_language: '简体中文',
+        map,
+      });
+      return this.taskResults.run({
+        scope: JSON.stringify(['sectionTranslation', sectionId]),
+        key: requestKey,
+        refresh: !!refresh,
+        signal: taskSignal,
+        onText,
+        read: async () => {
+          const cached = context.persistent
+            ? await this.c.repos.aiTaskCache.getSection(
+                this.bookId,
+                sectionId,
+                requestKey,
+              )
+            : null;
+          if (cached !== null)
+            this.c.log.debug('AI 本地结果命中', {
+              bookId: this.bookId,
+              task: 'sectionTranslation',
+            });
+          return cached;
+        },
+        write: content =>
+          context.persistent
+            ? this.c.repos.aiTaskCache.putSection(
+                this.bookId,
+                sectionId,
+                requestKey,
+                source,
+                content,
+              )
+            : Promise.resolve(),
+        generate: async (sharedSignal, publish) => {
+          // Start a fresh set of chunks; retain the previous complete section.
+          if (refresh === true && context.persistent)
+            await this.c.repos.aiTaskCache.clearScopePrefix(
+              this.bookId,
+              'translate',
+              JSON.stringify(['section', sectionId]).slice(0, -1) + ',',
+            );
+          const answers: string[] = [];
+          for (const [index, chunk] of chunks.entries()) {
+            if (sharedSignal.aborted) throw new Error('已停止翻译');
+            if (!chunk.translate) answers.push(chunk.source);
+            else
+              answers.push(
+                await this.cachedTaskAnswer(
+                  'translate',
+                  JSON.stringify(['section', sectionId, index]),
+                  {
+                    block: { text: chunk.source },
+                    target_language: '简体中文',
+                    map,
+                  },
+                  context,
+                  sharedSignal,
+                  refresh === true,
+                  onText
+                    ? answer => publish([...answers, answer].join('\n\n'))
+                    : undefined,
+                ),
+              );
+            publish(answers.join('\n\n'));
+          }
+          return answers.join('\n\n');
+        },
+      });
+    });
   }
   async explainBlock(
     seq: number,
     kind: 'explain' | 'translate',
     signal?: AbortSignal,
     config?: ConversationConfig,
-    onText?: (text: string) => void,
+    onText?: (text: string, fromCache?: boolean) => void,
+    refresh = false,
   ): Promise<string> {
-    const block = await this.c.repos.blocks.reading.get(this.bookId, seq);
-    if (!block) throw new Error('找不到这段原文');
-    const controller = new AbortController();
-    this.extraControllers.add(controller);
-    const onAbort = () => controller.abort();
-    signal?.addEventListener('abort', onAbort, { once: true });
-    if (signal?.aborted) controller.abort();
-    try {
-      const data = await this.task(
+    return this.withTaskSignal(signal, async taskSignal => {
+      const [block, map, context] = await Promise.all([
+        this.c.repos.blocks.reading.get(this.bookId, seq),
+        this.taskMap(),
+        taskCacheContext(this.c, kind === 'explain' ? 'teach' : 'tidy', config),
+      ]);
+      if (!block) throw new Error('找不到这段原文');
+      return this.cachedTaskAnswer(
         kind,
+        JSON.stringify(['block', seq]),
         {
           seq,
-          block,
+          block: {
+            seq,
+            type: block.type,
+            text: block.text,
+            latex: block.latex,
+          },
           ...(kind === 'translate' ? { target_language: '简体中文' } : {}),
-          map: this.state.sections.map(section => ({
-            id: section.id,
-            title: section.title,
-          })),
+          map,
         },
-        controller.signal,
-        kind === 'explain' ? 'teach' : 'tidy',
-        config,
+        context,
+        taskSignal,
+        refresh,
         onText,
+        kind === 'explain' ? seq : undefined,
       );
-      const answer = stringValue(data.answer);
-      if (!answer) throw new Error('AI 未返回内容，请重试');
-      return answer;
-    } finally {
-      signal?.removeEventListener('abort', onAbort);
-      this.extraControllers.delete(controller);
-    }
+    });
   }
   async generateGuide(): Promise<string> {
     const id = this.state.readerSectionId ?? this.state.main.sectionId,
@@ -2469,6 +2569,7 @@ export class StudySession implements StudySessionApi {
     this.disposed = true;
     if (this.flashTimer) clearTimeout(this.flashTimer);
     this.stop();
+    await this.taskResults.dispose();
     await this.active;
     await this.configWrite;
     await Promise.allSettled([...this.background]);

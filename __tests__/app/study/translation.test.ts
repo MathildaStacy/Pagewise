@@ -7,7 +7,9 @@ import { streamedTaskAnswer } from '@app/study/prompts';
 
 let c: Container, session: StudySession;
 const inputOf = (req: GatewayRequest) =>
-  JSON.parse(/<input>\s*([\s\S]*?)\s*<\/input>/.exec(req.system)![1]);
+  JSON.parse(
+    /<input>\s*([\s\S]*?)\s*<\/input>/.exec(req.contextBlocks.at(-1)!.text)![1],
+  );
 const response = (answer: string): ParsedResponse => ({
   parts: [{ t: 'text', text: JSON.stringify({ answer }) }],
   raw: { protocol: 'chat', model: 'translation-fixture', items: [] },
@@ -133,7 +135,7 @@ it('preserves original code and standalone equations between translated paragrap
 });
 
 it.each(['cancel', 'error', 'truncated'] as const)(
-  'does not cache partial output on %s',
+  'resumes completed chunks without caching the failed chunk on %s',
   async failure => {
     await prose('English text '.repeat(1200));
     const ctl = new AbortController();
@@ -147,15 +149,19 @@ it.each(['cancel', 'error', 'truncated'] as const)(
             return { ...response('被截断的译文'), stop: 'max_tokens' };
           else throw new Error('translation unavailable');
         }
-        return response('部分译文');
+        return response('已完成分片');
       });
     await expect(
       session.translateSection('3.5.2', ctl.signal),
     ).rejects.toThrow();
     expect(await c.db.all('SELECT * FROM section_translation')).toEqual([]);
     complete.mockImplementation(async () => response('重试完整译文'));
+    complete.mockClear();
     const translated = await session.translateSection('3.5.2');
-    expect(translated).not.toContain('部分译文');
+    expect(translated).toContain('已完成分片');
+    expect(translated).toContain('重试完整译文');
+    expect(translated).not.toContain('被截断');
+    expect(complete).toHaveBeenCalledTimes(2);
     expect(await c.db.get('SELECT content FROM section_translation')).toEqual({
       content: translated,
     });
@@ -186,6 +192,34 @@ it('keeps a complete cached translation when regeneration fails, and replaces it
   );
   expect(replacement).not.toBe(original);
   expect(await session.translateSection('3.5.2')).toBe(replacement);
+});
+
+it('resumes a failed regeneration using only the newly completed chunks and keeps the old full result until done', async () => {
+  await prose('English paragraph. '.repeat(700));
+  const complete = jest
+    .spyOn(c.ai, 'complete')
+    .mockResolvedValue(response('旧译文'));
+  const old = await session.translateSection('3.5.2');
+  complete
+    .mockResolvedValueOnce(response('本次完成分片'))
+    .mockRejectedValueOnce(new Error('offline'));
+  await expect(
+    session.translateSection('3.5.2', undefined, undefined, true),
+  ).rejects.toThrow('offline');
+  expect(await session.translateSection('3.5.2')).toBe(old);
+  complete.mockClear();
+  complete.mockResolvedValue(response('本次续做分片'));
+  const resumed = await session.translateSection(
+    '3.5.2',
+    undefined,
+    undefined,
+    'resume',
+  );
+  expect(resumed).toContain('本次完成分片');
+  expect(resumed).toContain('本次续做分片');
+  expect(resumed).not.toContain('旧译文');
+  expect(complete).toHaveBeenCalledTimes(2);
+  expect(await session.translateSection('3.5.2')).toBe(resumed);
 });
 
 it('publishes decoded Chinese before the streaming request finishes and replays the complete cache without a request', async () => {
@@ -236,7 +270,7 @@ it('publishes decoded Chinese before the streaming request finishes and replays 
     ),
   ).toBe('中文\n译文完成');
   expect(stream).not.toHaveBeenCalled();
-  expect(onText).toHaveBeenCalledWith('中文\n译文完成');
+  expect(onText).toHaveBeenCalledWith('中文\n译文完成', true);
 });
 
 it.each(['cancel', 'error', 'truncated'] as const)(

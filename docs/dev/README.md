@@ -18,6 +18,7 @@
 | [06-import-parse.md](06-import-parse.md) | 导入、MinerU 客户端、PDF/文件原生模块、EPUB、地图构建、书签核对 | 做导入解析时 |
 | [07-plan.md](07-plan.md) | 任务拆分（按顺序做）、每个任务的验收标准、测试策略、CI | 每个任务开始前 |
 | [ai-refinement.md](ai-refinement.md) | 可选 AI 文档精修：结构修复、原页复核、采纳/撤销、聊天与翻译兼容 | 做精修、阅读投影或相关迁移时 |
+| [AI 任务缓存功能设计](ai-task-cache-product.md) / [技术方案](ai-task-cache-technical.md) | 翻译、解释结果复用，分片续做和稳定 prompt 前缀 | 做非对话 AI 调用或缓存时 |
 
 ## 2. 设计稿怎么用
 
