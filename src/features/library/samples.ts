@@ -178,7 +178,7 @@ export const importSamples: Record<string, ImportSettingsState> = {
     ],
     model: 'vlm',
     modelHint: '公式、表格、复杂排版效果更好，速度稍慢。',
-    ocr: false,
+    ocr: true,
     priorityFrom: '1',
     parts: 'p.1–200、p.201–400、p.401–600、p.601–800、p.801–1000、p.1001–1136',
     quota: '0 → 1136 / 1000',

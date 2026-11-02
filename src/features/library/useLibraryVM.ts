@@ -744,7 +744,7 @@ export function useImportSettingsVM(draftId: string) {
     facts: [],
     model: 'vlm',
     modelHint: '公式、表格、复杂排版效果更好，速度稍慢。',
-    ocr: false,
+    ocr: true,
     priorityFrom: '1',
     parts: '',
     quota: '',
@@ -805,7 +805,9 @@ export function useImportSettingsVM(draftId: string) {
                   { label: '解析位置', value: '本机' },
                 ]),
           ],
-          ocr: !info.has_text_layer,
+          // A text layer can still lose mathematical symbols. Real-book comparisons
+          // retain them with OCR enabled; let the reader opt out explicitly.
+          ocr: format === 'PDF',
           parts: pages
             ? describeImportParts(pages, Number(info.size_bytes), 1)
             : 'EPUB 在本机解析',

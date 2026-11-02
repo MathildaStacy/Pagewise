@@ -524,6 +524,28 @@ it('keeps the source filename and PDF metadata available for the import preview'
     overQuota: false,
   });
 });
+it.each([true, false])(
+  'enables OCR for PDF imports with has_text_layer=%s and respects an explicit opt-out',
+  async hasTextLayer => {
+    await c.repos.drafts.insert({
+      id: 'ocr-draft',
+      file_path: 'demo://math.pdf',
+      info: {
+        title: 'Math textbook',
+        pages: 30,
+        size_bytes: 102400,
+        format: 'pdf',
+        has_text_layer: hasTextLayer,
+      },
+      created_at: c.clock.now().toISOString(),
+    });
+    const current = await mount(() => useImportSettingsVM('ocr-draft'));
+    expect(current().state.ocr).toBe(true);
+    await act(() => current().intents.setOcr(false));
+    await act(() => current().intents.setModel('pipeline'));
+    expect(current().state.ocr).toBe(false);
+  },
+);
 it('splits only at an existing source heading while keeping block references and notes intact', async () => {
   const section = (await c.repos.sections.get('aima', '3.5.2'))!;
   const blocks = await c.repos.blocks.bySection('aima', section.id);

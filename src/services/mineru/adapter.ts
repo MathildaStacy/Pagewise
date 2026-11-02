@@ -325,8 +325,8 @@ export function adaptContentList(
         addNumber(row, options.pageFrom + Number(page.page_idx ?? index));
     }
   });
-  // A blank page has no detected content. A page with empty OCR blocks (or only a detected
-  // header) may contain a footnote continuation or a table: retain its original image.
+  // Empty page-local blocks may be OCR gaps or content merged into a preceding page.
+  // Keep the original page without claiming the provider failed to recognize its text.
   const present = new Set(blocks.map(block => block.page));
   for (const { row, idx } of rows) {
     const page = options.pageFrom + idx;
@@ -359,7 +359,7 @@ export function adaptContentList(
       page,
       type: 'image',
       bbox: [0, 0, 1, 1],
-      text: '此页文字未能识别，已保留原页图像。',
+      text: '此页未生成独立的可读内容，已保留原页图像。',
       sourcePage: true,
     });
     present.add(page);

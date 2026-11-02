@@ -54,8 +54,12 @@ export function ImportSettingsView({
         title="OCR 文字识别"
         subtitle={
           state.facts.some(f => f.label === '文字层' && f.value === '有')
-            ? '书有文字层，一般不需要'
-            : '扫描版，已自动打开'
+            ? state.ocr
+              ? '推荐开启，减少文字层中的公式和符号遗漏'
+              : '使用 PDF 文字层，公式和符号可能遗漏'
+            : state.ocr
+            ? '扫描版，识别图中的文字'
+            : '已关闭，扫描内容可能无法读取'
         }
         right={
           <Switch
