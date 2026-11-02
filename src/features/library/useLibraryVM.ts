@@ -26,7 +26,11 @@ import {
   listImportDrafts,
   pickImportDraft,
   type ImportSelection,
+  reparseBook,
+  deleteBook,
+  ImportInputError,
 } from '@app/usecases/importBooks';
+import { importError } from '@app/usecases/importErrors';
 import {
   loadBackupReminder,
   dismissBackupReminder,
@@ -72,6 +76,7 @@ export function useShelfVM() {
   });
   const mounted = useRef(true);
   const backingUp = useRef(false);
+  const managing = useRef(false);
   const refresh = useCallback(() => {
     Promise.all([
       loadShelf(c),
@@ -100,6 +105,7 @@ export function useShelfVM() {
     const stops = [
       c.events.subscribe('backup.changed', refresh),
       c.events.subscribe('book.parse', refresh),
+      c.events.subscribe('book.deleted', refresh),
       c.events.subscribe('section.status', refresh),
     ];
     return () => {
@@ -139,22 +145,133 @@ export function useShelfVM() {
   };
   const selected = (result: ImportSelection | null) => {
     if (!result) return;
+    if (result.kind === 'duplicate') {
+      openBookActions(result.bookId, true, !!result.restored);
+    } else {
+      setState(s => ({ ...s, overlay: null, toast: null }));
+      nav.open({ name: 'ImportSettings', draftId: result.draftId });
+    }
+  };
+  const openBookActions = (
+    bookId: string,
+    duplicate = false,
+    restored = false,
+  ) => {
+    if (managing.current || c.mode === 'demo') return;
+    c.repos.books
+      .get(bookId)
+      .then(book => {
+        if (!mounted.current || !book) return;
+        setState(s => ({
+          ...s,
+          toast: null,
+          overlay: {
+            kind: 'bookActions',
+            bookId,
+            title: book.title,
+            format: book.format,
+            duplicate,
+            restored,
+            ocr: true,
+            busy: false,
+          },
+        }));
+      })
+      .catch(fail);
+  };
+  const changeAction = (kind: 'delete' | 'reparse') => {
+    if (managing.current) return;
     setState(s => ({
       ...s,
-      overlay: null,
-      toast:
-        result.kind === 'duplicate'
-          ? result.restored
-            ? '原文件已补回，学习记录已保留'
-            : '这本书已经在书架上了'
-          : null,
+      overlay:
+        s.overlay?.kind === 'bookActions'
+          ? { ...s.overlay, kind, error: undefined }
+          : s.overlay,
     }));
-    if (result.kind === 'duplicate') openBook(result.bookId);
-    else nav.open({ name: 'ImportSettings', draftId: result.draftId });
+  };
+  const confirmAction = async (kind: 'delete' | 'reparse') => {
+    const overlay = state.overlay;
+    if (overlay?.kind !== kind || managing.current) return;
+    managing.current = true;
+    setState(s => ({
+      ...s,
+      overlay: { ...overlay, busy: true, error: undefined },
+    }));
+    try {
+      if (kind === 'reparse') {
+        if (
+          overlay.format === 'pdf' &&
+          !(await c.secrets.get('mineru.token'))?.trim()
+        ) {
+          setState(s => ({
+            ...s,
+            overlay: {
+              ...overlay,
+              busy: false,
+              needsToken: true,
+              error: '请先在“解析服务”填写 MinerU Token，再开始重新解析。',
+            },
+          }));
+          return;
+        }
+        await reparseBook(c, overlay.bookId, { ocr: overlay.ocr });
+        if (mounted.current) {
+          setState(s => ({ ...s, overlay: null }));
+          nav.open({ name: 'ParseProgress', bookId: overlay.bookId });
+        }
+      } else {
+        const result = await deleteBook(c, overlay.bookId);
+        if (mounted.current)
+          setState(s => ({
+            ...s,
+            overlay: null,
+            toast: result.filesRemoved
+              ? '书籍已删除，可以重新导入'
+              : '书籍已删除，部分缓存未能清理；可以重新导入同一本书',
+          }));
+      }
+    } catch (error) {
+      c.log.warn(kind === 'delete' ? '删除书籍失败' : '重新解析失败', {
+        bookId: overlay.bookId,
+      });
+      if (mounted.current)
+        setState(s => ({
+          ...s,
+          overlay: {
+            ...overlay,
+            busy: false,
+            error:
+              error instanceof ImportInputError
+                ? error.message
+                : kind === 'delete'
+                ? '删除没有完成，请重试。'
+                : '重新解析没有启动，请检查原文件和解析服务后重试。',
+          },
+        }));
+    } finally {
+      managing.current = false;
+    }
   };
   return {
     state,
     intents: {
+      openBookActions,
+      requestReparse: () => changeAction('reparse'),
+      requestDelete: () => changeAction('delete'),
+      setReparseOcr: (ocr: boolean) =>
+        setState(s => ({
+          ...s,
+          overlay:
+            s.overlay?.kind === 'reparse' && !s.overlay.busy
+              ? { ...s.overlay, ocr }
+              : s.overlay,
+        })),
+      confirmReparse: () => confirmAction('reparse'),
+      confirmDelete: () => confirmAction('delete'),
+      configureParser: () => {
+        setState(s => ({ ...s, overlay: null }));
+        nav.open({ name: 'MeMineru' });
+      },
       openAsk: () => nav.open({ name: 'AskShelf' }),
       backup: () => {
         if (backingUp.current) return;
@@ -250,7 +367,10 @@ export function useShelfVM() {
                 }
               : s.overlay,
         })),
-      closeOverlay: () => setState(s => ({ ...s, overlay: null, toast: null })),
+      closeOverlay: () => {
+        if (!managing.current)
+          setState(s => ({ ...s, overlay: null, toast: null }));
+      },
       pickRecent,
       pickOther: () => {
         if (c.mode === 'demo') {
@@ -265,12 +385,21 @@ export function useShelfVM() {
           ...s,
           overlay:
             s.overlay?.kind === 'import'
-              ? { ...s.overlay, busy: true }
+              ? { ...s.overlay, busy: true, error: undefined }
               : s.overlay,
         }));
         pickImportDraft(c)
           .then(selected)
-          .catch(fail)
+          .catch(error => {
+            if (mounted.current)
+              setState(s => ({
+                ...s,
+                overlay:
+                  s.overlay?.kind === 'import'
+                    ? { ...s.overlay, error: importError(error).message }
+                    : s.overlay,
+              }));
+          })
           .finally(() =>
             setState(s => ({
               ...s,

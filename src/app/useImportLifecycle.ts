@@ -4,6 +4,7 @@ import { Intake } from '@platform/Intake';
 import type { Container } from './container';
 import { importBookFile, type ImportSelection } from './usecases/importBooks';
 import { getParseQueue } from './usecases/parseQueue';
+import { importError } from './usecases/importErrors';
 
 export function useImportLifecycle(
   c: Container,
@@ -15,7 +16,9 @@ export function useImportLifecycle(
     let mounted = true;
     const update = (state: string | null | undefined) => {
       if (enabled && state === 'active')
-        getParseQueue(c).resume().catch(() => c.log.warn('恢复解析队列失败'));
+        getParseQueue(c)
+          .resume()
+          .catch(() => c.log.warn('恢复解析队列失败'));
       else getParseQueue(c).pause();
     };
     update(AppState.currentState);
@@ -26,12 +29,8 @@ export function useImportLifecycle(
         .then(selection => {
           if (mounted) onImport(selection);
         })
-        .catch(() => {
-          if (mounted)
-            Alert.alert(
-              '无法导入',
-              '请检查文件是否为可读取的 PDF 或 EPUB，然后重新选择。',
-            );
+        .catch(error => {
+          if (mounted) Alert.alert('无法导入', importError(error).message);
         });
     };
     const unsubscribe = Intake.subscribe(receive);

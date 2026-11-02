@@ -6,6 +6,7 @@ import {
   importBookFile,
   pickImportDraft,
   reparseBook,
+  deleteBook,
 } from '@app/usecases/importBooks';
 import {
   clearParseCache,
@@ -204,6 +205,125 @@ test('file selection copies privately and persists real PDF metadata; repeated d
   expect(await c.repos.drafts.list()).toHaveLength(1);
   expect(runtime.files.remove).toHaveBeenCalled();
 });
+
+test('long Unicode names and encoded URIs are copied to short private paths', async () => {
+  const name = `${'中文'.repeat(35)} %20+#&’ (1).pdf`;
+  const uri = `content://provider/document/${encodeURIComponent(name)}`;
+  jest
+    .mocked(runtime.files.copyFromUri)
+    .mockImplementation(async (_uri, dest) => {
+      paths.add(dest);
+      return { size: 1000, name, mime: 'application/pdf' };
+    });
+  const selected = await importBookFile(c, { uri, name, mime: file.mime });
+  if (selected.kind !== 'draft') throw new Error('draft expected');
+  const draft = (await c.repos.drafts.get(selected.draftId))!;
+  expect(runtime.files.copyFromUri).toHaveBeenCalledWith(uri, draft.file_path);
+  expect(draft.file_path).toMatch(
+    /^\/docs\/books\/_incoming\/[a-z0-9-]+\.pdf$/u,
+  );
+  expect(draft.file_path.length).toBeLessThan(80);
+  expect(draft.info).toMatchObject({ name });
+});
+
+test('deletion removes book-owned data/settings/files and lets the same file import again', async () => {
+  await book();
+  await c.repos.books.update('book', { sha256: 'same-sha' });
+  const p = await part();
+  await importPdfResult(c, p, '/result');
+  await c.repos.notes.userText.set('book', 'ch1', 'remove me');
+  await c.repos.settings.set('book.import.book', { name: 'old.pdf' });
+  await c.repos.settings.set('reparse.blocks.book', [{ seq: 1001 }]);
+  await c.repos.settings.set('study.compact.book.ch1', { summary: 'old' });
+  await c.repos.settings.set('book.import.book-other', { name: 'keep.pdf' });
+  await c.repos.settings.set('backup.missingOriginals', [
+    { id: 'book', sha256: 'same-sha' },
+    { id: 'other', sha256: 'other' },
+  ]);
+  const removed = jest.fn();
+  c.events.subscribe('book.deleted', removed);
+  expect(await deleteBook(c, 'book')).toEqual({ filesRemoved: true });
+  expect(await c.repos.books.bySha('same-sha')).toBeUndefined();
+  expect(await c.repos.notes.userText.get('book', 'ch1')).toBeUndefined();
+  expect(await c.repos.parts.list('book')).toEqual([]);
+  expect(await c.repos.settings.get('book.import.book', null)).toBeNull();
+  expect(await c.repos.settings.get('reparse.blocks.book', null)).toBeNull();
+  expect(await c.repos.settings.get('study.compact.book.ch1', null)).toBeNull();
+  expect(await c.repos.settings.get('book.import.book-other', null)).toEqual({
+    name: 'keep.pdf',
+  });
+  expect(await c.repos.settings.get('backup.missingOriginals', [])).toEqual([
+    { id: 'other', sha256: 'other' },
+  ]);
+  expect(runtime.files.remove).toHaveBeenCalledWith('/docs/books/book');
+  expect(runtime.files.remove).toHaveBeenCalledWith('/cache/parse/book');
+  expect(removed).toHaveBeenCalledWith({ bookId: 'book' });
+  expect(await importBookFile(c, file)).toMatchObject({ kind: 'draft' });
+});
+
+test('deleting a book waits for its active upload to stop before removing it', async () => {
+  await book();
+  await part();
+  let aborted = false;
+  jest.mocked(runtime.mineru.upload).mockImplementation(
+    (_url, _path, _progress, signal) =>
+      new Promise((_, reject) =>
+        signal!.addEventListener(
+          'abort',
+          () => {
+            aborted = true;
+            reject(new MineruError('cancelled'));
+          },
+          { once: true },
+        ),
+      ),
+  );
+  await getParseQueue(c).resume();
+  await settle(
+    async () => jest.mocked(runtime.mineru.upload).mock.calls.length === 1,
+  );
+  await deleteBook(c, 'book');
+  expect(aborted).toBe(true);
+  expect(await c.repos.books.get('book')).toBeUndefined();
+  expect(await c.repos.parts.list('book')).toEqual([]);
+  expect(runtime.mineru.query).not.toHaveBeenCalled();
+});
+
+test('database deletion failure retains source files; cleanup failure reports partial cleanup', async () => {
+  await book();
+  await c.db.run(
+    "CREATE TRIGGER block_delete BEFORE DELETE ON book BEGIN SELECT RAISE(ABORT, 'blocked'); END",
+  );
+  await expect(deleteBook(c, 'book')).rejects.toThrow('blocked');
+  expect(await c.repos.books.get('book')).toBeDefined();
+  expect(runtime.files.remove).not.toHaveBeenCalled();
+  await c.db.run('DROP TRIGGER block_delete');
+  jest
+    .mocked(runtime.files.remove)
+    .mockRejectedValueOnce(new Error('permission'));
+  expect(await deleteBook(c, 'book')).toEqual({ filesRemoved: false });
+  expect(await c.repos.books.get('book')).toBeUndefined();
+});
+
+test('explicit reparse replaces OCR options and old part overrides without deleting notes', async () => {
+  await book();
+  await c.repos.books.update('book', { ocr: false });
+  await c.repos.settings.set('book.ocrParts.book', { '1': false });
+  await c.repos.notes.userText.set('book', 'ch1', 'keep me');
+  paths.add('/docs/books/book/source.pdf');
+  await reparseBook(c, 'book', { ocr: true });
+  await settle(
+    async () => jest.mocked(runtime.mineru.requestUpload).mock.calls.length > 0,
+  );
+  expect(runtime.mineru.requestUpload).toHaveBeenCalledWith(
+    [expect.objectContaining({ ocr: true })],
+    expect.any(String),
+    expect.any(Object),
+  );
+  expect(await c.repos.notes.userText.get('book', 'ch1')).toMatchObject({
+    user_text: 'keep me',
+  });
+});
 test('duplicate existing hash returns its book and removes incoming copy without parsing', async () => {
   await book();
   await c.repos.books.update('book', { sha256: 'same-sha' });
@@ -250,7 +370,7 @@ test('source restore failure retains the missing-original marker and existing le
     { id: 'book', sha256: 'same-sha' },
   ]);
   jest.mocked(runtime.files.move).mockRejectedValueOnce(new Error('no space'));
-  await expect(importBookFile(c, file)).rejects.toThrow('no space');
+  await expect(importBookFile(c, file)).rejects.toThrow('无法读取');
   expect(await c.repos.settings.get('backup.missingOriginals', [])).toEqual([
     { id: 'book', sha256: 'same-sha' },
   ]);
@@ -274,7 +394,7 @@ test('metadata failure cleans the copy and closes native PDF', async () => {
   jest
     .mocked(runtime.pdf.outline)
     .mockRejectedValueOnce(new Error('broken PDF'));
-  await expect(importBookFile(c, file)).rejects.toThrow('broken PDF');
+  await expect(importBookFile(c, file)).rejects.toThrow('无法读取');
   expect(runtime.pdf.close).toHaveBeenCalledTimes(1);
   expect(runtime.files.remove).toHaveBeenCalled();
   expect(await c.repos.drafts.list()).toEqual([]);

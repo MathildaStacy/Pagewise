@@ -47,11 +47,24 @@ export interface ShelfState extends PageState {
         }[];
         note: string;
         busy: boolean;
+        error?: string;
       }
     | {
         kind: 'search';
         query: string;
         results: { id: string; title: string; meta: string }[];
+      }
+    | {
+        kind: 'bookActions' | 'reparse' | 'delete';
+        bookId: string;
+        title: string;
+        format: 'pdf' | 'epub';
+        duplicate: boolean;
+        restored: boolean;
+        ocr: boolean;
+        busy: boolean;
+        error?: string;
+        needsToken?: boolean;
       };
 }
 export interface ShelfIntents {
@@ -62,6 +75,13 @@ export interface ShelfIntents {
   refresh(): void;
   openContinue(): void;
   openBook(id: string): void;
+  openBookActions(id: string): void;
+  requestReparse(): void;
+  setReparseOcr(value: boolean): void;
+  confirmReparse(): void;
+  requestDelete(): void;
+  confirmDelete(): void;
+  configureParser(): void;
   openImport(): void;
   openSearch(): void;
   setSearch(q: string): void;

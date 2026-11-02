@@ -174,3 +174,28 @@ it('refreshes the local continuation card when returning to the shelf without a 
   expect(lastState().continueCard?.recap).toContain('离开书架后刚问的问题');
   expect(loads).toHaveBeenCalledTimes(1);
 });
+
+it('offers book management once for an externally shared duplicate and does not reopen after dismissal', async () => {
+  c.mode = 'device';
+  const incomingBook = { bookId: 'aima', token: 123, restored: true };
+  const view = () => (
+    <ContainerProvider value={c}>
+      <AppNavProvider value={nav}>
+        <ShelfScreen incomingBook={incomingBook} />
+      </AppNavProvider>
+    </ContainerProvider>
+  );
+  await ReactTestRenderer.act(async () => {
+    renderer = ReactTestRenderer.create(view());
+  });
+  const last = () => jest.mocked(ShelfView).mock.calls.at(-1)![0];
+  expect(last().state.overlay).toMatchObject({
+    kind: 'bookActions',
+    duplicate: true,
+    restored: true,
+    bookId: 'aima',
+  });
+  await ReactTestRenderer.act(async () => last().intents.closeOverlay());
+  await ReactTestRenderer.act(async () => renderer!.update(view()));
+  expect(last().state.overlay).toBeNull();
+});

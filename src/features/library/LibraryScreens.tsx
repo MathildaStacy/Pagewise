@@ -10,8 +10,19 @@ import {
   useParseProgressVM,
   useShelfVM,
 } from './useLibraryVM';
-export function ShelfScreen() {
+export function ShelfScreen({
+  incomingBook,
+}: {
+  incomingBook?: { bookId: string; token: number; restored?: boolean };
+} = {}) {
   const vm = useShelfVM();
+  const handledImport = useRef<number | null>(null);
+  const openBookActions = vm.intents.openBookActions;
+  useEffect(() => {
+    if (!incomingBook || handledImport.current === incomingBook.token) return;
+    handledImport.current = incomingBook.token;
+    openBookActions(incomingBook.bookId, true, !!incomingBook.restored);
+  }, [incomingBook, openBookActions]);
   const focused = useIsFocused();
   const wasFocused = useRef(focused);
   const refresh = vm.intents.refresh;

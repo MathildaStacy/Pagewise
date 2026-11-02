@@ -30,6 +30,7 @@ import {
 } from '@ui/kit';
 import type { ShelfIntents, ShelfState } from '@features/library/types';
 import { ConversationList } from './ConversationList';
+import { BookManagementSheet } from './BookManagementSheet';
 export function ShelfView({
   state,
   intents,
@@ -278,6 +279,7 @@ export function ShelfView({
                     accessibilityRole="button"
                     accessibilityLabel={`打开 ${book.title}`}
                     onPress={() => intents.openBook(book.id)}
+                    onLongPress={() => intents.openBookActions(book.id)}
                     style={({ pressed }) => [
                       s.gridBook,
                       { width: gridWidth },
@@ -300,6 +302,13 @@ export function ShelfView({
                         {book.status.text}
                       </Text>
                     </View>
+                    {!state.demo ? (
+                      <IconButton
+                        icon="more"
+                        label={`管理 ${book.title}`}
+                        onPress={() => intents.openBookActions(book.id)}
+                      />
+                    ) : null}
                   </Pressable>
                 ))}
               </View>
@@ -311,6 +320,7 @@ export function ShelfView({
                     accessibilityRole="button"
                     accessibilityLabel={`打开 ${book.title}`}
                     onPress={() => intents.openBook(book.id)}
+                    onLongPress={() => intents.openBookActions(book.id)}
                     style={({ pressed }) => [s.book, pressed && s.rowPressed]}
                   >
                     {groupedLists && index > 0 ? (
@@ -363,7 +373,13 @@ export function ShelfView({
                         </View>
                       ) : null}
                     </View>
-                    {groupedLists && t.brand?.kind !== 'google' ? (
+                    {!state.demo ? (
+                      <IconButton
+                        icon="more"
+                        label={`管理 ${book.title}`}
+                        onPress={() => intents.openBookActions(book.id)}
+                      />
+                    ) : groupedLists && t.brand?.kind !== 'google' ? (
                       <Icon name="chev" size={20} color={t.color.ink3} />
                     ) : null}
                   </Pressable>
@@ -440,19 +456,26 @@ export function ShelfOverlays({
               ))}
               <SheetTouchable
                 accessibilityRole="button"
+                accessibilityState={{ disabled: state.overlay.busy }}
+                disabled={state.overlay.busy}
                 onPress={intents.pickOther}
                 style={s.chooseOther}
               >
                 <View style={s.importDivider} />
-                <Text style={s.chooseOtherLabel}>从其他位置选择…</Text>
+                <Text style={s.chooseOtherLabel}>
+                  {state.overlay.busy ? '正在读取文件…' : '从其他位置选择…'}
+                </Text>
               </SheetTouchable>
             </View>
             <View style={s.importNote}>
-              <Note tone="neutral">{state.overlay.note}</Note>
+              <Note tone={state.overlay.error ? 'bad' : 'neutral'}>
+                {state.overlay.error ?? state.overlay.note}
+              </Note>
             </View>
           </View>
         ) : null}
       </Sheet>
+      <BookManagementSheet state={state} intents={intents} />
       <Sheet
         visible={state.overlay?.kind === 'search'}
         title="搜索书架"

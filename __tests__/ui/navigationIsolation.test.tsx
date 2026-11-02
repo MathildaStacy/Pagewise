@@ -230,7 +230,13 @@ it('keeps rerenders and incoming imports attached to their originating root', as
     { type: 'NAVIGATE', payload: { name: 'MeAppearance' } },
     {
       type: 'NAVIGATE',
-      payload: { name: 'BookMap', params: { bookId: 'book-b' } },
+      payload: {
+        name: 'Tabs',
+        params: {
+          screen: 'Shelf',
+          params: { incomingBook: { bookId: 'book-b', token: 1 } },
+        },
+      },
     },
   ]);
 });

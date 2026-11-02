@@ -14,6 +14,7 @@ import {
   StackActions,
   useNavigationContainerRef,
   useIsFocused,
+  useRoute,
   type RouteProp,
 } from '@react-navigation/native';
 import {
@@ -100,7 +101,11 @@ export type RootStackParams = {
   Welcome: undefined;
 };
 const Stack = createNativeStackNavigator<RootStackParams>();
-const Tabs = createBottomTabNavigator<Record<TabName, undefined>>();
+type IncomingBook = { bookId: string; token: number; restored?: boolean };
+type TabParams = Record<Exclude<TabName, 'Shelf'>, undefined> & {
+  Shelf: { incomingBook?: IncomingBook } | undefined;
+};
+const Tabs = createBottomTabNavigator<TabParams>();
 const tabItems = [
   { key: 'Shelf', label: '书架', icon: 'shelf' as const },
   { key: 'Review', label: '复习', icon: 'cards' as const },
@@ -133,9 +138,10 @@ class ScreenBoundary extends Component<PropsWithChildren, { failed: boolean }> {
   }
 }
 function ShelfTab() {
+  const route = useRoute<RouteProp<TabParams, 'Shelf'>>();
   return (
     <ScreenBoundary>
-      <ShelfScreen />
+      <ShelfScreen incomingBook={route.params?.incomingBook} />
     </ScreenBoundary>
   );
 }
@@ -332,7 +338,7 @@ export function RootNavigator({
     token: number;
     selection:
       | { kind: 'draft'; draftId: string }
-      | { kind: 'duplicate'; bookId: string };
+      | { kind: 'duplicate'; bookId: string; restored?: boolean };
   } | null;
 }) {
   const navRef = useNavigationContainerRef<RootStackParams>();
@@ -349,10 +355,19 @@ export function RootNavigator({
     const selection = incomingImport.selection;
     navRef.dispatch(
       CommonActions.navigate(
-        selection.kind === 'draft' ? 'ImportSettings' : 'BookMap',
+        selection.kind === 'draft' ? 'ImportSettings' : 'Tabs',
         selection.kind === 'draft'
           ? { draftId: selection.draftId }
-          : { bookId: selection.bookId },
+          : {
+              screen: 'Shelf',
+              params: {
+                incomingBook: {
+                  bookId: selection.bookId,
+                  restored: selection.restored,
+                  token: incomingImport.token,
+                },
+              },
+            },
       ),
     );
   }, [ready, incomingImport, navRef]);

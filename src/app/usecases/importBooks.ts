@@ -18,6 +18,10 @@ import {
   type IntakeFile,
 } from './importRuntime';
 import { getParseQueue } from './parseQueue';
+import { ImportInputError, importError } from './importErrors';
+import { disposeContainerSessions } from '../study/registry';
+import { disposeReaderRuntime } from '../readerRuntime';
+import { disposeRefinements } from './refinement';
 
 export { configureImportRuntime } from './importRuntime';
 export type { ImportRuntime, IntakeFile } from './importRuntime';
@@ -30,12 +34,7 @@ export interface ImportOptions {
   ocr: boolean;
   priorityFrom: number;
 }
-export class ImportInputError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'ImportInputError';
-  }
-}
+export { ImportInputError } from './importErrors';
 let nextId = 0;
 const newId = (c: Container) =>
   `${c.clock.now().getTime().toString(36)}-${(++nextId).toString(
@@ -75,7 +74,7 @@ function formatOf(file: IntakeFile): 'pdf' | 'epub' {
     return 'epub';
   if (file.mime === 'application/pdf' || /\.pdf$/iu.test(file.name ?? ''))
     return 'pdf';
-  throw new Error('请选择 PDF 或 EPUB 文件');
+  throw new ImportInputError('请选择 PDF 或 EPUB 文件');
 }
 export function describeImportParts(
   pages: number,
@@ -105,8 +104,12 @@ export async function listImportDrafts(c: Container) {
 export async function pickImportDraft(
   c: Container,
 ): Promise<ImportSelection | null> {
-  const file = await getImportRuntime(c).chooseFile();
-  return file ? importBookFile(c, file) : null;
+  try {
+    const file = await getImportRuntime(c).chooseFile();
+    return file ? await importBookFile(c, file) : null;
+  } catch (error) {
+    throw importError(error);
+  }
 }
 /** Restored databases may contain the book and its learning records without its source. */
 async function restoreOriginal(
@@ -151,7 +154,7 @@ export function importBookFile(
   c: Container,
   file: IntakeFile,
 ): Promise<ImportSelection> {
-  return serial(c, async () => {
+  return serial<ImportSelection>(c, async () => {
     const runtime = getImportRuntime(c),
       { files, pdf } = runtime;
     const format = formatOf(file),
@@ -164,7 +167,7 @@ export function importBookFile(
     try {
       const copied = await files.copyFromUri(file.uri, path);
       if (!Number.isSafeInteger(copied.size) || copied.size <= 0)
-        throw new Error('文件是空的，请重新选择');
+        throw new ImportInputError('文件是空的，请重新选择');
       const sha256 = await files.sha256(path);
       const existing = await c.repos.books.bySha(sha256);
       if (existing) {
@@ -190,7 +193,10 @@ export function importBookFile(
       if (format === 'pdf') {
         try {
           const metadata = await pdf.info(path);
-          if (metadata.pageCount < 1) throw new Error('PDF 没有可读取的页面');
+          if (metadata.pageCount < 1)
+            throw new ImportInputError(
+              'PDF 没有可读取的页面，请选择另一份文件',
+            );
           const samples = [
             ...new Set(
               Array.from(
@@ -248,6 +254,10 @@ export function importBookFile(
         await files.remove(metadataDirectory);
       }
     }
+  }).catch(error => {
+    const friendly = importError(error);
+    c.log.warn('书籍导入失败', { code: friendly.code });
+    throw friendly;
   });
 }
 export function confirmImportDraft(
@@ -338,7 +348,11 @@ export function confirmImportDraft(
 }
 
 /** Explicitly authorized reparse. Foreground resume alone never recreates cleared data. */
-export function reparseBook(c: Container, bookId: string): Promise<void> {
+export function reparseBook(
+  c: Container,
+  bookId: string,
+  options?: { ocr: boolean },
+): Promise<void> {
   return serial(c, async () => {
     const runtime = getImportRuntime(c),
       book = await c.repos.books.get(bookId);
@@ -399,7 +413,9 @@ export function reparseBook(c: Container, bookId: string): Promise<void> {
       await repos.books.update(bookId, {
         status: book.format === 'pdf' ? 'parsing' : 'importing',
         ready_to_page: 0,
+        ...(book.format === 'pdf' && options ? { ocr: options.ocr } : {}),
       });
+      if (options) await repos.settings.set(`book.ocrParts.${bookId}`, {});
     });
     await runtime.files.remove(`${runtime.files.cacheDir}/parse/${bookId}`);
     c.events.emit('book.parse', {
@@ -407,5 +423,86 @@ export function reparseBook(c: Container, bookId: string): Promise<void> {
       status: book.format === 'pdf' ? 'parsing' : 'importing',
     });
     await getParseQueue(c).resume();
+  });
+}
+
+/** Called only after the user confirms deletion. Serialize with intake/reparse. */
+export function deleteBook(
+  c: Container,
+  bookId: string,
+): Promise<{ filesRemoved: boolean }> {
+  return serial(c, async () => {
+    if (!/^[a-zA-Z0-9_-]+$/u.test(bookId))
+      throw new ImportInputError('书籍标识无效，请返回书架后重试');
+    const runtime = getImportRuntime(c);
+    const book = await c.repos.books.get(bookId);
+    if (!book) return { filesRemoved: true };
+    await getParseQueue(c).dispose();
+    try {
+      await disposeRefinements(c);
+      await disposeContainerSessions(c);
+      await disposeReaderRuntime(c);
+      const drafts = (await c.repos.drafts.list()).filter(
+        draft => object(draft.info).sha256 === book.sha256,
+      );
+      await c.db.transaction(async tx => {
+        const repos = createRepos(tx);
+        await repos.books.remove(bookId);
+        for (const prefix of [
+          'book.import',
+          'book.pageNumbers',
+          'book.pageOffsetReliable',
+          'book.parseWarnings',
+          'book.referenceMoves',
+          'book.epubError',
+          'book.epubWarnings',
+          'book.ocrParts',
+          'book.learningScope',
+          'reparse.blocks',
+          'reparse.sections',
+        ])
+          await tx.run('DELETE FROM setting WHERE key=?', [
+            `${prefix}.${bookId}`,
+          ]);
+        const compact = `study.compact.${bookId}.`;
+        await tx.run('DELETE FROM setting WHERE substr(key,1,?)=?', [
+          compact.length,
+          compact,
+        ]);
+        const missing = await repos.settings.get<
+          { id: string; sha256: string }[]
+        >('backup.missingOriginals', []);
+        await repos.settings.set(
+          'backup.missingOriginals',
+          missing.filter(value => value.id !== bookId),
+        );
+        for (const draft of drafts) await repos.drafts.remove(draft.id);
+      });
+      const cleanup = await Promise.allSettled(
+        [
+          bookDirectory(runtime, bookId),
+          `${runtime.files.cacheDir}/parse/${bookId}`,
+          `${runtime.files.cacheDir}/pages`,
+          ...drafts.flatMap(draft => [
+            draft.file_path,
+            ...(typeof object(draft.info).metadataDirectory === 'string'
+              ? [String(object(draft.info).metadataDirectory)]
+              : []),
+          ]),
+        ].map(path => runtime.files.remove(path)),
+      );
+      const filesRemoved = cleanup.every(
+        result => result.status === 'fulfilled',
+      );
+      if (!filesRemoved) c.log.warn('书籍已删除，文件清理未完成', { bookId });
+      c.events.emit('book.deleted', { bookId });
+      c.events.emit('cards.changed', { bookId });
+      c.events.emit('stuck.changed', { bookId });
+      return { filesRemoved };
+    } finally {
+      await getParseQueue(c)
+        .resume()
+        .catch(() => c.log.warn('恢复其他书籍的解析失败'));
+    }
   });
 }

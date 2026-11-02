@@ -612,6 +612,13 @@ it.each(['paper', 'glass'] as const)(
           intents={{
             refresh: () => {},
             openBook: () => {},
+            openBookActions: () => {},
+            requestReparse: () => {},
+            setReparseOcr: () => {},
+            confirmReparse: () => {},
+            requestDelete: () => {},
+            confirmDelete: () => {},
+            configureParser: () => {},
             openContinue: () => {},
             openImport: () => {},
             openSearch: () => {},

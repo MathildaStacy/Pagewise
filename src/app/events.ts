@@ -1,4 +1,5 @@
 export interface AppEvents {
+  'book.deleted': { bookId: string };
   'backup.changed': undefined;
   'source.refined': { bookId: string; sectionId: string };
   'cards.changed': { bookId?: string };
