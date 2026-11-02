@@ -15,8 +15,8 @@ jest.mock(
   () => require('react-native-safe-area-context/jest/mock').default,
 );
 jest.mock('react-native-gesture-handler', () => {
-  const { View } = require('react-native');
-  return { GestureHandlerRootView: View };
+  const { View, ScrollView } = require('react-native');
+  return { GestureHandlerRootView: View, ScrollView };
 });
 jest.mock('@react-native-community/blur', () => {
   const { View } = require('react-native');

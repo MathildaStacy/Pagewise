@@ -2,6 +2,7 @@ import { PRIVATE_USE } from '@core/layout';
 import type { Block, Book, Message, Section } from '@core/types';
 import { sectionName } from '@features/sectionName';
 import {
+  decodeTextEntities,
   displayTex,
   parse,
   parseSourceCode,
@@ -486,14 +487,15 @@ export function tableRows(html: string | null, text: string): string[][] {
   if (!html) return text.split('\n').map(line => line.split('\t'));
   const rows = [...html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)].map(row =>
     [...row[1].matchAll(/<t[dh]\b[^>]*>([\s\S]*?)<\/t[dh]>/gi)].map(cell =>
-      cell[1]
-        .replace(/<[^>]*>/g, ' ')
-        .replace(/&nbsp;/g, ' ')
-        .replace(/&amp;/g, '&')
-        .trim(),
+      decodeTextEntities(
+        cell[1].replace(/<(?!\/?(?:sup|sub)\b)[^>]*>/gi, ' '),
+      ).trim(),
     ),
   );
   return rows.length ? rows : [[text || html.replace(/<[^>]*>/g, ' ')]];
+}
+export function tableContent(html: string | null, text: string): RichDoc[][] {
+  return tableRows(html, text).map(row => row.map(cell => parse(cell)));
 }
 export function presentRefinementContent(
   block: Pick<Block, 'type' | 'text' | 'latex' | 'html'>,
@@ -501,7 +503,7 @@ export function presentRefinementContent(
   if (block.type === 'equation')
     return { kind: 'equation', tex: displayTex(block.latex ?? block.text) };
   if (block.type === 'table')
-    return { kind: 'table', rows: tableRows(block.html, block.text) };
+    return { kind: 'table', rows: tableContent(block.html, block.text) };
   return { kind: 'text', text: block.text };
 }
 export function presentReaderItems(
@@ -585,7 +587,7 @@ export function presentReaderItems(
       marks,
       pin: pins.get(b.seq),
       uri: b.image_path ?? undefined,
-      table: b.type === 'table' ? tableRows(b.html, b.text) : undefined,
+      table: b.type === 'table' ? tableContent(b.html, b.text) : undefined,
     };
     result.push(item);
     if (b.type === 'text' || b.type === 'title') open.set(b.seq, item);

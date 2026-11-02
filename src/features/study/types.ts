@@ -133,7 +133,7 @@ export interface ReaderBlock {
   marks: ('heard' | 'now' | 'highlight' | 'selected' | 'flash')[];
   pin?: { id: string; label: string };
   uri?: string;
-  table?: string[][];
+  table?: RichDoc[][];
 }
 export type ReaderItem =
   | ReaderBlock
@@ -255,7 +255,7 @@ export type StudyOverlay =
       subtitle: string;
     }
   | { kind: 'switchMain'; body: string; rebase?: boolean }
-  | { kind: 'table'; rows: string[][]; caption: string };
+  | { kind: 'table'; rows: RichDoc[][]; caption: string };
 export interface StudyState {
   aiOptions?: AiOptionsState;
   conversationTitle?: string;
@@ -354,7 +354,7 @@ export interface ReaderScreenState {
 export type RefinementContent =
   | { kind: 'text'; text: string }
   | { kind: 'equation'; tex: string }
-  | { kind: 'table'; rows: string[][] };
+  | { kind: 'table'; rows: RichDoc[][] };
 export interface RefinementState {
   busy: boolean;
   activity: 'loading' | 'generate' | 'save' | null;

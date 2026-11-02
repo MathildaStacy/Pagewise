@@ -1,4 +1,4 @@
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import {
   Button,
   CheckRow,
@@ -7,6 +7,7 @@ import {
   ProgressBar,
   Segmented,
   Sheet,
+  TableView,
   makeStyles,
 } from '@ui/kit';
 import type {
@@ -257,25 +258,7 @@ function RefinementPreview({
   if (content.kind === 'equation')
     return <MathView tex={content.tex} display />;
   if (content.kind === 'table')
-    return (
-      <ScrollView horizontal accessibilityLabel="表格对照，左右滑动查看">
-        <View>
-          {content.rows.map((row, i) => (
-            <View key={i} style={s.tableRow}>
-              {row.map((cell, j) => (
-                <Text
-                  key={j}
-                  selectable
-                  style={[s.tableCell, original ? s.before : s.after]}
-                >
-                  {cell}
-                </Text>
-              ))}
-            </View>
-          ))}
-        </View>
-      </ScrollView>
-    );
+    return <TableView rows={content.rows} selectable />;
   return (
     <Text selectable style={original ? s.before : s.after}>
       {content.text}
@@ -289,12 +272,6 @@ const useStyles = makeStyles(t => ({
   label: { ...t.type.label, color: t.color.ink },
   before: { ...t.type.bookBody, color: t.color.ink2 },
   after: { ...t.type.bookBody, color: t.color.ink },
-  tableRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: t.color.line,
-  },
-  tableCell: { width: 170, padding: t.space.gap },
   edit: {
     gap: t.space.gap,
     paddingVertical: t.space.pageX,

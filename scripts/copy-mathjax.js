@@ -8,7 +8,7 @@ const version = require(path.join(source, 'package.json')).version;
 if (!version.startsWith('3.')) throw new Error('Pagewise requires MathJax 3');
 fs.mkdirSync(destination, { recursive: true });
 fs.copyFileSync(
-  path.join(source, 'es5/tex-svg.js'),
+  path.join(source, 'es5/tex-svg-full.js'),
   path.join(destination, 'tex-svg.js'),
 );
 fs.copyFileSync(
@@ -44,7 +44,23 @@ fs.writeFileSync(
   document.addEventListener('message', receive);
   window.addEventListener('message', receive);
   window.MathJax = {
-    tex: { packages: ['base', 'ams', 'newcommand'], formatError: function (_jax, error) { throw error; } },
+    tex: {
+      // All extensions are in the local full bundle; no autoload or network fetch.
+      packages: ['base', 'ams', 'newcommand', 'boldsymbol', 'configmacros', 'enclose', 'unicode'],
+      macros: {
+        dag: '\\\\dagger',
+        hdots: '\\\\ldots',
+        normalfont: '\\\\rm',
+        em: '\\\\it',
+        AA: 'Å',
+        textmd: ['\\\\text{#1}', 1],
+        // SVG math fonts have no small-caps face; preserve the letters upright.
+        textsc: ['\\\\mathrm{#1}', 1],
+        textsuperscript: ['{{}^{#1}}', 1],
+        textcircled: ['\\\\enclose{circle}{\\\\text{#1}}', 1]
+      },
+      formatError: function (_jax, error) { throw error; }
+    },
     svg: { fontCache: 'none' },
     options: { enableMenu: false },
     startup: {

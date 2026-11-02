@@ -5,6 +5,7 @@ export { makeStyles } from './makeStyles';
 export { Icon } from './Icon';
 export { ToastHost } from './ToastHost';
 export { BottomFade } from './BottomFade';
+export { TableView } from './TableView';
 export { Gradient, GradientText, ProgressRing } from './Gradient';
 export type { SkinId } from './skin';
 export { useStickToBottom } from './useStickToBottom';

@@ -143,12 +143,12 @@ it('blurEnabled=false 有稳定填充且不挂载原生 blur', async () => {
       node.props.style !== undefined,
   )[0];
   expect(flattened(surface).backgroundColor).toBe(
-    skins.glass.tokens.light.color.glassStrong,
+    skins.glass.tokens.light.color.surface,
   );
 });
 
 it.each(['light', 'dark'] as const)(
-  'Android %s uses the translucent fill for surfaces and scrolled headers',
+  'Android %s uses an opaque material fallback without native blur',
   async scheme => {
     const platform = jest.replaceProperty(Platform, 'OS', 'android');
     try {
@@ -170,7 +170,7 @@ it.each(['light', 'dark'] as const)(
           node.props.style !== undefined,
       )[0];
       expect(flattened(surface).backgroundColor).toBe(
-        skins.glass.tokens[scheme].color.glassStrong,
+        skins.glass.tokens[scheme].color.surface,
       );
       const header = renderer.root.findAllByProps({
         testID: 'glass-appbar-material',

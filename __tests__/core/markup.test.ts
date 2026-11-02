@@ -102,6 +102,27 @@ it('recognizes quote and figure cards only on a standalone line', () => {
     paragraph('[[q:abc]]\n[[fig:9007199254740992]]'),
   ]);
 });
+it('preserves source HTML superscripts and subscripts without interpreting code or TeX', () => {
+  expect(
+    parseInline('e−<sup>rT</sup> 与 PV<sub>float</sub>，注<sup>[1]</sup>'),
+  ).toEqual([
+    text('e−'),
+    { t: 'math', tex: '{}^{\\text{rT}}' },
+    text(' 与 PV'),
+    { t: 'math', tex: '{}_{\\text{float}}' },
+    text('，注'),
+    { t: 'math', tex: '{}^{\\text{[1]}}' },
+  ]);
+  expect(parseInline('<SUP class="note">&#49;&amp;</SUP>')).toEqual([
+    { t: 'math', tex: '{}^{\\text{1}\\unicode{38}}' },
+  ]);
+  expect(parseInline('`<sup>x</sup>` $<sup>x</sup>$')).toEqual([
+    { t: 'code', v: '<sup>x</sup>' },
+    text(' '),
+    { t: 'math', tex: '<sup>x</sup>' },
+  ]);
+  expect(parseInline('x<sup>unfinished')).toEqual([text('x<sup>unfinished')]);
+});
 it('parses nested auxiliary content with citations, formulas, lists and a check', () => {
   expect(
     parse(

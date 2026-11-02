@@ -62,7 +62,6 @@ const pairs: Pair[] = [
 // These pairs deliberately preserve the source and report the contrast debt.
 const prototypeExceptions: Record<string, string[]> = {
   'glass light': [
-    'ink2/surface',
     'onAccent/accent',
     'stuck/stuckBg',
     'ok/surface',

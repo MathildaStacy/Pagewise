@@ -46,6 +46,7 @@ import {
   SelectionMenu,
   Sheet,
   StackBar,
+  TableView,
   ToastHost,
   Typing,
   makeStyles,
@@ -824,11 +825,7 @@ function ReaderBlockRow({
           onPress={select}
         >
           <View style={s.tablePreview}>
-            {item.table?.slice(0, 3).map((row, i) => (
-              <Text key={i} style={s.tableText} numberOfLines={1}>
-                {row.join('    ·    ')}
-              </Text>
-            ))}
+            <TableView rows={item.table ?? []} preview />
             <Button
               variant="text"
               size="sm"
@@ -1187,23 +1184,10 @@ export function StudyOverlays({
         </View>
       ) : null}
       {overlay.kind === 'table' ? (
-        <ScrollView horizontal>
-          <View style={s.overlayBody}>
-            {overlay.rows.map((row, i) => (
-              <View key={i} style={s.tableRow}>
-                {row.map((cell, j) => (
-                  <Text
-                    key={j}
-                    style={[s.tableCell, i === 0 ? s.tableHead : undefined]}
-                  >
-                    {cell}
-                  </Text>
-                ))}
-              </View>
-            ))}
-            <Text style={s.hint}>{overlay.caption}</Text>
-          </View>
-        </ScrollView>
+        <View style={s.overlayBody}>
+          <TableView rows={overlay.rows} />
+          <Text style={s.hint}>{overlay.caption}</Text>
+        </View>
       ) : null}
     </Sheet>
   );
@@ -1506,15 +1490,4 @@ const useStyles = makeStyles(t => ({
     borderColor: t.color.line,
     borderRadius: t.shape.md,
   },
-  tableText: { ...t.type.bookBody, color: t.color.ink },
-  tableRow: { flexDirection: 'row' },
-  tableCell: {
-    ...t.type.body,
-    color: t.color.ink,
-    width: 170,
-    padding: t.space.gap,
-    borderWidth: 1,
-    borderColor: t.color.line,
-  },
-  tableHead: { backgroundColor: t.color.surfaceAlt },
 }));

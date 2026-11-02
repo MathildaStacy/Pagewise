@@ -205,7 +205,7 @@ it('presents equation and table comparisons as readable content rather than sour
     rows: [
       ['Item', 'Count'],
       ['Example', 'l'],
-    ],
+    ].map(row => row.map(v => [{ t: 'p', c: [{ t: 'text', v }] }])),
   });
   const equation = presentRefinementContent({
     type: 'equation',

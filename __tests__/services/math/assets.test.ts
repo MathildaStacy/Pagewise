@@ -9,7 +9,9 @@ const root = path.resolve(__dirname, '../../..');
 const asset = path.join(root, 'android/app/src/main/assets/math');
 it('ships the exact offline MathJax runtime and its Apache license', () => {
   const bundled = fs.readFileSync(path.join(asset, 'tex-svg.js'));
-  const installed = fs.readFileSync(require.resolve('mathjax/es5/tex-svg.js'));
+  const installed = fs.readFileSync(
+    require.resolve('mathjax/es5/tex-svg-full.js'),
+  );
   expect(bundled.equals(installed)).toBe(true);
   expect(fs.readFileSync(path.join(asset, 'version.txt'), 'utf8').trim()).toBe(
     '3.2.2',
@@ -67,7 +69,7 @@ it('runs the HTML request protocol and rejects bad TeX using the real offline Ma
     startup: { ready(): void };
   };
   const engine = (await init({
-    loader: { load: ['input/tex', 'output/svg'] },
+    loader: { load: ['input/tex-full', 'output/svg'] },
     tex: configuration.tex,
     svg: configuration.svg,
   })) as Engine;
@@ -121,4 +123,35 @@ it('runs the HTML request protocol and rejects bad TeX using the real offline Ma
   });
   await new Promise(resolve => setImmediate(resolve));
   expect(messages).toContainEqual({ id: 'invalid', error: 'render' });
+  // Commands present in the six real imports, plus source HTML scripts.
+  const samples = [
+    String.raw`\boldsymbol{x}=(x_1,\dots,x_p)`,
+    String.raw`\hat{\theta}=X^{\dag}y`,
+    String.raw`x=2,3,\hdots,10`,
+    String.raw`\mathrm{\normalfont{\theta}}=4.91\times10^{-5}`,
+    String.raw`p\textmd{-}\textsc{i}`,
+    String.raw`\mathrm{\AA}_{(t)}`,
+    String.raw`\textsuperscript{y}^{(1)}`,
+    String.raw`36000\textcircled{1}`,
+    String.raw`\boldsymbol{\em X}`,
+    String.raw`{}^{\text{[1]}}`,
+    String.raw`{}_{\text{float}}`,
+    '{}^{\\text{1}\\unicode{38}}',
+    String.raw`T_1\quad D(T_2)`,
+  ];
+  samples.forEach((tex, index) =>
+    listeners['window.message']({
+      data: JSON.stringify({ id: `book-${index}`, tex, display: false }),
+    }),
+  );
+  await new Promise(resolve => setImmediate(resolve));
+  samples.forEach((_, index) =>
+    expect(messages).toContainEqual(
+      expect.objectContaining({
+        id: `book-${index}`,
+        svg: expect.stringContaining('<svg'),
+        w: expect.any(Number),
+      }),
+    ),
+  );
 });

@@ -39,7 +39,7 @@ export const glassLight: Tokens = {
     line: 'rgba(60,60,67,.16)',
     scrim: 'rgba(0,0,0,.22)',
     ink: '#000000',
-    ink2: 'rgba(60,60,67,.62)',
+    ink2: '#696970',
     ink3: '#696970',
     onAccent: '#FFFFFF',
     accent: '#007AFF',

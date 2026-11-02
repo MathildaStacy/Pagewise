@@ -20,6 +20,41 @@ export interface ParseOptions {
   /** Explicit final overrides streaming when the network stream is complete or stopped. */
   final?: boolean;
 }
+/** Decode source text without interpreting it as executable HTML. */
+export function decodeTextEntities(text: string): string {
+  const named: Record<string, string> = {
+    amp: '&',
+    lt: '<',
+    gt: '>',
+    quot: '"',
+    apos: "'",
+    nbsp: ' ',
+  };
+  return text.replace(
+    /&(#x[\da-f]+|#\d+|amp|lt|gt|quot|apos|nbsp);/gi,
+    (raw, entity: string) => {
+      if (!entity.startsWith('#')) return named[entity.toLowerCase()] ?? raw;
+      const code =
+        entity[1].toLowerCase() === 'x'
+          ? parseInt(entity.slice(2), 16)
+          : Number(entity.slice(1));
+      return code > 0 && code <= 0x10ffff && !(code >= 0xd800 && code <= 0xdfff)
+        ? String.fromCodePoint(code)
+        : raw;
+    },
+  );
+}
+function texText(text: string): string {
+  return decodeTextEntities(text)
+    .split(/([\\{}$&#_%~^])/g)
+    .filter(Boolean)
+    .map(part =>
+      /^[\\{}$&#_%~^]$/.test(part)
+        ? `\\unicode{${part.codePointAt(0)}}`
+        : `\\text{${part}}`,
+    )
+    .join('');
+}
 type Group = 'derive' | 'example' | 'check';
 const groups: readonly Group[] = ['derive', 'example', 'check'];
 const streamingMode = (options: ParseOptions) =>
@@ -153,6 +188,24 @@ export function parseInline(
         flush();
         nodes.push({ t: 'math', tex: text.slice(i + delimiter.length, end) });
         i = end + delimiter.length;
+        continue;
+      }
+    }
+    // MinerU emits footnotes and text exponents as HTML even in Markdown.
+    // Use the existing math baseline renderer; code spans and TeX stay literal.
+    if (text[i] === '<') {
+      const script = /^<(sup|sub)\b[^>]*>([^<>]*)<\/\1\s*>/i.exec(
+        text.slice(i),
+      );
+      if (script) {
+        flush();
+        nodes.push({
+          t: 'math',
+          tex: `{}${script[1].toLowerCase() === 'sup' ? '^' : '_'}{${texText(
+            script[2],
+          )}}`,
+        });
+        i += script[0].length;
         continue;
       }
     }

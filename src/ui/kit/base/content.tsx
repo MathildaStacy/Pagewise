@@ -10,7 +10,6 @@ import {
   Animated,
   Image,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -18,6 +17,7 @@ import {
   type StyleProp,
   type TextStyle,
 } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 import { SvgXml } from 'react-native-svg';
 import type { KitProps, RichInline, Tone } from '../contracts';
 import { useSkin, useTokens } from '../context';
@@ -34,6 +34,7 @@ import {
 } from '../reveal/useReveal';
 
 const BookTypography = createContext(false);
+const InlineFontSize = createContext<number | undefined>(undefined);
 const StudyTypography = createContext<
   'source' | 'aux' | 'check' | 'fold' | null
 >(null);
@@ -127,6 +128,7 @@ function Inline({
 export function RichView({
   doc,
   typography,
+  selectable,
   onCite,
   onFigure,
 }: KitProps['RichView']) {
@@ -134,7 +136,9 @@ export function RichView({
   const book = useContext(BookTypography);
   const study = useContext(StudyTypography);
   const textStyle =
-    typography === 'dialogQuote'
+    typography === 'tableCell'
+      ? s.tableCellText
+      : typography === 'dialogQuote'
       ? s.dialogQuoteText
       : typography === 'sheetQuote'
       ? s.sheetQuoteText
@@ -157,17 +161,20 @@ export function RichView({
       accessibilityLabel="讲解内容"
       accessibilityState={{}}
     >
-      <TextInk.Provider value={typeof ink === 'string' ? ink : undefined}>
-        {doc.map((block, index) => (
-          <RichBlockView
-            key={index}
-            block={block}
-            textStyle={textStyle}
-            onCite={onCite}
-            onFigure={onFigure}
-          />
-        ))}
-      </TextInk.Provider>
+      <InlineFontSize.Provider value={StyleSheet.flatten(textStyle)?.fontSize}>
+        <TextInk.Provider value={typeof ink === 'string' ? ink : undefined}>
+          {doc.map((block, index) => (
+            <RichBlockView
+              key={index}
+              block={block}
+              textStyle={textStyle}
+              selectable={selectable}
+              onCite={onCite}
+              onFigure={onFigure}
+            />
+          ))}
+        </TextInk.Provider>
+      </InlineFontSize.Provider>
     </View>
   );
 }
@@ -176,11 +183,13 @@ export function RichView({
 const RichBlockView = memo(function RichBlock({
   block,
   textStyle,
+  selectable,
   onCite,
   onFigure,
 }: {
   block: KitProps['RichView']['doc'][number];
   textStyle: StyleProp<TextStyle>;
+  selectable?: boolean;
   onCite?: KitProps['RichView']['onCite'];
   onFigure?: KitProps['RichView']['onFigure'];
 }) {
@@ -188,7 +197,7 @@ const RichBlockView = memo(function RichBlock({
   switch (block.t) {
     case 'p':
       return (
-        <Text style={textStyle}>
+        <Text style={textStyle} selectable={selectable}>
           <Inline nodes={block.c} onCite={onCite} />
         </Text>
       );
@@ -205,10 +214,10 @@ const RichBlockView = memo(function RichBlock({
         <View style={s.list}>
           {block.items.map((items, itemIndex) => (
             <View key={itemIndex} style={s.listItem}>
-              <Text style={textStyle}>
+              <Text style={textStyle} selectable={selectable}>
                 {block.ordered ? `${itemIndex + 1}.` : '•'}
               </Text>
-              <Text style={[textStyle, s.grow]}>
+              <Text style={[textStyle, s.grow]} selectable={selectable}>
                 <Inline nodes={items} onCite={onCite} />
               </Text>
             </View>
@@ -269,6 +278,7 @@ export function MathView({
   const t = useTokens();
   const renderer = useMathRenderer();
   const book = useContext(BookTypography);
+  const inlineFontSize = useContext(InlineFontSize);
   const { fontScale } = useWindowDimensions();
   const [rendered, setRendered] = useState<{
     tex: string;
@@ -304,12 +314,14 @@ export function MathView({
       ? rendered.value
       : null;
   const ex =
-    (book ? t.type.bookBody.fontSize : t.type.aiBody.fontSize) *
+    (inlineFontSize ??
+      (book ? t.type.bookBody.fontSize : t.type.aiBody.fontSize)) *
     fontScale *
     0.5;
   const xml = svg ?? result?.svg;
   const content = xml ? (
     <SvgXml
+      pointerEvents="none"
       xml={xml}
       width={width ?? (result ? result.width * ex : '100%')}
       height={
@@ -336,6 +348,8 @@ export function MathView({
   return display ? (
     <ScrollView
       horizontal
+      nestedScrollEnabled
+      disallowInterruption
       contentContainerStyle={s.mathDisplay}
       accessibilityRole="text"
       accessibilityLabel={`公式 ${tex}`}
@@ -1585,6 +1599,7 @@ const useStyles = makeStyles(t => ({
     paddingLeft: 8,
   },
   mathText: { ...t.type.aiBody, ...t.type.num, color: t.color.ink },
+  tableCellText: { ...t.type.body, color: t.color.ink },
   mathFallback: {
     ...t.type.aiBody,
     fontFamily: 'monospace',

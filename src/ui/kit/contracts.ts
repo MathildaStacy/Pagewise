@@ -336,7 +336,8 @@ export type RichBlock =
 export type RichDoc = RichBlock[];
 export interface RichViewProps {
   doc: RichDoc;
-  typography?: 'dialogQuote' | 'sheetQuote';
+  typography?: 'dialogQuote' | 'sheetQuote' | 'tableCell';
+  selectable?: boolean;
   onCite?(ref: number): void;
   onFigure?(ref: number): void;
 }

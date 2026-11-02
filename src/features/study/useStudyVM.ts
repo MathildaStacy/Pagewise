@@ -35,7 +35,7 @@ import {
   quickActions,
   sectionLabel,
   stepPages,
-  tableRows,
+  tableContent,
 } from './presenters';
 import type {
   BlockMenuKey,
@@ -756,7 +756,7 @@ export function useStudyVM(
       if (block.type === 'table') {
         setOverlay({
           kind: 'table',
-          rows: tableRows(block.html, block.text),
+          rows: tableContent(block.html, block.text),
           caption: blockPage(block, raw.book),
         });
         return;

@@ -59,8 +59,10 @@ export function GlassSurface({
     skin.blurEnabled !== false &&
     (Platform.OS === 'android' || Platform.OS === 'ios');
   const fill =
-    material && tokens.brand?.kind === 'win11' && !enabled
-      ? tokens.brand.acrylicSolid
+    material && !enabled
+      ? tokens.brand?.kind === 'win11'
+        ? tokens.brand.acrylicSolid
+        : tokens.color.surface
       : material
       ? strength === 'strong'
         ? tokens.color.glassStrong
