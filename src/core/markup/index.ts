@@ -9,6 +9,7 @@ export type Inline =
 export type Block =
   | { t: 'p'; c: Inline[]; heading?: number }
   | { t: 'list'; ordered: boolean; start?: number; items: Inline[][] }
+  | { t: 'table'; rows: Inline[][][] }
   | { t: 'math'; tex: string }
   | { t: 'quote' | 'figure'; ref: number; verified: boolean }
   | { t: 'aux'; kind: 'derive' | 'example'; body: Block[]; open: boolean }
@@ -133,7 +134,7 @@ export function parseInline(
     if (
       text[i] === '\\' &&
       i + 1 < text.length &&
-      /[\\*`$_~[\]]/.test(text[i + 1])
+      /[\\*`$_~[\]|]/.test(text[i + 1])
     ) {
       plain += text[i + 1];
       i += 2;
@@ -215,6 +216,37 @@ export function parseInline(
   flush();
   return nodes;
 }
+/** Pipes inside code, TeX and escaped text belong to a cell. */
+function tableRow(line: string): string[] | null {
+  const text = line.trim();
+  const cells: string[] = [];
+  let start = 0;
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '`' && !escaped(text, i)) {
+      const span = codeSpan(text, i);
+      if (span) {
+        i = span.end - 1;
+        continue;
+      }
+    }
+    if (text[i] === '$' && !escaped(text, i)) {
+      const marker = text.startsWith('$$', i) ? '$$' : '$';
+      const end = endMarker(text, marker, i + marker.length);
+      if (end >= 0) {
+        i = end + marker.length - 1;
+        continue;
+      }
+    }
+    if (text[i] !== '|' || escaped(text, i)) continue;
+    cells.push(text.slice(start, i).trim());
+    start = i + 1;
+  }
+  if (!cells.length) return null;
+  cells.push(text.slice(start).trim());
+  if (!cells[0]) cells.shift();
+  if (!cells[cells.length - 1]) cells.pop();
+  return cells.length ? cells : null;
+}
 function ordinary(text: string, options: ParseOptions): RichDoc {
   const doc: RichDoc = [];
   let paragraph: string[] = [];
@@ -225,9 +257,35 @@ function ordinary(text: string, options: ParseOptions): RichDoc {
       paragraph = [];
     }
   };
-  for (const line of text.split('\n')) {
+  const lines = text.split('\n');
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index];
     if (!line.trim()) {
       flush();
+      continue;
+    }
+    const header = tableRow(line);
+    const divider = tableRow(lines[index + 1] ?? '');
+    if (
+      header &&
+      divider?.length === header.length &&
+      divider.every(cell => /^:?-{3,}:?$/.test(cell))
+    ) {
+      flush();
+      const rows = [header.map(cell => parseInline(cell, options))];
+      index++;
+      while (index + 1 < lines.length) {
+        const row = tableRow(lines[index + 1]);
+        if (!row) break;
+        // An arriving row remains hidden until it has all of its columns.
+        if (streamingMode(options) && row.length < header.length) {
+          if (index + 2 === lines.length) index++;
+          break;
+        }
+        rows.push(header.map((_, col) => parseInline(row[col] ?? '', options)));
+        index++;
+      }
+      doc.push({ t: 'table', rows });
       continue;
     }
     const reference = /^\s*\[\[(q|fig):(\d+)\]\]\s*$/.exec(line);
@@ -286,6 +344,14 @@ function groupInline(doc: RichDoc): Inline[] {
     if (block.t === 'p' || block.t === 'check') line(block.c);
     else if (block.t === 'math') line([{ t: 'math', tex: block.tex }]);
     else if (block.t === 'list') block.items.forEach(line);
+    else if (block.t === 'table')
+      block.rows.forEach(row =>
+        line(
+          row.flatMap((cell, i) =>
+            i ? [{ t: 'text', v: ' · ' }, ...cell] : cell,
+          ),
+        ),
+      );
     else if (block.t === 'code') line([{ t: 'text', v: block.text }]);
     else if (block.t === 'aux') line(groupInline(block.body));
     else line([{ t: 'cite', ref: block.ref, verified: false, detour: false }]);

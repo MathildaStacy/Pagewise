@@ -419,6 +419,8 @@ export function useAskVM(): { state: AskState; intents: AskIntents } {
       if ('c' in block) return { ...block, c: inline(block.c) };
       if (block.t === 'list')
         return { ...block, items: block.items.map(inline) };
+      if (block.t === 'table')
+        return { ...block, rows: block.rows.map(row => row.map(inline)) };
       if (block.t === 'aux')
         return { ...block, body: labelCitations(block.body) };
       return block;

@@ -83,6 +83,7 @@ export function ReaderView({
     <Screen edges={['top', 'left', 'right', 'bottom']}>
       <AppBar
         variant="push"
+        titleLines={2}
         title={
           t.layout.groupedLists
             ? state.header.title
@@ -187,6 +188,7 @@ export function ReaderContent({
   const [contentHeight, setContentHeight] = useState(0);
   const [headerHeight, setHeaderHeight] = useState(0);
   const [footerHeight, setFooterHeight] = useState(0);
+  const [visibleRef, setVisibleRef] = useState<string | null>(null);
   const rows = useMemo(() => {
     if (state.format === 'epub') {
       const blocks = state.items.filter(
@@ -231,6 +233,18 @@ export function ReaderContent({
       },
     ]);
   }, [state.items, state.format]);
+  const contentRows = rows.filter(row => row.block);
+  const position = Math.max(
+    0,
+    contentRows.findIndex(
+      row => row.id === (visibleRef ?? state.scrollTo?.ref),
+    ),
+  );
+  const location = contentRows.length
+    ? `${contentRows[position].block!.page} · 本节 ${position + 1} / ${
+        contentRows.length
+      }`
+    : state.hint;
   const latest = useRef({ rows, reportAnchor: intents.reportAnchor });
   latest.current = { rows, reportAnchor: intents.reportAnchor };
   const settleTarget = useRef(() => {});
@@ -267,6 +281,7 @@ export function ReaderContent({
   }, [state.view, t.type.bookBody.fontSize, t.layout.groupedLists]);
   useEffect(() => {
     if (index < 0 || state.view !== 'flow') return;
+    setVisibleRef(target ?? null);
     pending.current = target ?? null;
     settleTarget.current();
     if (pending.current)
@@ -335,7 +350,11 @@ export function ReaderContent({
             />
           </View>
         ) : null}
-        <Text style={s.hint}>{state.hint}</Text>
+        <Text style={s.hint}>
+          {state.view === 'flow' && location !== state.hint
+            ? `${location}\n${state.hint}`
+            : state.hint}
+        </Text>
       </View>
       {state.view === 'orig' ? (
         state.original?.available ? (
@@ -401,7 +420,10 @@ export function ReaderContent({
                 if (!nearest || distance < nearest.distance)
                   nearest = { ref: row.id, distance };
               }
-              if (nearest) latest.current.reportAnchor(nearest.ref);
+              if (nearest) {
+                setVisibleRef(nearest.ref);
+                latest.current.reportAnchor(nearest.ref);
+              }
             }}
             onScrollBeginDrag={() => {
               pending.current = null;

@@ -757,7 +757,7 @@ it.each(['paper', 'glass'] as const)(
     const body = root.findByProps({ testID: 'sheet-body' });
     expect(
       body.findAllByType(Button).map(button => button.props.label),
-    ).toEqual(['重新讲解']);
+    ).toEqual(['复制讲解', '重新讲解']);
     const quote = body
       .findAllByType(RichView)
       .find(node => node.props.typography === 'book')!;
@@ -775,7 +775,12 @@ it.each(['paper', 'glass'] as const)(
     expect(overlayAction.mock.calls.map(([action]) => action)).toEqual(
       skin === 'glass' ? ['ask', 'ok', 'stuck'] : ['stuck', 'ask'],
     );
-    await act(async () => body.findAllByType(Button)[0].props.onPress());
+    await act(async () =>
+      body
+        .findAllByType(Button)
+        .find(button => button.props.label === '重新讲解')!
+        .props.onPress(),
+    );
     expect(overlayAction).toHaveBeenLastCalledWith('regenerate');
   },
 );
@@ -975,7 +980,9 @@ it.each([1, 2])(
     ).toBe(true);
     const hint = root
       .findAllByType(Text)
-      .find(node => node.props.children === readerSamples.normal.read.hint)!;
+      .find(node =>
+        String(node.props.children).includes(readerSamples.normal.read.hint),
+      )!;
     expect(StyleSheet.flatten(hint.props.style).minWidth).toBe(100);
   },
 );

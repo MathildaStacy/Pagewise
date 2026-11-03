@@ -15,6 +15,7 @@ import type {
   ReadingAppearance,
   StudyIntents,
   StudyOverlay,
+  TranslationReadingMode,
 } from '@features/study/types';
 import type { AiOptionsState } from '@features/settings/types';
 import { AiOptionsControl } from './AiOptionsControl';
@@ -22,7 +23,7 @@ import { ReadingSettings } from './ReadingTools';
 
 type Translation = Extract<StudyOverlay, { kind: 'sectionTranslation' }>;
 type Passage = NonNullable<Translation['passages']>[number];
-type ReadingMode = 'parallel' | 'chinese' | 'source';
+type ReadingMode = TranslationReadingMode;
 const empty: RichDoc = [];
 const noPassages: Passage[] = [];
 
@@ -39,16 +40,22 @@ export function BilingualReading({
   reading?: ReadingAppearance;
 }) {
   const s = useStyles();
-  const [mode, setMode] = useState<ReadingMode>('parallel');
+  const parts = overlay.passages ?? noPassages;
+  const initial = parts.find(part => part.ref === overlay.initialRef);
+  const [mode, setMode] = useState<ReadingMode>(
+    overlay.initialMode ?? 'parallel',
+  );
   const list = useRef<FlatList<Passage>>(null);
-  const anchor = useRef<string | null>(null);
-  const pending = useRef<string | null>(null);
+  const anchor = useRef<string | null>(initial?.id ?? null);
+  const pending = useRef<string | null>(initial?.id ?? null);
   const restoring = useRef(false);
   const frame = useRef<number | null>(null);
   const retry = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { width, fontScale } = useWindowDimensions();
   const columns = width >= 720 && fontScale <= 1.3;
-  const parts = overlay.passages ?? noPassages;
+  const [visibleId, setVisibleId] = useState(initial?.id ?? parts[0]?.id);
+  const actions = useRef(intents);
+  actions.current = intents;
   const translated = parts.filter(part => !part.preserved);
   const finished = translated.filter(part => part.complete).length;
   const firstPending = parts.findIndex(
@@ -65,6 +72,13 @@ export function BilingualReading({
       }
       anchor.current =
         pending.current ?? viewableItems[0]?.item.id ?? anchor.current;
+      const visible = viewableItems.find(
+        item => item.item.id === anchor.current,
+      );
+      if (visible) {
+        setVisibleId(visible.item.id);
+        actions.current.reportAnchor?.(`b${visible.item.ref}`);
+      }
       pending.current = null;
     },
   ).current;
@@ -102,15 +116,29 @@ export function BilingualReading({
       ? `正在翻译 · ${finished} / ${translated.length}`
       : '正在准备译文…'
     : translated.length
-    ? `翻译完成 · ${finished} / ${translated.length}`
+    ? `${
+        finished === translated.length ? '翻译完成' : '部分已翻译'
+      } · ${finished} / ${translated.length}`
     : '原文内容无需翻译';
+  const visibleIndex = Math.max(
+    0,
+    parts.findIndex(part => part.id === visibleId),
+  );
   return (
     <View style={s.root} testID="bilingual-reading">
       <View style={s.controls}>
         <View style={s.tools}>
-          <Text style={s.status} accessibilityLiveRegion="polite">
-            {status}
-          </Text>
+          <View style={s.progress}>
+            <Text style={s.status} accessibilityLiveRegion="polite">
+              {status}
+            </Text>
+            {parts.length ? (
+              <Text style={s.status}>
+                {parts[visibleIndex].page} · 本节 {visibleIndex + 1} /{' '}
+                {parts.length}
+              </Text>
+            ) : null}
+          </View>
           <ReadingSettings reading={reading} intents={intents} />
           <View style={s.model}>
             <AiOptionsControl
@@ -118,6 +146,7 @@ export function BilingualReading({
               onChange={intents.setAiOptions}
               disabled={overlay.streaming}
               compact
+              labelOnly
             />
           </View>
         </View>
@@ -133,8 +162,21 @@ export function BilingualReading({
             pending.current = anchor.current;
             restoring.current = false;
             setMode(value as ReadingMode);
+            intents.setTranslationMode?.(value as ReadingMode);
           }}
         />
+        {firstPending >= 0 ? (
+          <Button
+            variant="text"
+            label="到未译段落"
+            icon="arrowDown"
+            onPress={() => {
+              pending.current = parts[firstPending].id;
+              restoring.current = false;
+              restoreAnchor();
+            }}
+          />
+        ) : null}
       </View>
       <FlatList
         ref={list}
@@ -209,7 +251,7 @@ export function BilingualReading({
                 <Button
                   variant="text"
                   icon="sync"
-                  label="重新翻译"
+                  label={firstPending >= 0 ? '继续翻译' : '重新翻译'}
                   onPress={() => intents.overlayAction('regenerate')}
                 />
               ) : null}
@@ -359,6 +401,7 @@ const useStyles = makeStyles(t => ({
     gap: 8,
   },
   model: { flexShrink: 1, minWidth: 0 },
+  progress: { flex: 1, minWidth: 100, gap: 4 },
   status: { ...t.type.caption, color: t.color.ink2 },
   book: { paddingTop: 20, paddingHorizontal: 24, paddingBottom: 24 },
   language: { ...t.type.caption, color: t.color.ink2, marginBottom: 8 },

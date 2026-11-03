@@ -287,7 +287,11 @@ it('retries a failed chapter translation through the resume path instead of forc
   const translate = jest
     .spyOn(session, 'translateSection')
     .mockRejectedValueOnce(new Error('network interrupted'))
-    .mockResolvedValue('完成的译文');
+    .mockResolvedValueOnce('部分译文')
+    .mockImplementation(async (...args) => {
+      args[5]?.([]);
+      return '完成的译文';
+    });
   await act(() => vm().intents.translateSection?.());
   expect(vm().state.overlay).toMatchObject({
     kind: 'sectionTranslation',
@@ -299,8 +303,11 @@ it('retries a failed chapter translation through the resume path instead of forc
     kind: 'sectionTranslation',
     streaming: false,
   });
+  // Passages that never arrived are continued rather than discarded.
   await act(() => vm().intents.overlayAction('regenerate'));
-  expect(translate.mock.calls[2][3]).toBe(true);
+  expect(translate.mock.calls[2][3]).toBe('resume');
+  await act(() => vm().intents.overlayAction('regenerate'));
+  expect(translate.mock.calls[3][3]).toBe(true);
 });
 
 it('stops a translation while keeping the original and received Chinese visible', async () => {

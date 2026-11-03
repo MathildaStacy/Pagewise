@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, useWindowDimensions } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-import type { RichDoc, RichTable } from './contracts';
+import type { RichDoc, RichTable, RichViewProps } from './contracts';
 import { useTokens } from './context';
 import { RichView } from './proxy';
 import { makeStyles } from './makeStyles';
@@ -13,15 +13,27 @@ export function TableView({
   grid,
   preview = false,
   selectable = false,
+  onCite,
+  onFigure,
 }: {
   rows: RichDoc[][];
   grid?: RichTable;
   preview?: boolean;
   selectable?: boolean;
+  onCite?: RichViewProps['onCite'];
+  onFigure?: RichViewProps['onFigure'];
 }) {
   const s = useStyles();
   if (grid)
-    return <GridTable grid={grid} preview={preview} selectable={selectable} />;
+    return (
+      <GridTable
+        grid={grid}
+        preview={preview}
+        selectable={selectable}
+        onCite={onCite}
+        onFigure={onFigure}
+      />
+    );
   const content = (
     <View style={preview ? s.preview : undefined}>
       {(preview ? rows.slice(0, 3) : rows).map((row, i) => (
@@ -35,6 +47,8 @@ export function TableView({
                 doc={cell}
                 typography="tableCell"
                 selectable={selectable}
+                onCite={onCite}
+                onFigure={onFigure}
               />
             </View>
           ))}
@@ -61,10 +75,14 @@ function GridTable({
   grid,
   preview,
   selectable,
+  onCite,
+  onFigure,
 }: {
   grid: RichTable;
   preview: boolean;
   selectable: boolean;
+  onCite?: RichViewProps['onCite'];
+  onFigure?: RichViewProps['onFigure'];
 }) {
   const s = useStyles();
   const t = useTokens();
@@ -146,6 +164,8 @@ function GridTable({
               doc={cell.doc}
               typography="tableCell"
               selectable={selectable}
+              onCite={onCite}
+              onFigure={onFigure}
             />
           </View>
         </View>

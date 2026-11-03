@@ -145,6 +145,10 @@ export function validateCitations(
         block.items.forEach(item => unsupported(item, inAux));
         return { ...block, items: block.items.map(inlines) };
       }
+      if (block.t === 'table') {
+        block.rows.slice(1).forEach(row => unsupported(row.flat(), inAux));
+        return { ...block, rows: block.rows.map(row => row.map(inlines)) };
+      }
       if (block.t === 'aux') return { ...block, body: visit(block.body, true) };
       if (block.t === 'quote' || block.t === 'figure') {
         if (verified(block.ref)) {
@@ -197,6 +201,8 @@ export function rewriteReferences(
     if (block.t === 'p' || block.t === 'check')
       return { ...block, c: inline(block.c) };
     if (block.t === 'list') return { ...block, items: block.items.map(inline) };
+    if (block.t === 'table')
+      return { ...block, rows: block.rows.map(row => row.map(inline)) };
     if (block.t === 'quote' || block.t === 'figure')
       return { ...block, ref: map(block.ref), verified: false };
     if (block.t === 'aux')

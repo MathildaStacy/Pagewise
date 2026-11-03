@@ -73,6 +73,8 @@ export function enrichDoc(
   return doc.map(b => {
     if (b.t === 'p' || b.t === 'check') return { ...b, c: inline(b.c) };
     if (b.t === 'list') return { ...b, items: b.items.map(inline) };
+    if (b.t === 'table')
+      return { ...b, rows: b.rows.map(row => row.map(inline)) };
     if (b.t === 'aux') return { ...b, body: enrichDoc(b.body, blocks, book) };
     if (b.t === 'quote' || b.t === 'figure') {
       const source = blocks.get(b.ref);

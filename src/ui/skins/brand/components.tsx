@@ -30,6 +30,7 @@ function AppBar({
   right,
   scrollY = 0,
   part = 'all',
+  titleLines = 1,
 }: KitProps['AppBar']) {
   const t = useTokens(),
     kind = t.brand!.kind;
@@ -106,7 +107,7 @@ function AppBar({
         ) : null}
         <Text
           accessibilityRole="header"
-          numberOfLines={1}
+          numberOfLines={titleLines}
           style={[
             root ? t.type.largeTitle : t.type.title,
             {

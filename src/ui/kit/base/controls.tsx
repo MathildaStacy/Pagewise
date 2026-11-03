@@ -165,6 +165,7 @@ export function AppBar({
   onBack,
   backLabel,
   right,
+  titleLines = 1,
 }: KitProps['AppBar']) {
   const s = useStyles();
   const t = useTokens();
@@ -189,12 +190,16 @@ export function AppBar({
       <View style={[s.grow, variant === 'push' ? s.center : s.rootTitle]}>
         <Text
           accessibilityRole="header"
-          numberOfLines={1}
+          numberOfLines={titleLines}
           style={[variant === 'root' ? t.type.largeTitle : t.type.title, s.ink]}
         >
           {title}
         </Text>
-        {subtitle ? <Text style={s.caption}>{subtitle}</Text> : null}
+        {subtitle ? (
+          <Text numberOfLines={2} style={s.caption}>
+            {subtitle}
+          </Text>
+        ) : null}
       </View>
       <View style={[s.barSide, s.right]}>{right}</View>
     </View>
