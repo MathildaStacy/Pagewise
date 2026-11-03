@@ -49,7 +49,6 @@ import {
   StackBar,
   TableView,
   ToastHost,
-  Typing,
   makeStyles,
   useTokens,
   type RichInline,
@@ -60,6 +59,7 @@ import type {
   ReaderOriginalPage,
   ReaderScreenState,
   ReaderState,
+  ReadingAppearance,
   StudyIntents,
   StudyOverlay,
 } from '@features/study/types';
@@ -68,6 +68,7 @@ import { AiOptionsControl } from './AiOptionsControl';
 import { RefinementSheet } from './RefinementSheet';
 import { TranslationView } from './TranslationView';
 import { ConversationPicker } from './ConversationList';
+import { ReadingTools } from './ReadingTools';
 
 export function ReaderView({
   state,
@@ -97,25 +98,11 @@ export function ReaderView({
           </View>
         }
       />
-      <View style={s.readerTools}>
-        <Button
-          variant="text"
-          label="精修本节"
-          disabled={state.read.loading || !state.read.items.length}
-          onPress={() => intents.openRefinement?.()}
-        />
-        <Button
-          variant="text"
-          label="本节对话"
-          onPress={() => intents.openConversations?.()}
-        />
-        <Button
-          variant="text"
-          label="翻译本节"
-          disabled={!state.read.canTranslate}
-          onPress={() => intents.translateSection?.()}
-        />
-      </View>
+      <ReadingTools
+        read={state.read}
+        reading={state.reading}
+        intents={intents}
+      />
       <View style={s.grow}>
         <ReaderContent state={state.read} intents={intents} />
       </View>
@@ -124,6 +111,19 @@ export function ReaderView({
         overlay={state.overlay}
         intents={intents}
         aiOptions={state.aiOptions}
+        reading={state.reading}
+      />
+      <StudyOverlays
+        overlay={state.referenceOverlay ?? null}
+        intents={{
+          ...intents,
+          closeOverlay: intents.closeReference ?? intents.closeOverlay,
+        }}
+        returnLabel={
+          state.overlay?.kind === 'sectionTranslation'
+            ? '返回双语阅读'
+            : '返回讲解'
+        }
       />
       <ToastHost toast={state.toast ? { message: state.toast } : null} />
     </Screen>
@@ -890,10 +890,14 @@ export function StudyOverlays({
   overlay,
   intents,
   aiOptions,
+  reading,
+  returnLabel,
 }: {
   overlay: StudyOverlay | null;
   intents: StudyIntents;
   aiOptions?: AiOptionsState;
+  reading?: ReadingAppearance;
+  returnLabel?: string;
 }) {
   const s = useStyles(),
     t = useTokens();
@@ -959,11 +963,22 @@ export function StudyOverlays({
         onPress: () => intents.overlayAction('openInReader'),
       });
     actions.push({
-      label: overlay.detour ? '好的' : '关闭',
+      label: returnLabel ?? (overlay.detour ? '好的' : '关闭'),
       kind: overlay.detour ? 'primary' : 'ghost',
       onPress: intents.closeOverlay,
     });
   } else if (overlay.kind === 'explain') {
+    if (overlay.streaming || overlay.error || overlay.stopped)
+      actions.push({
+        label: overlay.streaming
+          ? '停止讲解'
+          : overlay.error
+          ? '重试讲解'
+          : '重新讲解',
+        kind: 'secondary',
+        onPress: () =>
+          intents.overlayAction(overlay.streaming ? 'stop' : 'regenerate'),
+      });
     const ask = {
       label: apple ? '带到听讲里继续问' : '带到伴读里继续问',
       kind: 'primary' as const,
@@ -990,6 +1005,17 @@ export function StudyOverlays({
       );
     else actions.push(stuck, ask);
   } else if (overlay.kind === 'translate') {
+    if (overlay.streaming || overlay.error || overlay.stopped)
+      actions.push({
+        label: overlay.streaming
+          ? '停止翻译'
+          : overlay.error
+          ? '重试翻译'
+          : '继续翻译',
+        kind: 'secondary',
+        onPress: () =>
+          intents.overlayAction(overlay.streaming ? 'stop' : 'regenerate'),
+      });
     if (apple)
       actions.push({
         label: '好的',
@@ -1022,6 +1048,12 @@ export function StudyOverlays({
       { label: '好的', kind: 'ghost', onPress: intents.closeOverlay },
     );
   }
+  if (returnLabel && overlay.kind !== 'peek')
+    actions.push({
+      label: returnLabel,
+      kind: 'primary',
+      onPress: intents.closeOverlay,
+    });
   const title =
     overlay.kind === 'conversations'
       ? '本节对话'
@@ -1061,8 +1093,10 @@ export function StudyOverlays({
       subtitle={subtitle}
       onClose={intents.closeOverlay}
       actions={actions}
+      scrollable={!(overlay.kind === 'sectionTranslation' && overlay.passages)}
       opaque={
         overlay.kind === 'translate' ||
+        overlay.kind === 'explain' ||
         overlay.kind === 'sectionTranslation' ||
         overlay.kind === 'conversations'
       }
@@ -1071,7 +1105,8 @@ export function StudyOverlays({
           ? 'reading'
           : overlay.kind === 'figure' ||
             overlay.kind === 'table' ||
-            overlay.kind === 'translate'
+            overlay.kind === 'translate' ||
+            overlay.kind === 'explain'
           ? 'full'
           : 'auto'
       }
@@ -1163,54 +1198,20 @@ export function StudyOverlays({
       {overlay.kind === 'figure' ? (
         <FigureDetail key={overlay.uri} figure={overlay} />
       ) : null}
-      {overlay.kind === 'translate' || overlay.kind === 'sectionTranslation' ? (
+      {overlay.kind === 'translate' ||
+      overlay.kind === 'explain' ||
+      overlay.kind === 'sectionTranslation' ? (
         <TranslationView
           key={
             overlay.kind === 'sectionTranslation'
               ? overlay.sectionId
-              : `block-${overlay.seq}`
+              : `${overlay.kind}-${overlay.seq}`
           }
           overlay={overlay}
           intents={intents}
           aiOptions={aiOptions}
+          reading={reading}
         />
-      ) : null}
-      {overlay.kind === 'explain' ? (
-        <View style={s.overlayBody}>
-          {'quote' in overlay ? (
-            <View style={s.sheetQuote}>
-              <RichView doc={overlay.quote} typography="sheetQuote" />
-            </View>
-          ) : null}
-          {overlay.streaming ? <Typing label="正在整理…" /> : null}
-          {overlay.answer ? (
-            <RichView
-              doc={overlay.answer}
-              onCite={intents.pressCite}
-              onFigure={intents.pressFigure}
-            />
-          ) : null}
-          {overlay.error ? <Note tone="bad">{overlay.error}</Note> : null}
-          <AiOptionsControl
-            state={aiOptions}
-            onChange={intents.setAiOptions}
-            disabled={overlay.streaming}
-            compact
-          />
-          {!overlay.streaming ? (
-            <Button
-              variant="secondary"
-              label={
-                overlay.error
-                  ? '重试'
-                  : overlay.kind === 'explain'
-                  ? '按当前设置重新讲解'
-                  : '按当前设置重新翻译'
-              }
-              onPress={() => intents.overlayAction('regenerate')}
-            />
-          ) : null}
-        </View>
       ) : null}
       {overlay.kind === 'pin' ? (
         <View style={s.overlayBody}>
@@ -1263,12 +1264,6 @@ function FigureDetail({
   );
 }
 const useStyles = makeStyles(t => ({
-  readerTools: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    paddingHorizontal: t.space.pageX,
-  },
   grow: { flex: 1 },
   toolbar: {
     flexDirection: 'row',
@@ -1520,14 +1515,6 @@ const useStyles = makeStyles(t => ({
     borderLeftColor: t.color.highlight,
     paddingLeft: t.layout.groupedLists ? 12 : 10,
     paddingVertical: t.layout.groupedLists ? 0 : 2,
-  },
-  sheetQuote: {
-    borderLeftWidth: 3,
-    borderLeftColor: t.color.highlight,
-    paddingLeft: t.layout.groupedLists ? 12 : 10,
-    paddingVertical: t.layout.groupedLists ? 0 : 2,
-    marginTop: t.layout.groupedLists ? 4 : 0,
-    marginRight: t.layout.groupedLists ? 2 : 0,
   },
   noteEditor: {
     ...t.type.body,

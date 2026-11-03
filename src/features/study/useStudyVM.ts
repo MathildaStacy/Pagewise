@@ -98,6 +98,7 @@ export function useStudyVM(
     [c, bookId],
   );
   const raw = useStore(session.store);
+  const appearance = useStore(c.appearance.store);
   const aiOptions = useAiOptions(raw.config);
   const explanationController = useRef<AbortController | null>(null);
   useEffect(() => () => explanationController.current?.abort(), []);
@@ -107,6 +108,9 @@ export function useStudyVM(
     >(),
     [overlay, setOverlay] = useState<StudyOverlay | null>(null),
     [toast, setToast] = useState<string | null>(null);
+  const [referenceOverlay, setReferenceOverlay] = useState<StudyOverlay | null>(
+    null,
+  );
   const [loadedReader, setReader] = useState<ReaderData | null>(null),
     [readerError, setReaderError] = useState<string | null>(null),
     [readerLoading, setReaderLoading] = useState(true);
@@ -447,6 +451,8 @@ export function useStudyVM(
   })();
   const state: StudyState = {
     aiOptions: aiOptions.state,
+    reading: appearance,
+    referenceOverlay,
     conversationTitle: raw.conversation?.title,
     header: {
       title:
@@ -598,6 +604,7 @@ export function useStudyVM(
     return true;
   };
   const closeOverlay = () => {
+    setReferenceOverlay(null);
     explanationController.current?.abort();
     explainRequest.current++;
     setOverlay(null);
@@ -772,8 +779,16 @@ export function useStudyVM(
     try {
       const block = blocks.get(seq) ?? (await loadStudyBlock(c, bookId, seq));
       setCache(old => new Map(old).set(seq, block));
+      // Keep the reading surface mounted: returning from evidence must retain
+      // its scroll position, reading mode and any translation still arriving.
+      const show =
+        overlay?.kind === 'sectionTranslation' ||
+        overlay?.kind === 'translate' ||
+        overlay?.kind === 'explain'
+          ? setReferenceOverlay
+          : setOverlay;
       if (figure && block.image_path) {
-        setOverlay({
+        show({
           kind: 'figure',
           uri: block.image_path,
           caption: block.text,
@@ -783,7 +798,7 @@ export function useStudyVM(
         return;
       }
       if (block.type === 'table') {
-        setOverlay({
+        show({
           kind: 'table',
           rows: tableContent(block.html, block.text),
           grid: tableGrid(block.html, block.text),
@@ -796,7 +811,7 @@ export function useStudyVM(
           b => b.section_id === block.section_id && Math.abs(b.seq - seq) <= 1,
         )
         .sort((a, b) => a.seq - b.seq);
-      setOverlay({
+      show({
         kind: 'peek',
         seq,
         title: `原书 ${blockPage(block, raw.book)}`,
@@ -1001,6 +1016,15 @@ export function useStudyVM(
       note: 'AI 只能引用本轮已读取的原文。你问到别的小节时，它会先读取，再回答。预计值与服务返回的实际用量可能不同。',
     });
   const intents: StudyIntents = {
+    closeReference: () => setReferenceOverlay(null),
+    setReadingAppearance: patch => {
+      run(
+        c.appearance.update(patch).then(() => {
+          const error = c.appearance.store.getState().error;
+          if (error) setToast(error);
+        }),
+      );
+    },
     openSource: url => run(openExternalSource(url)),
     setAiOptions: patch => {
       const config = aiOptions.patch(patch);
@@ -1293,11 +1317,13 @@ export function useStudyVM(
     setNoteText: value =>
       setOverlay(old => (old?.kind === 'note' ? { ...old, value } : old)),
     overlayAction: key => {
-      const shown = overlay;
+      const shown = referenceOverlay ?? overlay;
       if (!shown) return;
       if (
         key === 'stop' &&
-        (shown.kind === 'translate' || shown.kind === 'sectionTranslation')
+        (shown.kind === 'explain' ||
+          shown.kind === 'translate' ||
+          shown.kind === 'sectionTranslation')
       ) {
         explanationController.current?.abort();
         explainRequest.current++;
@@ -1312,7 +1338,8 @@ export function useStudyVM(
         return;
       }
       if (key === 'close') {
-        closeOverlay();
+        if (referenceOverlay) setReferenceOverlay(null);
+        else closeOverlay();
         return;
       }
       if (shown.kind === 'jumpStep' && key === 'confirm') {
@@ -1464,6 +1491,8 @@ export function useReaderVM(
   const vm = useStudyVM(bookId, { sectionId, blockRef }, true);
   const state: ReaderScreenState = {
     aiOptions: vm.state.aiOptions,
+    reading: vm.state.reading,
+    referenceOverlay: vm.state.referenceOverlay,
     header: vm.state.header,
     read: vm.state.read,
     overlay: vm.state.overlay,

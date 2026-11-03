@@ -1,7 +1,9 @@
 import Renderer, { act } from 'react-test-renderer';
-import { Modal } from 'react-native';
+import { FlatList, Modal } from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
 import {
   Button,
+  AiMessage,
   AppBar,
   RichView,
   Segmented,
@@ -46,6 +48,166 @@ const pressable = (testID: string) =>
     node =>
       node.props.testID === testID && typeof node.props.onPress === 'function',
   )[0];
+
+it('keeps the same source passage when switching between bilingual and Chinese reading', async () => {
+  const scroll = jest
+    .spyOn(FlatList.prototype, 'scrollToIndex')
+    .mockImplementation(() => {});
+  const passages = Array.from({ length: 20 }, (_, index) => ({
+    id: `${index}:0`,
+    ref: index,
+    page: 'p.1',
+    type: 'text',
+    source: doc('A long source paragraph.'),
+    answer: doc('一段中文译文。'),
+    complete: true,
+    preserved: false,
+  }));
+  try {
+    await act(() => {
+      renderer = Renderer.create(
+        <SkinProvider skinId="paper" scheme="light" reduceMotion>
+          <BilingualReading
+            intents={{} as StudyIntents}
+            overlay={{
+              kind: 'sectionTranslation',
+              sectionId: '1',
+              subtitle: '1',
+              answer: null,
+              streaming: false,
+              passages,
+            }}
+          />
+        </SkinProvider>,
+      );
+    });
+    renderer.root
+      .findByType(FlatList)
+      .props.onViewableItemsChanged({
+        viewableItems: [{ item: passages[12] }],
+      });
+    await act(() => {
+      renderer.root
+        .findAllByType(Segmented)
+        .find(node => node.props.accessibilityLabel === '双语阅读方式')!
+        .props.onChange('chinese');
+    });
+    // Layout can briefly report the old viewport while the rows resize.
+    renderer.root.findByType(FlatList).props.onViewableItemsChanged({
+      viewableItems: [{ item: passages[0] }, { item: passages[12] }],
+    });
+    expect(scroll).not.toHaveBeenCalled();
+    renderer.root.findByType(FlatList).props.onContentSizeChange(430, 5000);
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 30));
+    });
+    expect(scroll).toHaveBeenCalledWith({
+      index: 12,
+      animated: false,
+      viewPosition: 0,
+    });
+  } finally {
+    scroll.mockRestore();
+  }
+});
+
+it('names an explanation as teaching and copies its complete text with math and list numbering', async () => {
+  const content: RichDoc = [
+    ...doc('先看这个等式。'),
+    { t: 'math', tex: 'x^2' },
+    {
+      t: 'list',
+      ordered: true,
+      start: 3,
+      items: [[{ t: 'text', v: '保留编号' }]],
+    },
+  ];
+  await act(() => {
+    renderer = Renderer.create(
+      <SkinProvider skinId="paper" scheme="light" reduceMotion>
+        <AiMessage doc={content} />
+      </SkinProvider>,
+    );
+  });
+  expect(renderer.root.findByType(RichView).props.selectable).toBe(true);
+  await act(() =>
+    renderer.root
+      .findAllByType(Button)
+      .find(button => button.props.label === '复制讲解')!
+      .props.onPress(),
+  );
+  expect(Clipboard.setString).toHaveBeenCalledWith(
+    '先看这个等式。\n\n$$x^2$$\n\n3. 保留编号',
+  );
+  await act(() =>
+    renderer.update(
+      <SkinProvider skinId="paper" scheme="light" reduceMotion>
+        <StudyOverlays
+          intents={{} as StudyIntents}
+          overlay={{
+            kind: 'explain',
+            seq: 1,
+            quote: doc('Source'),
+            answer: content,
+            streaming: false,
+            subtitle: 'p.1',
+          }}
+        />
+      </SkinProvider>,
+    ),
+  );
+  const text = JSON.stringify(renderer.toJSON());
+  expect(text).toContain('AI 讲解');
+  expect(text).toContain('讲解完成');
+  expect(text).not.toContain('中文译文');
+  expect(text).not.toContain('翻译完成');
+  expect(
+    renderer.root.findAllByType(RichView).every(view => view.props.selectable),
+  ).toBe(true);
+});
+
+it.each([
+  { streaming: true, status: '正在讲解', action: '停止讲解', key: 'stop' },
+  { stopped: true, status: '已停止', action: '重新讲解', key: 'regenerate' },
+  {
+    error: '网络连接中断',
+    status: '讲解中断',
+    action: '重试讲解',
+    key: 'regenerate',
+  },
+])('keeps explanation status and recovery accurate: $status', async scenario => {
+  const overlayAction = jest.fn();
+  await act(() => {
+    renderer = Renderer.create(
+      <SkinProvider skinId="paper" scheme="dark" reduceMotion>
+        <StudyOverlays
+          intents={{ overlayAction } as unknown as StudyIntents}
+          overlay={{
+            kind: 'explain',
+            seq: 1,
+            quote: doc('Source'),
+            answer: doc('已有讲解。'),
+            subtitle: 'p.1',
+            streaming: scenario.streaming ?? false,
+            stopped: scenario.stopped,
+            error: scenario.error,
+          }}
+        />
+      </SkinProvider>,
+    );
+  });
+  const text = JSON.stringify(renderer.toJSON());
+  expect(text).toContain(scenario.status);
+  expect(text).not.toContain('中文译文');
+  expect(text).not.toContain('翻译完成');
+  await act(() =>
+    renderer.root
+      .findAllByType(Button)
+      .find(button => button.props.label === scenario.action)!
+      .props.onPress(),
+  );
+  expect(overlayAction).toHaveBeenCalledWith(scenario.key);
+});
 
 it('restores MinerU bullets and keeps the source table visible until its translated shape is validated', () => {
   expect(

@@ -1,5 +1,5 @@
-import { useLayoutEffect, useState } from 'react';
-import { Text, View, useWindowDimensions } from 'react-native';
+import { useLayoutEffect, useRef, useState } from 'react';
+import { FlatList, Text, View, useWindowDimensions } from 'react-native';
 import {
   Button,
   Note,
@@ -11,32 +11,88 @@ import {
   useReveal,
   type RichDoc,
 } from '@ui/kit';
-import type { StudyIntents, StudyOverlay } from '@features/study/types';
+import type {
+  ReadingAppearance,
+  StudyIntents,
+  StudyOverlay,
+} from '@features/study/types';
 import type { AiOptionsState } from '@features/settings/types';
 import { AiOptionsControl } from './AiOptionsControl';
+import { ReadingSettings } from './ReadingTools';
 
 type Translation = Extract<StudyOverlay, { kind: 'sectionTranslation' }>;
 type Passage = NonNullable<Translation['passages']>[number];
 type ReadingMode = 'parallel' | 'chinese' | 'source';
 const empty: RichDoc = [];
+const noPassages: Passage[] = [];
 
 /** A book's source blocks own the layout and alignment, including while translation streams. */
 export function BilingualReading({
   overlay,
   intents,
   aiOptions,
+  reading,
 }: {
   overlay: Translation;
   intents: StudyIntents;
   aiOptions?: AiOptionsState;
+  reading?: ReadingAppearance;
 }) {
   const s = useStyles();
   const [mode, setMode] = useState<ReadingMode>('parallel');
+  const list = useRef<FlatList<Passage>>(null);
+  const anchor = useRef<string | null>(null);
+  const pending = useRef<string | null>(null);
+  const restoring = useRef(false);
+  const frame = useRef<number | null>(null);
+  const retry = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { width, fontScale } = useWindowDimensions();
   const columns = width >= 720 && fontScale <= 1.3;
-  const parts = overlay.passages ?? [];
+  const parts = overlay.passages ?? noPassages;
   const translated = parts.filter(part => !part.preserved);
   const finished = translated.filter(part => part.complete).length;
+  const firstPending = parts.findIndex(
+    part => !part.preserved && !part.complete,
+  );
+  const onViewableItemsChanged = useRef(
+    ({ viewableItems }: { viewableItems: { item: Passage }[] }) => {
+      if (pending.current) {
+        if (
+          !restoring.current ||
+          !viewableItems.some(item => item.item.id === pending.current)
+        )
+          return;
+      }
+      anchor.current =
+        pending.current ?? viewableItems[0]?.item.id ?? anchor.current;
+      pending.current = null;
+    },
+  ).current;
+  const restoreAnchor = () => {
+    if (!pending.current) return;
+    if (frame.current !== null) cancelAnimationFrame(frame.current);
+    // Cell heights change between reading modes. Wait for native layout before
+    // asking FlatList to locate the passage with its newly measured offsets.
+    frame.current = requestAnimationFrame(() => {
+      frame.current = null;
+      const index = parts.findIndex(part => part.id === pending.current);
+      if (index >= 0) {
+        restoring.current = true;
+        list.current?.scrollToIndex({
+          index,
+          animated: false,
+          viewPosition: 0,
+        });
+      }
+    });
+  };
+  useLayoutEffect(
+    () => () => {
+      if (retry.current) clearTimeout(retry.current);
+      if (frame.current !== null) cancelAnimationFrame(frame.current);
+    },
+    [],
+  );
   const status = overlay.error
     ? '翻译中断'
     : overlay.stopped
@@ -45,79 +101,129 @@ export function BilingualReading({
     ? translated.length
       ? `正在翻译 · ${finished} / ${translated.length}`
       : '正在准备译文…'
-    : '翻译完成';
+    : translated.length
+    ? `翻译完成 · ${finished} / ${translated.length}`
+    : '原文内容无需翻译';
   return (
-    <View
-      style={[s.root, (mode !== 'parallel' || !columns) && s.singleColumn]}
-      testID="bilingual-reading"
-    >
-      <View style={s.tools}>
-        <Text style={s.status} accessibilityLiveRegion="polite">
-          {status}
-        </Text>
-        <View style={s.model}>
-          <AiOptionsControl
-            state={aiOptions}
-            onChange={intents.setAiOptions}
-            disabled={overlay.streaming}
-            compact
-          />
+    <View style={s.root} testID="bilingual-reading">
+      <View style={s.controls}>
+        <View style={s.tools}>
+          <Text style={s.status} accessibilityLiveRegion="polite">
+            {status}
+          </Text>
+          <ReadingSettings reading={reading} intents={intents} />
+          <View style={s.model}>
+            <AiOptionsControl
+              state={aiOptions}
+              onChange={intents.setAiOptions}
+              disabled={overlay.streaming}
+              compact
+            />
+          </View>
         </View>
+        <Segmented
+          accessibilityLabel="双语阅读方式"
+          options={[
+            { key: 'parallel', label: '中英对照' },
+            { key: 'chinese', label: '中文' },
+            { key: 'source', label: '原文' },
+          ]}
+          value={mode}
+          onChange={value => {
+            pending.current = anchor.current;
+            restoring.current = false;
+            setMode(value as ReadingMode);
+          }}
+        />
       </View>
-      <Segmented
-        accessibilityLabel="双语阅读方式"
-        options={[
-          { key: 'parallel', label: '中英对照' },
-          { key: 'chinese', label: '中文' },
-          { key: 'source', label: '原文' },
-        ]}
-        value={mode}
-        onChange={value => setMode(value as ReadingMode)}
+      <FlatList
+        ref={list}
+        testID="bilingual-passages"
+        style={s.scroll}
+        contentContainerStyle={s.book}
+        data={parts}
+        keyExtractor={part => part.id}
+        extraData={[mode, columns, overlay.streaming, overlay.fromCache]}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={{ itemVisiblePercentThreshold: 5 }}
+        onContentSizeChange={restoreAnchor}
+        onScrollBeginDrag={() => {
+          pending.current = null;
+        }}
+        onScrollToIndexFailed={info => {
+          list.current?.scrollToOffset({
+            offset: info.averageItemLength * info.index,
+            animated: false,
+          });
+          if (retry.current) clearTimeout(retry.current);
+          retry.current = setTimeout(() => {
+            if (pending.current)
+              list.current?.scrollToIndex({
+                index: info.index,
+                animated: false,
+                viewPosition: 0,
+              });
+          }, 150);
+        }}
+        renderItem={({ item: part, index }) => (
+          <View
+            onLayout={restoreAnchor}
+            style={[
+              s.page,
+              (mode !== 'parallel' || !columns) && s.singleColumn,
+            ]}
+          >
+            <PassageView
+              part={part}
+              mode={mode}
+              columns={columns}
+              streaming={overlay.streaming}
+              fromCache={overlay.fromCache}
+              intents={intents}
+              showPage={parts[index + 1]?.page !== part.page}
+              pendingLabel={
+                overlay.streaming && index === firstPending
+                  ? '正在翻译…'
+                  : '尚未翻译'
+              }
+            />
+          </View>
+        )}
+        ListFooterComponent={
+          <View style={[s.page, s.singleColumn]}>
+            {overlay.error ? <Note tone="bad">{overlay.error}</Note> : null}
+            {overlay.stopped ? (
+              <Text style={s.status}>已保留当前译文，继续时会接着翻译。</Text>
+            ) : null}
+            <View style={s.footer}>
+              <Text style={s.status}>
+                {mode === 'parallel'
+                  ? columns
+                    ? '原文在左，中文在右'
+                    : '原文在前，中文紧随其后'
+                  : mode === 'chinese'
+                  ? '未译段落保留原文'
+                  : '原文保持书籍顺序'}
+              </Text>
+              {!overlay.streaming && !overlay.error && !overlay.stopped ? (
+                <Button
+                  variant="text"
+                  icon="sync"
+                  label="重新翻译"
+                  onPress={() => intents.overlayAction('regenerate')}
+                />
+              ) : null}
+              {overlay.error ? (
+                <Button
+                  variant="text"
+                  label="AI 服务设置"
+                  onPress={() => intents.openAiSettings?.()}
+                />
+              ) : null}
+            </View>
+          </View>
+        }
       />
-      <View style={s.book}>
-        {parts.map((part, index) => (
-          <PassageView
-            key={part.id}
-            part={part}
-            mode={mode}
-            columns={columns}
-            streaming={overlay.streaming}
-            fromCache={overlay.fromCache}
-            intents={intents}
-            showPage={parts[index + 1]?.page !== part.page}
-          />
-        ))}
-      </View>
-      {overlay.error ? <Note tone="bad">{overlay.error}</Note> : null}
-      {overlay.stopped ? (
-        <Text style={s.status}>已保留当前译文，继续时会接着翻译。</Text>
-      ) : null}
-      <View style={s.footer}>
-        <Text style={s.status}>
-          {mode === 'parallel'
-            ? columns
-              ? '原文在左，中文在右'
-              : '原文在前，中文紧随其后'
-            : mode === 'chinese'
-            ? '未译段落保留原文'
-            : '原文保持书籍顺序'}
-        </Text>
-        {!overlay.streaming && !overlay.error && !overlay.stopped ? (
-          <Button
-            variant="text"
-            icon="sync"
-            label="重新翻译"
-            onPress={() => intents.overlayAction('regenerate')}
-          />
-        ) : null}
-        {overlay.error ? (
-          <Button
-            variant="text"
-            label="AI 服务设置"
-            onPress={() => intents.openAiSettings?.()}
-          />
-        ) : null}
-      </View>
     </View>
   );
 }
@@ -130,6 +236,7 @@ function PassageView({
   fromCache,
   intents,
   showPage,
+  pendingLabel,
 }: {
   part: Passage;
   mode: ReadingMode;
@@ -138,6 +245,7 @@ function PassageView({
   fromCache?: boolean;
   intents: StudyIntents;
   showPage: boolean;
+  pendingLabel: string;
 }) {
   const s = useStyles();
   const reveal = useReveal(part.answer ?? empty, streaming && !part.complete);
@@ -187,6 +295,11 @@ function PassageView({
             style={sideBySide ? s.column : undefined}
             testID={`translation-original-${part.id}`}
           >
+            {!part.preserved && (mode === 'parallel' || !part.answer) ? (
+              <Text style={s.language}>
+                {mode === 'chinese' ? '原文 · 尚未翻译' : '原文'}
+              </Text>
+            ) : null}
             {original}
           </View>
         ) : null}
@@ -200,7 +313,14 @@ function PassageView({
             ]}
             testID={`translation-chinese-${part.id}`}
           >
-            {part.answer ? translated : <Text style={s.pending}>待译</Text>}
+            {mode === 'parallel' ? (
+              <Text style={s.language}>中文译文</Text>
+            ) : null}
+            {part.answer ? (
+              translated
+            ) : (
+              <Text style={s.pending}>{pendingLabel}</Text>
+            )}
           </View>
         ) : null}
       </View>
@@ -219,12 +339,18 @@ function PassageView({
 const useStyles = makeStyles(t => ({
   singleColumn: { maxWidth: 760 },
   root: {
+    flex: 1,
     width: '100%',
-    maxWidth: 1040,
-    alignSelf: 'center',
-    gap: 16,
-    paddingTop: 4,
   },
+  scroll: { flex: 1 },
+  controls: {
+    paddingHorizontal: 24,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: t.color.line,
+    backgroundColor: t.color.paper,
+  },
+  page: { width: '100%', maxWidth: 1040, alignSelf: 'center' },
   tools: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -234,7 +360,8 @@ const useStyles = makeStyles(t => ({
   },
   model: { flexShrink: 1, minWidth: 0 },
   status: { ...t.type.caption, color: t.color.ink2 },
-  book: { paddingTop: 8 },
+  book: { paddingTop: 20, paddingHorizontal: 24, paddingBottom: 24 },
+  language: { ...t.type.caption, color: t.color.ink2, marginBottom: 8 },
   passage: { marginBottom: 18 },
   parallelPassage: {
     paddingBottom: 16,

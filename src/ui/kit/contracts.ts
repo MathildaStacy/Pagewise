@@ -261,6 +261,8 @@ export interface SheetProps {
     onPress(): void;
   }[];
   detent?: 'auto' | 'half' | 'full' | 'reading';
+  /** The full-screen reading surface owns its own scrolling and fixed controls. */
+  scrollable?: boolean;
   /** Keep text-heavy panels legible above the reader in translucent skins. */
   opaque?: boolean;
   children?: ReactNode;

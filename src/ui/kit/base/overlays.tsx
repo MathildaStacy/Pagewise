@@ -310,6 +310,7 @@ export function Sheet({
   onClose,
   actions = [],
   detent = 'auto',
+  scrollable = true,
   opaque = false,
   children,
 }: SheetProps) {
@@ -387,13 +388,17 @@ export function Sheet({
             onBack={onClose}
             backLabel="返回原文"
           />
-          <ScrollView
-            contentContainerStyle={s.readingBody}
-            keyboardShouldPersistTaps="handled"
-            testID="reading-sheet-body"
-          >
-            {children}
-          </ScrollView>
+          {scrollable ? (
+            <ScrollView
+              contentContainerStyle={s.readingBody}
+              keyboardShouldPersistTaps="handled"
+              testID="reading-sheet-body"
+            >
+              {children}
+            </ScrollView>
+          ) : (
+            <View style={s.root}>{children}</View>
+          )}
           {actions.length ? <SheetActions actions={actions} /> : null}
         </GestureHandlerRootView>
       </Modal>

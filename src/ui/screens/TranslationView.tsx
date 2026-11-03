@@ -15,7 +15,11 @@ import {
   useTokens,
   type RichDoc,
 } from '@ui/kit';
-import type { StudyIntents, StudyOverlay } from '@features/study/types';
+import type {
+  ReadingAppearance,
+  StudyIntents,
+  StudyOverlay,
+} from '@features/study/types';
 import type { AiOptionsState } from '@features/settings/types';
 import { AiOptionsControl } from './AiOptionsControl';
 import { BilingualReading } from './BilingualReading';
@@ -31,10 +35,12 @@ export function TranslationView({
   overlay,
   intents,
   aiOptions,
+  reading,
 }: {
   overlay: Translation;
   intents: StudyIntents;
   aiOptions?: AiOptionsState;
+  reading?: ReadingAppearance;
 }) {
   const s = useStyles(),
     t = useTokens();
@@ -48,12 +54,19 @@ export function TranslationView({
     if (overlay.fromCache) skipReveal();
   }, [overlay.fromCache, skipReveal]);
   const busy = overlay.streaming || (!overlay.fromCache && reveal.revealing);
+  const explain = overlay.kind === 'explain';
   const status = overlay.error
-    ? '翻译中断'
+    ? explain
+      ? '讲解中断'
+      : '翻译中断'
     : overlay.stopped
     ? '已停止'
     : busy
-    ? '正在翻译'
+    ? explain
+      ? '正在讲解'
+      : '正在翻译'
+    : explain
+    ? '讲解完成'
     : '翻译完成';
   if (overlay.kind === 'sectionTranslation' && overlay.passages)
     return (
@@ -61,12 +74,13 @@ export function TranslationView({
         overlay={overlay}
         intents={intents}
         aiOptions={aiOptions}
+        reading={reading}
       />
     );
   return (
     <View style={s.root}>
       <View style={s.options}>
-        <Text style={s.language}>双语对照</Text>
+        <Text style={s.language}>{explain ? '本段讲解' : '双语对照'}</Text>
         <View style={s.model}>
           <AiOptionsControl
             state={aiOptions}
@@ -101,7 +115,7 @@ export function TranslationView({
               </Pressable>
             ) : null}
           </View>
-          <RichView doc={source} typography="book" />
+          <RichView doc={source} typography="book" selectable />
           {canExpand && !expanded ? <Text style={s.ellipsis}>…</Text> : null}
         </View>
       ) : null}
@@ -114,7 +128,7 @@ export function TranslationView({
           <View style={s.titleGroup}>
             <Icon name="spark" size={18} color={t.color.accentInk} />
             <Text accessibilityRole="header" style={s.title}>
-              中文译文
+              {explain ? 'AI 讲解' : '中文译文'}
             </Text>
           </View>
           <Text accessibilityLiveRegion="polite" style={s.status}>
@@ -123,7 +137,8 @@ export function TranslationView({
         </View>
         <RevealContext.Provider value={busy}>
           <RichView
-            typography="book"
+            typography={explain ? undefined : 'book'}
+            selectable={!busy}
             doc={overlay.fromCache ? overlay.answer ?? empty : reveal.doc}
             onCite={intents.pressCite}
             onFigure={intents.pressFigure}
@@ -131,7 +146,13 @@ export function TranslationView({
         </RevealContext.Provider>
         {overlay.streaming ? (
           <Typing
-            label={overlay.answer?.length ? '正在翻译…' : '正在准备译文…'}
+            label={
+              explain
+                ? '正在生成讲解…'
+                : overlay.answer?.length
+                ? '正在翻译…'
+                : '正在准备译文…'
+            }
           />
         ) : null}
         {!overlay.fromCache && reveal.canSkip ? (
@@ -149,33 +170,21 @@ export function TranslationView({
           </>
         ) : null}
         {overlay.stopped ? (
-          <Text style={s.status}>已保留当前译文，可继续翻译。</Text>
+          <Text style={s.status}>
+            {explain
+              ? '讲解已停止，可重新生成。'
+              : '已保留当前译文，可继续翻译。'}
+          </Text>
         ) : null}
       </View>
-      {overlay.kind !== 'sectionTranslation' ||
-      (!overlay.streaming && !overlay.error && !overlay.stopped) ? (
+      {!overlay.streaming && !overlay.error && !overlay.stopped ? (
         <View style={s.footer}>
-          {overlay.streaming ? (
-            <Button
-              variant="text"
-              icon="stop"
-              label="停止翻译"
-              onPress={() => intents.overlayAction('stop')}
-            />
-          ) : (
-            <Button
-              variant="text"
-              icon="sync"
-              label={
-                overlay.error
-                  ? '重试翻译'
-                  : overlay.stopped
-                  ? '继续翻译'
-                  : '重新翻译'
-              }
-              onPress={() => intents.overlayAction('regenerate')}
-            />
-          )}
+          <Button
+            variant="text"
+            icon="sync"
+            label={explain ? '重新讲解' : '重新翻译'}
+            onPress={() => intents.overlayAction('regenerate')}
+          />
         </View>
       ) : null}
     </View>

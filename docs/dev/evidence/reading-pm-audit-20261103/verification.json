@@ -1,0 +1,21 @@
+{
+  "date": "2026-11-03",
+  "baseline": "b88fc0e",
+  "branch": "codex/ebook-reading",
+  "lint": "passed",
+  "typecheck": "passed",
+  "testSuites": 124,
+  "tests": 2229,
+  "snapshots": 15,
+  "releaseBuild": "passed",
+  "apk": {
+    "file": "app-release.apk",
+    "size": 46455928,
+    "sha256": "dd557726b526899d0faf0622292c34bbb306dbf1b5106ad3c0a7fb1e70c94e9e"
+  },
+  "releaseTag": "v0.0.21",
+  "mergeTarget": "main",
+  "versionName": "0.0.21",
+  "versionCode": 21,
+  "apkSignature": "verified"
+}

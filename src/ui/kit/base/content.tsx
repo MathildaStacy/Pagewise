@@ -19,7 +19,8 @@ import {
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { SvgXml } from 'react-native-svg';
-import type { KitProps, RichInline, Tone } from '../contracts';
+import Clipboard from '@react-native-clipboard/clipboard';
+import type { KitProps, RichDoc, RichInline, Tone } from '../contracts';
 import { useSkin, useTokens } from '../context';
 import { Icon } from '../Icon';
 import { makeStyles } from '../makeStyles';
@@ -535,6 +536,14 @@ export function AiMessage({
 }: KitProps['AiMessage']) {
   const s = useStyles();
   const reveal = useReveal(rich.doc, !!streaming);
+  const [copyLabel, setCopyLabel] = useState('复制讲解');
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (copyTimer.current) clearTimeout(copyTimer.current);
+    },
+    [],
+  );
   return (
     <View
       style={[s.message, detour && s.detourMessage]}
@@ -543,15 +552,82 @@ export function AiMessage({
       accessibilityState={{ busy: !!streaming || reveal.revealing }}
     >
       <RevealContext.Provider value={reveal.revealing || !!streaming}>
-        <Kit.RichView {...rich} doc={reveal.doc} />
+        <Kit.RichView
+          {...rich}
+          doc={reveal.doc}
+          selectable={rich.selectable ?? (!streaming && !reveal.revealing)}
+        />
       </RevealContext.Provider>
       {streaming ? (
         <Kit.Typing label="正在生成讲解" />
       ) : reveal.canSkip ? (
         <Kit.RevealSkip onPress={reveal.skip} />
       ) : null}
+      {!streaming && !reveal.revealing && rich.doc.length ? (
+        <View style={s.messageActions}>
+          <Kit.Button
+            variant="text"
+            size="sm"
+            label={copyLabel}
+            onPress={() => {
+              try {
+                Clipboard.setString(copyableText(rich.doc));
+                setCopyLabel('已复制');
+              } catch {
+                setCopyLabel('复制失败，请重试');
+              }
+              if (copyTimer.current) clearTimeout(copyTimer.current);
+              copyTimer.current = setTimeout(
+                () => setCopyLabel('复制讲解'),
+                2000,
+              );
+            }}
+          />
+        </View>
+      ) : null}
     </View>
   );
+}
+
+function copyableText(doc: RichDoc): string {
+  const inline = (nodes: RichInline[]): string =>
+    nodes
+      .map(node =>
+        node.t === 'text' || node.t === 'code'
+          ? node.v
+          : node.t === 'b'
+          ? inline(node.c)
+          : node.t === 'math'
+          ? `$${node.tex}$`
+          : node.t === 'cite'
+          ? `[${node.label ?? `b${node.ref}`}]`
+          : '（未核实）',
+      )
+      .join('');
+  return doc
+    .map(block =>
+      block.t === 'p' || block.t === 'check'
+        ? inline(block.c)
+        : block.t === 'list'
+        ? block.items
+            .map(
+              (item, index) =>
+                `${
+                  block.ordered ? `${(block.start ?? 1) + index}.` : '•'
+                } ${inline(item)}`,
+            )
+            .join('\n')
+        : block.t === 'math'
+        ? `$$${block.tex}$$`
+        : block.t === 'code'
+        ? block.text
+        : block.t === 'aux'
+        ? copyableText(block.body)
+        : block.t === 'visual'
+        ? `${block.data.title}\n${block.data.description}`
+        : block.text ?? block.label ?? `[b${block.ref}]`,
+    )
+    .join('\n\n');
 }
 
 export function RevealSkip({
@@ -1773,6 +1849,7 @@ const useStyles = makeStyles(t => ({
     color: t.color.ink2,
   },
   message: { gap: 8 },
+  messageActions: { flexDirection: 'row', justifyContent: 'flex-end' },
   tools: { gap: 3 },
   toolLine: {
     flexDirection: 'row',

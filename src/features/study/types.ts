@@ -293,6 +293,8 @@ export type StudyOverlay =
     };
 export interface StudyState {
   aiOptions?: AiOptionsState;
+  reading?: ReadingAppearance;
+  referenceOverlay?: StudyOverlay | null;
   conversationTitle?: string;
   header: {
     title: string;
@@ -328,6 +330,8 @@ export interface StudyState {
   overlay: StudyOverlay | null;
 }
 export interface StudyIntents {
+  setReadingAppearance?(patch: Partial<ReadingAppearance>): void;
+  closeReference?(): void;
   loadOlderMessages?(): void;
   openAiSettings?(): void;
   openRefinement?(): void;
@@ -381,10 +385,16 @@ export interface StudyIntents {
 }
 export interface ReaderScreenState {
   aiOptions?: AiOptionsState;
+  reading?: ReadingAppearance;
+  referenceOverlay?: StudyOverlay | null;
   header: StudyState['header'];
   read: ReaderState;
   overlay: StudyOverlay | null;
   toast: string | null;
+}
+export interface ReadingAppearance {
+  readingSize: 's' | 'm' | 'l';
+  scheme: 'system' | 'light' | 'dark';
 }
 export type RefinementContent =
   | { kind: 'visual'; data: BookVisualData }

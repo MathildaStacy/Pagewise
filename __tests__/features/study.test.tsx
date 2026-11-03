@@ -14,7 +14,7 @@ import {
 import { createReaderRuntime, setReaderRuntime } from '@app/readerRuntime';
 import { loadStudyReader } from '@app/usecases/studyReader';
 import { FlatList } from 'react-native';
-import { Button, PageOrig } from '@ui/kit';
+import { Button, IconButton, PageOrig, Row } from '@ui/kit';
 import {
   useStudyVM,
   useReaderVM,
@@ -346,6 +346,16 @@ it('stops a translation while keeping the original and received Chinese visible'
     expect(JSON.stringify(before.passages?.[0].answer)).toContain(
       '已经收到的中文译文。',
     );
+    await act(() => vm().intents.pressCite(block.seq));
+    expect(vm().state.referenceOverlay).toMatchObject({
+      kind: 'peek',
+      seq: block.seq,
+    });
+    expect(vm().state.overlay).toBe(before);
+    expect(signal?.aborted).toBe(false);
+    await act(() => vm().intents.closeReference?.());
+    expect(vm().state.referenceOverlay).toBeNull();
+    expect(vm().state.overlay).toBe(before);
     await act(() => vm().intents.overlayAction('stop'));
     expect(signal?.aborted).toBe(true);
     expect(vm().state.overlay).toEqual({
@@ -356,6 +366,21 @@ it('stops a translation while keeping the original and received Chinese visible'
   } finally {
     translation.mockRestore();
   }
+});
+it('saves reading appearance in place without losing the current section', async () => {
+  const vm = await mount(() => useReaderVM('aima', '3.5.2'));
+  const heading = vm().state.header.title;
+  await act(async () => {
+    vm().intents.setReadingAppearance?.({ readingSize: 'l', scheme: 'dark' });
+    await c.appearance.flush();
+  });
+  expect(vm().state.reading).toMatchObject({
+    readingSize: 'l',
+    scheme: 'dark',
+  });
+  expect(vm().state.header.title).toBe(heading);
+  expect(await c.repos.settings.get('ui.readingSize', '')).toBe('l');
+  expect(nav.open).not.toHaveBeenCalled();
 });
 it.each([false, true])(
   'prefills and focuses a shelf question without sending or starting AI (warm session: %s)',
@@ -1165,10 +1190,19 @@ it('opens refinement from both readers and shows adopted details on selection', 
         </SkinProvider>,
       );
     });
-    const buttons = renderer!.root.findAllByType(Button);
-    const entry = buttons.find(b => b.props.label === '精修本节')!;
-    const badge = buttons.find(b => b.props.label === 'AI 精修 · 接续上段')!;
-    expect(entry.props.disabled).toBe(false);
+    await act(() =>
+      renderer!.root
+        .findAllByType(IconButton)
+        .find(b => b.props.label === '阅读工具')!
+        .props.onPress(),
+    );
+    const entry = renderer!.root
+      .findAllByType(Row)
+      .find(row => row.props.title === '精修本节')!;
+    const badge = renderer!.root
+      .findAllByType(Button)
+      .find(b => b.props.label === 'AI 精修 · 接续上段')!;
+    expect(entry.props.onPress).toEqual(expect.any(Function));
     expect(badge).toBeDefined();
     await act(() => entry.props.onPress());
     await act(() => badge.props.onPress());
