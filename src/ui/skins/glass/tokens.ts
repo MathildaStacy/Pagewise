@@ -90,7 +90,7 @@ export const glassLight: Tokens = {
     headline: text(21, 28, '700'),
     body: text(17, 24.65),
     aiBody: text(17, 28.05),
-    bookBody: text(17, 31.45, '400', 'serif'),
+    bookBody: text(17, 29.75, '400', 'serif'),
     bookOrig: text(13, 24.05, '400', 'serif'),
     label: text(15, 21.75, '500'),
     caption: text(13, 18.85),

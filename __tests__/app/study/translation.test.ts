@@ -4,6 +4,7 @@ import { StudySession } from '@app/study/StudySession';
 import type { GatewayRequest } from '@services/ai/gateway';
 import type { ParsedResponse } from '@services/ai/protocol';
 import { streamedTaskAnswer } from '@app/study/prompts';
+import type { TranslationProgress } from '@app/study/translation';
 
 let c: Container, session: StudySession;
 const inputOf = (req: GatewayRequest) =>
@@ -313,4 +314,167 @@ it('decodes every partial JSON boundary without leaking escapes or half a Unicod
     previous = text;
   }
   expect(previous).toBe(answer);
+});
+
+it('keeps source-owned alignment when a model changes paragraph count, preserves formulas and replays the paired cache', async () => {
+  await prose('First paragraph.');
+  await c.repos.blocks.insertMany('aima', [
+    {
+      seq: 2,
+      type: 'equation',
+      text: '$$x=2$$',
+      chars: 7,
+      section_id: '3.5.2',
+    },
+    {
+      seq: 3,
+      type: 'title',
+      level: 3,
+      text: 'A heading',
+      chars: 9,
+      section_id: '3.5.2',
+    },
+    {
+      seq: 4,
+      type: 'text',
+      text: 'Last paragraph.',
+      chars: 15,
+      section_id: '3.5.2',
+    },
+  ]);
+  const stream = jest
+    .spyOn(c.ai, 'stream')
+    .mockImplementation(async (_purpose, req, handlers) => {
+      const seq = inputOf(req).block.seq;
+      handlers.onText(JSON.stringify({ answer: `译文${seq}` }));
+      return response(seq === 1 ? '第一段。\n\n模型另起一段。' : `译文${seq}`);
+    });
+  const onPassages = jest.fn<void, [TranslationProgress[], boolean?]>();
+  const result = await session.translateSection(
+    '3.5.2',
+    undefined,
+    undefined,
+    false,
+    undefined,
+    onPassages,
+  );
+  expect(stream).toHaveBeenCalledTimes(3);
+  const parts = onPassages.mock.calls.at(-1)![0];
+  expect(parts.map(part => part.block.seq)).toEqual([1, 2, 3, 4]);
+  expect(parts[0]).toMatchObject({
+    source: 'First paragraph.',
+    answer: '第一段。\n\n模型另起一段。',
+    complete: true,
+  });
+  expect(parts[1]).toMatchObject({ translate: false, source: '$$\nx=2\n$$' });
+  expect(parts[2].block).toMatchObject({ type: 'title', level: 3 });
+  expect(parts[3].answer).toBe('译文4');
+  stream.mockClear();
+  onPassages.mockClear();
+  expect(
+    await session.translateSection(
+      '3.5.2',
+      undefined,
+      undefined,
+      false,
+      undefined,
+      onPassages,
+    ),
+  ).toBe(result);
+  expect(stream).not.toHaveBeenCalled();
+  expect(onPassages).toHaveBeenLastCalledWith(parts, true);
+});
+
+it('resumes an interrupted paired translation without losing earlier alignment or caching incomplete results', async () => {
+  await prose('First.');
+  await c.repos.blocks.insertMany('aima', [
+    { seq: 2, type: 'text', text: 'Second.', chars: 7, section_id: '3.5.2' },
+  ]);
+  const stream = jest
+    .spyOn(c.ai, 'stream')
+    .mockResolvedValueOnce(response('第一段。'))
+    .mockRejectedValueOnce(new Error('offline'));
+  const progress = jest.fn();
+  await expect(
+    session.translateSection(
+      '3.5.2',
+      undefined,
+      undefined,
+      false,
+      undefined,
+      progress,
+    ),
+  ).rejects.toThrow('offline');
+  expect(progress.mock.calls.at(-1)![0]).toEqual([
+    expect.objectContaining({ id: '1:0', answer: '第一段。', complete: true }),
+    expect.objectContaining({ id: '2:0', answer: null, complete: false }),
+  ]);
+  expect(
+    await c.db.get('SELECT content FROM ai_task_cache WHERE scope=?', [
+      JSON.stringify(['bilingualSection', '3.5.2']),
+    ]),
+  ).toBeUndefined();
+  stream.mockClear();
+  stream.mockResolvedValue(response('第二段。'));
+  await session.translateSection(
+    '3.5.2',
+    undefined,
+    undefined,
+    'resume',
+    undefined,
+    progress,
+  );
+  expect(stream).toHaveBeenCalledTimes(1);
+  expect(
+    progress.mock.calls
+      .at(-1)![0]
+      .map((part: TranslationProgress) => part.answer),
+  ).toEqual(['第一段。', '第二段。']);
+});
+
+it('rejects a translated table that loses merged cells and retries it without caching the invalid layout', async () => {
+  const html =
+    '<table><tr><th rowspan="2">Model</th><th>Score</th></tr><tr><td>0.9</td></tr></table>';
+  await c.repos.blocks.insertMany('aima', [
+    { seq: 1, type: 'table', text: '', html, chars: 12, section_id: '3.5.2' },
+  ]);
+  const stream = jest
+    .spyOn(c.ai, 'stream')
+    .mockResolvedValueOnce(
+      response(
+        '<table><tr><td>模型</td><td>分数</td></tr><tr><td>0.9</td></tr></table>',
+      ),
+    );
+  const progress = jest.fn();
+  await expect(
+    session.translateSection(
+      '3.5.2',
+      undefined,
+      undefined,
+      false,
+      undefined,
+      progress,
+    ),
+  ).rejects.toThrow('译文表格的行列与原文不一致');
+  expect(
+    await c.db.all('SELECT content FROM ai_task_cache WHERE scope IN (?, ?)', [
+      JSON.stringify(['bilingualSection', '3.5.2']),
+      JSON.stringify(['bilingual', '3.5.2', '1:0']),
+    ]),
+  ).toEqual([]);
+  const translated = html.replace('Model', '模型').replace('Score', '分数');
+  stream.mockResolvedValueOnce(response(translated));
+  await session.translateSection(
+    '3.5.2',
+    undefined,
+    undefined,
+    'resume',
+    undefined,
+    progress,
+  );
+  expect(stream).toHaveBeenCalledTimes(2);
+  expect(progress.mock.calls.at(-1)![0][0]).toMatchObject({
+    answer: translated,
+    complete: true,
+  });
 });

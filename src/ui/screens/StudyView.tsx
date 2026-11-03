@@ -1,5 +1,5 @@
 import { memo, useEffect, useRef, useState } from 'react';
-import { FlatList, Pressable, Text, View } from 'react-native';
+import { FlatList, Text, View } from 'react-native';
 import {
   AiMessage,
   AppBar,
@@ -9,7 +9,6 @@ import {
   DoneCard,
   Empty,
   FoldCard,
-  Icon,
   IconButton,
   ModeSwitch,
   Note,
@@ -41,6 +40,7 @@ import type {
 } from '@features/study/types';
 import { ReaderContent, StudyOverlays } from './ReaderView';
 import { RefinementSheet } from './RefinementSheet';
+import { ReadingTools } from './ReadingTools';
 export function StudyView({
   state,
   intents,
@@ -53,6 +53,7 @@ export function StudyView({
   const [previousOpen, setPreviousOpen] = useState(false);
   const keyboardOpen = useKeyboardVisible();
   const [moreActions, setMoreActions] = useState(false);
+  const [following, setFollowing] = useState(true);
   const visibleActions = state.listen.quickActions.slice(0, 2);
   const extraActions = state.listen.quickActions.slice(2);
   const s = useStyles(),
@@ -86,6 +87,7 @@ export function StudyView({
     resumeWhen: state.listen.composer.streaming,
     disabled: index >= 0,
     animated: !state.loading,
+    onFollowingChange: setFollowing,
   });
   useEffect(() => {
     if (state.mode !== 'listen') return;
@@ -146,43 +148,11 @@ export function StudyView({
           }
         />
         {state.mode === 'read' ? (
-          <View style={s.conversations}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`本节对话，${
-                state.conversationTitle ?? '选择对话'
-              }`}
-              onPress={() => intents.openConversations?.()}
-              style={({ pressed }) => [
-                s.conversationSwitch,
-                state.mode === 'read' && s.readConversationSwitch,
-                pressed && s.conversationPressed,
-              ]}
-            >
-              <Icon name="listen" size={18} color={s.conversationTitle.color} />
-              <Icon
-                name="arrowDown"
-                size={16}
-                color={s.conversationTitle.color}
-              />
-            </Pressable>
-            {state.mode === 'read' ? (
-              <>
-                <Button
-                  variant="text"
-                  label="精修本节"
-                  disabled={state.read.loading || !state.read.items.length}
-                  onPress={() => intents.openRefinement?.()}
-                />
-                <Button
-                  variant="text"
-                  label="翻译本节"
-                  disabled={!state.read.canTranslate}
-                  onPress={() => intents.translateSection?.()}
-                />
-              </>
-            ) : null}
-          </View>
+          <ReadingTools
+            read={state.read}
+            reading={state.reading}
+            intents={intents}
+          />
         ) : null}
         {state.mode === 'read' ? (
           <ReaderContent state={state.read} intents={intents} />
@@ -263,6 +233,19 @@ export function StudyView({
                   })
                 }
               />
+              {!following && thread.length > 0 ? (
+                <View
+                  style={[s.latest, { bottom: dockHeight + 8 }]}
+                  pointerEvents="box-none"
+                >
+                  <Button
+                    variant="secondary"
+                    icon="arrowDown"
+                    label={comp.streaming ? '新讲解正在生成' : '回到最新讲解'}
+                    onPress={() => stick.resume()}
+                  />
+                </View>
+              ) : null}
               <View
                 onLayout={event =>
                   setDockHeight(event.nativeEvent.layout.height)
@@ -337,6 +320,19 @@ export function StudyView({
         overlay={state.overlay}
         intents={intents}
         aiOptions={state.aiOptions}
+        reading={state.reading}
+      />
+      <StudyOverlays
+        overlay={state.referenceOverlay ?? null}
+        intents={{
+          ...intents,
+          closeOverlay: intents.closeReference ?? intents.closeOverlay,
+        }}
+        returnLabel={
+          state.overlay?.kind === 'sectionTranslation'
+            ? '返回双语阅读'
+            : '返回讲解'
+        }
       />
       <ToastHost toast={state.toast ? { message: state.toast } : null} />
     </Screen>
@@ -519,32 +515,6 @@ function ThreadCard({
 const ThreadRow = memo(ThreadCard);
 const useStyles = makeStyles(t => ({
   sources: { gap: t.space.gap, paddingTop: t.space.gap },
-  conversations: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: t.space.pageX,
-    paddingBottom: 8,
-    gap: 8,
-  },
-  conversationSwitch: {
-    flex: 1,
-    minWidth: 0,
-    minHeight: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-    borderRadius: t.shape.md,
-    backgroundColor: t.color.surfaceAlt,
-  },
-  conversationPressed: { backgroundColor: t.color.pressed },
-  readConversationSwitch: { flex: 0, minWidth: 64, justifyContent: 'center' },
-  conversationTitle: {
-    ...t.type.caption,
-    color: t.color.ink2,
-    flex: 1,
-    minWidth: t.type.caption.fontSize * 3,
-  },
   root: { flex: 1 },
   selectorRow: {
     flexDirection: 'row',
@@ -611,6 +581,9 @@ const useStyles = makeStyles(t => ({
   },
   readerHeaderSpacer: { width: 40, flexShrink: 0 },
   thread: {
+    width: '100%',
+    maxWidth: 800,
+    alignSelf: 'center',
     paddingHorizontal: t.brand ? 16 : t.layout.groupedLists ? 20 : 14,
     paddingTop: t.layout.groupedLists ? 4 : 12,
     paddingBottom: t.layout.groupedLists ? 24 : 18,
@@ -626,4 +599,5 @@ const useStyles = makeStyles(t => ({
   quizHelp: { flexDirection: 'row', flexWrap: 'wrap', gap: t.space.gap },
   error: { paddingVertical: t.space.gap, gap: t.space.gap },
   hint: { ...t.type.caption, color: t.color.ink2 },
+  latest: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
 }));

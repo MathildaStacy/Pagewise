@@ -90,7 +90,7 @@ export const paperLight: Tokens = {
     headline: text(15, 22.5, '600'),
     body: text(14, 21),
     aiBody: text(16, 28.48),
-    bookBody: text(16.5, 31.35, '400', 'serif'),
+    bookBody: text(17, 29.75, '400', 'serif'),
     bookOrig: text(12.5, 23.125, '400', 'serif'),
     label: text(13, 19.5, '500'),
     caption: text(12, 18),

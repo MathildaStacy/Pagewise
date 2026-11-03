@@ -208,6 +208,10 @@ export interface StudySessionApi {
     config?: ConversationConfig,
     refresh?: boolean | 'resume',
     onText?: (text: string, fromCache?: boolean) => void,
+    onPassages?: (
+      parts: import('./translation').TranslationProgress[],
+      fromCache?: boolean,
+    ) => void,
   ): Promise<string>;
   generateGuide(): Promise<string>;
   clearNotice(): void;

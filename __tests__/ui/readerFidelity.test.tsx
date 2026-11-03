@@ -273,7 +273,7 @@ it('includes the original page label when aligning a PDF block to the viewport',
 });
 
 it.each(['paper', 'glass'] as const)(
-  'uses %s page boundaries without splitting the Apple reading article',
+  'keeps %s pages in one continuous reading column',
   async skin => {
     const block = readerSamples.normal.read.items.find(
       item => item.kind === 'block',
@@ -293,30 +293,22 @@ it.each(['paper', 'glass'] as const)(
       (row: { label?: string }) => row.label === 'p.103',
     );
     const nextPageBlock = rows.find((row: { id: string }) => row.id === 'b4');
-    expect(nextPageBlock.start).toBe(skin === 'paper');
-    expect(firstPageNumber.end).toBe(skin === 'paper');
+    expect(nextPageBlock.start).toBe(false);
+    expect(firstPageNumber.end).toBe(false);
     const pageNumber = list.props.renderItem({ item: firstPageNumber });
     const style = StyleSheet.flatten(pageNumber.props.style);
     expect(style).toMatchObject({
-      marginHorizontal: skin === 'glass' ? 16 : 12,
+      alignSelf: 'center',
       paddingHorizontal: skin === 'glass' ? 20 : 16,
     });
-    if (skin === 'paper')
-      expect(style).toMatchObject({
-        backgroundColor: undefined,
-        paddingBottom: 14,
-        marginBottom: 14,
-      });
-    else expect(style.borderBottomLeftRadius).toBeUndefined();
+    expect(style.borderBottomLeftRadius).toBeUndefined();
     const label = pageNumber.props.children;
     if (skin === 'paper')
       expect(StyleSheet.flatten(label.props.style)).toMatchObject({
         color: '#736D64',
         borderTopColor: '#DDD6C8',
       });
-    expect(StyleSheet.flatten(label.props.style).textAlign).toBe(
-      skin === 'glass' ? 'center' : 'left',
-    );
+    expect(StyleSheet.flatten(label.props.style).textAlign).toBe('center');
   },
 );
 
@@ -347,7 +339,7 @@ it('keeps Google reflow as one continuous article with the prototype padding and
   const rowStyle = (item: unknown) =>
     StyleSheet.flatten(list.props.renderItem({ item }).props.style);
   expect(rowStyle(first)).toMatchObject({
-    marginHorizontal: 16,
+    alignSelf: 'center',
     paddingHorizontal: 22,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
@@ -369,7 +361,7 @@ it.each(['paper', 'glass'] as const)(
       .find(node => node.props.accessibilityRole === 'header')!;
     expect(title.props.children).toBe('3.5.2 A*搜索');
     expect(StyleSheet.flatten(title.props.style)).toMatchObject({
-      fontSize: skin === 'glass' ? 22.1 : 20.625,
+      fontSize: skin === 'glass' ? 22.1 : 21.25,
       fontWeight: '700',
       fontFamily: 'sans-serif',
     });
@@ -625,7 +617,7 @@ it.each(['paper', 'glass'] as const)(
       skin === 'paper' ? 'p.103–105' : studySamples.normal.header.subtitle,
     );
     expect(
-      renderer.root
+      bar
         .findAllByType(IconButton)
         .filter(button => button.props.icon === 'more'),
     ).toHaveLength(skin === 'paper' ? 0 : 1);
@@ -765,10 +757,12 @@ it.each(['paper', 'glass'] as const)(
     const body = root.findByProps({ testID: 'sheet-body' });
     expect(
       body.findAllByType(Button).map(button => button.props.label),
-    ).toEqual(['按当前设置重新讲解']);
+    ).toEqual(['重新讲解']);
     const quote = body
       .findAllByType(RichView)
-      .find(node => node.props.typography === 'sheetQuote')!;
+      .find(node => node.props.typography === 'book')!;
+    expect(quote.props.doc).toEqual(explanation.quote);
+    expect(quote.props.selectable).toBe(true);
     const quoteText = quote
       .findAllByType(Text)
       .find(
@@ -776,8 +770,6 @@ it.each(['paper', 'glass'] as const)(
       )!;
     expect(StyleSheet.flatten(quoteText.props.style)).toMatchObject({
       fontFamily: 'serif',
-      fontSize: skin === 'glass' ? 15 : 13,
-      lineHeight: skin === 'glass' ? 27 : 23.4,
     });
     await act(async () => buttons.forEach(button => button.props.onPress()));
     expect(overlayAction.mock.calls.map(([action]) => action)).toEqual(
@@ -824,7 +816,7 @@ it.each(['paper', 'glass', 'meta', 'google', 'win11'] as const)(
     expect(
       root
         .findAllByType(RichView)
-        .some(node => node.props.typography === 'sheetQuote'),
+        .some(node => node.props.typography === 'book'),
     ).toBe(true);
     expect(actions.map((action: { label: string }) => action.label)).toEqual(
       skin !== 'paper' ? ['好的'] : [],

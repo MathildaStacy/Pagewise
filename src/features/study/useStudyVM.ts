@@ -3,6 +3,7 @@ import { AppState } from 'react-native';
 import { toAppError } from '@app/errors';
 import { useRefinementVM } from './useRefinementVM';
 import { parseStudyCard } from '@app/study/types';
+import { translationPassages } from '@app/study/translation';
 import { useStore } from 'zustand';
 import { useContainer } from '@app/ContainerProvider';
 import { resolveStudyBlockImage } from '@app/bookImages';
@@ -30,12 +31,14 @@ import {
   blockPage,
   messageDoc,
   presentReaderItems,
+  presentTranslation,
   presentOriginalPages,
   presentThread,
   quickActions,
   sectionLabel,
   stepPages,
   tableContent,
+  tableGrid,
 } from './presenters';
 import type {
   BlockMenuKey,
@@ -95,6 +98,7 @@ export function useStudyVM(
     [c, bookId],
   );
   const raw = useStore(session.store);
+  const appearance = useStore(c.appearance.store);
   const aiOptions = useAiOptions(raw.config);
   const explanationController = useRef<AbortController | null>(null);
   useEffect(() => () => explanationController.current?.abort(), []);
@@ -104,6 +108,9 @@ export function useStudyVM(
     >(),
     [overlay, setOverlay] = useState<StudyOverlay | null>(null),
     [toast, setToast] = useState<string | null>(null);
+  const [referenceOverlay, setReferenceOverlay] = useState<StudyOverlay | null>(
+    null,
+  );
   const [loadedReader, setReader] = useState<ReaderData | null>(null),
     [readerError, setReaderError] = useState<string | null>(null),
     [readerLoading, setReaderLoading] = useState(true);
@@ -444,6 +451,8 @@ export function useStudyVM(
   })();
   const state: StudyState = {
     aiOptions: aiOptions.state,
+    reading: appearance,
+    referenceOverlay,
     conversationTitle: raw.conversation?.title,
     header: {
       title:
@@ -595,6 +604,7 @@ export function useStudyVM(
     return true;
   };
   const closeOverlay = () => {
+    setReferenceOverlay(null);
     explanationController.current?.abort();
     explainRequest.current++;
     setOverlay(null);
@@ -610,6 +620,14 @@ export function useStudyVM(
       kind: 'sectionTranslation',
       sectionId: readerId,
       quote: reader?.blocks.flatMap(block => blockDoc(block, raw.book)),
+      passages: presentTranslation(
+        translationPassages(reader?.blocks ?? []).map(part => ({
+          ...part,
+          answer: null,
+          complete: !part.translate,
+        })),
+        raw.book,
+      ),
       answer: null,
       streaming: true,
       subtitle: sectionLabel(readSection) + ' · 简体中文',
@@ -620,33 +638,45 @@ export function useStudyVM(
         controller.signal,
         aiOptions.state.config ?? undefined,
         refresh,
-        (partial, fromCache) => {
+        undefined,
+        (parts, fromCache) => {
           if (
-            mounted.current &&
-            !controller.signal.aborted &&
-            explainRequest.current === request
+            !mounted.current ||
+            controller.signal.aborted ||
+            explainRequest.current !== request
           )
-            setOverlay(current =>
-              current?.kind === 'sectionTranslation' &&
-              current.sectionId === readerId
-                ? {
-                    ...current,
-                    ...(fromCache ? { fromCache: true, streaming: false } : {}),
-                    answer: messageDoc(
-                      stableStreamText(partial),
-                      [],
-                      new Map(),
-                      raw.book,
-                      readerId,
-                      true,
-                    ),
-                  }
-                : current,
-            );
+            return;
+          const images = new Map(
+            reader?.blocks.map(block => [block.seq, block.image_path]),
+          );
+          const passages = presentTranslation(
+            parts.map(part => ({
+              ...part,
+              block: {
+                ...part.block,
+                image_path: images.get(part.block.seq) ?? part.block.image_path,
+              },
+            })),
+            raw.book,
+          );
+          setOverlay(current =>
+            current?.kind === 'sectionTranslation' &&
+            current.sectionId === readerId
+              ? {
+                  ...current,
+                  passages,
+                  ...(fromCache ? { fromCache: true, streaming: false } : {}),
+                }
+              : current,
+          );
         },
       )
       .then(answer => {
-        if (mounted.current && !controller.signal.aborted)
+        if (
+          mounted.current &&
+          !controller.signal.aborted &&
+          explainRequest.current === request
+        )
           setOverlay(current =>
             current?.kind === 'sectionTranslation' &&
             current.sectionId === readerId
@@ -659,7 +689,11 @@ export function useStudyVM(
           );
       })
       .catch(error => {
-        if (mounted.current && !controller.signal.aborted)
+        if (
+          mounted.current &&
+          !controller.signal.aborted &&
+          explainRequest.current === request
+        )
           setOverlay(current =>
             current?.kind === 'sectionTranslation'
               ? { ...current, streaming: false, error: errorText(error) }
@@ -745,19 +779,29 @@ export function useStudyVM(
     try {
       const block = blocks.get(seq) ?? (await loadStudyBlock(c, bookId, seq));
       setCache(old => new Map(old).set(seq, block));
+      // Keep the reading surface mounted: returning from evidence must retain
+      // its scroll position, reading mode and any translation still arriving.
+      const show =
+        overlay?.kind === 'sectionTranslation' ||
+        overlay?.kind === 'translate' ||
+        overlay?.kind === 'explain'
+          ? setReferenceOverlay
+          : setOverlay;
       if (figure && block.image_path) {
-        setOverlay({
+        show({
           kind: 'figure',
           uri: block.image_path,
           caption: block.text,
           page: blockPage(block, raw.book),
+          visual: block.refinement?.visual,
         });
         return;
       }
       if (block.type === 'table') {
-        setOverlay({
+        show({
           kind: 'table',
           rows: tableContent(block.html, block.text),
+          grid: tableGrid(block.html, block.text),
           caption: blockPage(block, raw.book),
         });
         return;
@@ -767,7 +811,7 @@ export function useStudyVM(
           b => b.section_id === block.section_id && Math.abs(b.seq - seq) <= 1,
         )
         .sort((a, b) => a.seq - b.seq);
-      setOverlay({
+      show({
         kind: 'peek',
         seq,
         title: `原书 ${blockPage(block, raw.book)}`,
@@ -972,6 +1016,15 @@ export function useStudyVM(
       note: 'AI 只能引用本轮已读取的原文。你问到别的小节时，它会先读取，再回答。预计值与服务返回的实际用量可能不同。',
     });
   const intents: StudyIntents = {
+    closeReference: () => setReferenceOverlay(null),
+    setReadingAppearance: patch => {
+      run(
+        c.appearance.update(patch).then(() => {
+          const error = c.appearance.store.getState().error;
+          if (error) setToast(error);
+        }),
+      );
+    },
     openSource: url => run(openExternalSource(url)),
     setAiOptions: patch => {
       const config = aiOptions.patch(patch);
@@ -1264,11 +1317,13 @@ export function useStudyVM(
     setNoteText: value =>
       setOverlay(old => (old?.kind === 'note' ? { ...old, value } : old)),
     overlayAction: key => {
-      const shown = overlay;
+      const shown = referenceOverlay ?? overlay;
       if (!shown) return;
       if (
         key === 'stop' &&
-        (shown.kind === 'translate' || shown.kind === 'sectionTranslation')
+        (shown.kind === 'explain' ||
+          shown.kind === 'translate' ||
+          shown.kind === 'sectionTranslation')
       ) {
         explanationController.current?.abort();
         explainRequest.current++;
@@ -1283,7 +1338,8 @@ export function useStudyVM(
         return;
       }
       if (key === 'close') {
-        closeOverlay();
+        if (referenceOverlay) setReferenceOverlay(null);
+        else closeOverlay();
         return;
       }
       if (shown.kind === 'jumpStep' && key === 'confirm') {
@@ -1421,6 +1477,8 @@ function docText(doc: import('@ui/kit').RichDoc): string {
         ? docText(b.body)
         : b.t === 'code'
         ? markdownCode(b.text, { block: true, language: b.language })
+        : b.t === 'visual'
+        ? `[AI 重绘] ${b.data.title}\n${b.data.description}`
         : b.text ?? '',
     )
     .join('\n\n');
@@ -1433,6 +1491,8 @@ export function useReaderVM(
   const vm = useStudyVM(bookId, { sectionId, blockRef }, true);
   const state: ReaderScreenState = {
     aiOptions: vm.state.aiOptions,
+    reading: vm.state.reading,
+    referenceOverlay: vm.state.referenceOverlay,
     header: vm.state.header,
     read: vm.state.read,
     overlay: vm.state.overlay,

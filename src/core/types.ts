@@ -109,6 +109,7 @@ export type BlockType =
 export interface Block {
   /** Present only on a reading projection; source rows and source coordinates stay immutable. */
   refinement?: {
+    visual?: import('./refinement/visual').VisualReconstruction;
     originalText: string;
     originalType: BlockType;
     reason: string;

@@ -114,6 +114,22 @@ it('keeps a stable identity and honours disabled', () => {
   expect(list.scrollToEnd).not.toHaveBeenCalled();
 });
 
+it('lets the reader explicitly return to the latest reply after inspecting an older step', () => {
+  const changed = jest.fn();
+  const { list, stick } = mountStick({
+    disabled: true,
+    onFollowingChange: changed,
+  });
+  stick().listProps.onScrollBeginDrag();
+  stick().listProps.onScrollEndDrag(scrollEvent(100));
+  stick().listProps.onContentSizeChange();
+  expect(list.scrollToEnd).not.toHaveBeenCalled();
+  expect(changed).toHaveBeenLastCalledWith(false);
+  stick().resume();
+  expect(changed).toHaveBeenLastCalledWith(true);
+  expect(list.scrollToEnd).toHaveBeenCalledWith({ animated: true });
+});
+
 it('stable handlers keep identity while calling the latest implementation', () => {
   const calls: string[] = [];
   let handlers!: { press(id: string): void };

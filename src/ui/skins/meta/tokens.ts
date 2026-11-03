@@ -107,7 +107,7 @@ export const metaLight: Tokens = {
     title: text(18, 23.400000000000002, '600'),
     body: text(17, 24.65),
     aiBody: text(17, 28.049999999999997),
-    bookBody: text(17, 31.45, '400', 'serif'),
+    bookBody: text(17, 29.75, '400', 'serif'),
     continueTitle: text(22, 28.6, '700'),
     label: text(15, 21.75, '500'),
     caption: text(13, 18.85),

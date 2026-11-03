@@ -1,4 +1,10 @@
-import type { ComposerQuote, PageOrigProps, RichDoc } from '@ui/kit';
+import type {
+  BookVisualData,
+  ComposerQuote,
+  PageOrigProps,
+  RichDoc,
+  RichTable,
+} from '@ui/kit';
 import type { StudyOpenOptions } from '@app/study/types';
 import type { ConversationSummary } from '@features/library/types';
 import type {
@@ -134,10 +140,25 @@ export interface ReaderBlock {
   pin?: { id: string; label: string };
   uri?: string;
   table?: RichDoc[][];
+  tableGrid?: import('@ui/kit').RichTable;
 }
 export type ReaderItem =
   | ReaderBlock
   | { kind: 'pageBreak'; page: string; id: string };
+export interface TranslationReadingPassage {
+  id: string;
+  ref: number;
+  page: string;
+  type: string;
+  source: RichDoc;
+  answer: RichDoc | null;
+  sourceTable?: RichDoc[][];
+  sourceGrid?: import('@ui/kit').RichTable;
+  answerTable?: RichDoc[][];
+  answerGrid?: import('@ui/kit').RichTable;
+  complete: boolean;
+  preserved: boolean;
+}
 export interface ReaderOriginalPage {
   page: number;
   label: string;
@@ -184,6 +205,7 @@ export type StudyOverlay =
     }
   | {
       kind: 'sectionTranslation';
+      passages?: TranslationReadingPassage[];
       sectionId: string;
       quote?: RichDoc;
       answer: RichDoc | null;
@@ -230,7 +252,13 @@ export type StudyOverlay =
       blocks: { ref: string; doc: RichDoc; target: boolean }[];
       detour: boolean;
     }
-  | { kind: 'figure'; uri: string; caption: string; page: string }
+  | {
+      kind: 'figure';
+      uri: string;
+      caption: string;
+      page: string;
+      visual?: BookVisualData;
+    }
   | {
       kind: 'explain' | 'translate';
       seq: number;
@@ -257,9 +285,16 @@ export type StudyOverlay =
       subtitle: string;
     }
   | { kind: 'switchMain'; body: string; rebase?: boolean }
-  | { kind: 'table'; rows: RichDoc[][]; caption: string };
+  | {
+      kind: 'table';
+      rows: RichDoc[][];
+      grid?: import('@ui/kit').RichTable;
+      caption: string;
+    };
 export interface StudyState {
   aiOptions?: AiOptionsState;
+  reading?: ReadingAppearance;
+  referenceOverlay?: StudyOverlay | null;
   conversationTitle?: string;
   header: {
     title: string;
@@ -295,6 +330,8 @@ export interface StudyState {
   overlay: StudyOverlay | null;
 }
 export interface StudyIntents {
+  setReadingAppearance?(patch: Partial<ReadingAppearance>): void;
+  closeReference?(): void;
   loadOlderMessages?(): void;
   openAiSettings?(): void;
   openRefinement?(): void;
@@ -348,15 +385,23 @@ export interface StudyIntents {
 }
 export interface ReaderScreenState {
   aiOptions?: AiOptionsState;
+  reading?: ReadingAppearance;
+  referenceOverlay?: StudyOverlay | null;
   header: StudyState['header'];
   read: ReaderState;
   overlay: StudyOverlay | null;
   toast: string | null;
 }
+export interface ReadingAppearance {
+  readingSize: 's' | 'm' | 'l';
+  scheme: 'system' | 'light' | 'dark';
+}
 export type RefinementContent =
+  | { kind: 'visual'; data: BookVisualData }
+  | { kind: 'image'; uri?: string; text: string }
   | { kind: 'text'; text: string }
   | { kind: 'equation'; tex: string }
-  | { kind: 'table'; rows: RichDoc[][] };
+  | { kind: 'table'; rows: RichDoc[][]; grid?: RichTable };
 export interface RefinementState {
   busy: boolean;
   activity: 'loading' | 'generate' | 'save' | null;

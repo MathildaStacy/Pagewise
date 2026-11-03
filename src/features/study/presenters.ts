@@ -1,4 +1,5 @@
 import { PRIVATE_USE } from '@core/layout';
+import { parseBookTable } from '@app/readingTable';
 import type { Block, Book, Message, Section } from '@core/types';
 import { sectionName } from '@features/sectionName';
 import {
@@ -16,13 +17,15 @@ import {
   parseStudyCard,
   type StudyState as SessionState,
 } from '@app/study/types';
-import type { RichDoc, RichInline } from '@ui/kit';
+import type { BookVisualData, RichDoc, RichInline, RichTable } from '@ui/kit';
+import type { TranslationProgress } from '@app/study/translation';
 import type {
   QuickKey,
   ReaderBlock,
   ReaderItem,
   RefinementContent,
   ThreadItem,
+  TranslationReadingPassage,
 } from './types';
 
 export function sectionLabel(section: Section | null | undefined) {
@@ -73,6 +76,8 @@ export function enrichDoc(
     if (b.t === 'aux') return { ...b, body: enrichDoc(b.body, blocks, book) };
     if (b.t === 'quote' || b.t === 'figure') {
       const source = blocks.get(b.ref);
+      if (b.t === 'figure' && b.verified && source?.refinement?.visual)
+        return { t: 'visual', ref: b.ref, data: source.refinement.visual };
       return {
         ...b,
         label: blockPage(source, book),
@@ -99,10 +104,18 @@ export function messageDoc(
   return enrichDoc(checked.doc, blocks, book);
 }
 export function blockDoc(source: Block, book: Book | null): RichDoc {
+  if (source.refinement?.visual)
+    return [{ t: 'visual', ref: source.seq, data: source.refinement.visual }];
   // E-book link icons in the Private Use Area have no glyph and render as boxes.
   const block = { ...source, text: source.text.replace(PRIVATE_USE, '') };
   if (block.type === 'title')
-    return [{ t: 'p', c: [{ t: 'b', c: [{ t: 'text', v: block.text }] }] }];
+    return [
+      {
+        t: 'p',
+        heading: block.level ?? 2,
+        c: [{ t: 'b', c: [{ t: 'text', v: block.text }] }],
+      },
+    ];
   if (block.type === 'equation')
     return [{ t: 'math', tex: displayTex(block.latex ?? block.text) }];
   if (block.type === 'code') return [parseSourceCode(block.text)];
@@ -117,7 +130,62 @@ export function blockDoc(source: Block, book: Book | null): RichDoc {
         ...(block.image_path ? { uri: block.image_path } : {}),
       },
     ];
-  return enrichDoc(parse(block.text), new Map([[block.seq, block]]), book);
+  // MinerU escapes printed bullet markers. Restore their layout only in book text.
+  return enrichDoc(
+    parse(block.text.replace(/^\s*\\-\s+/gm, '- ')),
+    new Map([[block.seq, block]]),
+    book,
+  );
+}
+
+export function presentTranslation(
+  parts: TranslationProgress[],
+  book: Book | null,
+): TranslationReadingPassage[] {
+  return parts.map(part => {
+    const source = part.block;
+    const translated =
+      part.answer === null || (source.type === 'table' && !part.complete)
+        ? null
+        : {
+            ...source,
+            // A title's rank comes from the book, even if a model adds Markdown marks.
+            text:
+              source.type === 'title'
+                ? part.answer.replace(/^\s*#{1,6}\s+/, '')
+                : part.complete
+                ? part.answer
+                : stableStreamText(part.answer),
+            html: source.type === 'table' ? part.answer : null,
+            type: source.type === 'image' ? ('caption' as const) : source.type,
+          };
+    return {
+      id: part.id,
+      ref: source.seq,
+      page: blockPage(source, book),
+      type: source.type,
+      source: blockDoc(source, book),
+      sourceTable:
+        source.type === 'table'
+          ? tableContent(source.html, source.text)
+          : undefined,
+      sourceGrid:
+        source.type === 'table'
+          ? tableGrid(source.html, source.text)
+          : undefined,
+      answer: translated ? blockDoc(translated, book) : null,
+      answerTable:
+        translated?.type === 'table'
+          ? tableContent(translated.html, translated.text)
+          : undefined,
+      answerGrid:
+        translated?.type === 'table'
+          ? tableGrid(translated.html, translated.text)
+          : undefined,
+      complete: part.complete,
+      preserved: !part.translate,
+    };
+  });
 }
 export function quickActions(
   raw: SessionState,
@@ -497,13 +565,42 @@ export function tableRows(html: string | null, text: string): string[][] {
 export function tableContent(html: string | null, text: string): RichDoc[][] {
   return tableRows(html, text).map(row => row.map(cell => parse(cell)));
 }
+export function tableGrid(
+  html: string | null,
+  text: string,
+): RichTable | undefined {
+  const table = parseBookTable(text, html);
+  return table
+    ? {
+        ...table,
+        cells: table.cells.map(({ text: value, ...cell }) => ({
+          ...cell,
+          doc: parse(value),
+        })),
+      }
+    : undefined;
+}
 export function presentRefinementContent(
-  block: Pick<Block, 'type' | 'text' | 'latex' | 'html'>,
+  block: Pick<Block, 'type' | 'text' | 'latex' | 'html'> & {
+    visual?: BookVisualData | null;
+    image_path?: string | null;
+  },
 ): RefinementContent {
+  if (block.visual) return { kind: 'visual', data: block.visual };
+  if (block.type === 'image')
+    return {
+      kind: 'image',
+      uri: block.image_path ?? undefined,
+      text: block.text,
+    };
   if (block.type === 'equation')
     return { kind: 'equation', tex: displayTex(block.latex ?? block.text) };
   if (block.type === 'table')
-    return { kind: 'table', rows: tableContent(block.html, block.text) };
+    return {
+      kind: 'table',
+      rows: tableContent(block.html, block.text),
+      grid: tableGrid(block.html, block.text),
+    };
   return { kind: 'text', text: block.text };
 }
 export function presentReaderItems(
@@ -588,6 +685,7 @@ export function presentReaderItems(
       pin: pins.get(b.seq),
       uri: b.image_path ?? undefined,
       table: b.type === 'table' ? tableContent(b.html, b.text) : undefined,
+      tableGrid: b.type === 'table' ? tableGrid(b.html, b.text) : undefined,
     };
     result.push(item);
     if (b.type === 'text' || b.type === 'title') open.set(b.seq, item);
@@ -600,7 +698,10 @@ const reworded = (b: Block) => {
   const visible = (text: string) =>
     text.replace(PRIVATE_USE, '').replace(/\s+/g, '');
   return (
-    !!b.refinement && visible(b.refinement.originalText) !== visible(b.text)
+    !!b.refinement &&
+    (visible(b.refinement.originalText) !== visible(b.text) ||
+      !!b.refinement.visual ||
+      (b.refinement.originalType === 'image' && b.type === 'table'))
   );
 };
 /** Joins the last paragraph of `a` with the first paragraph of `b` into one printed paragraph. */

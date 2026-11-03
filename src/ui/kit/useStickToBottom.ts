@@ -19,6 +19,7 @@ export interface StickToBottomOptions {
   /** 暂停自动滚动，例如正在定位到某一项。 */
   disabled?: boolean;
   animated?: boolean;
+  onFollowingChange?(following: boolean): void;
 }
 
 /**
@@ -32,32 +33,49 @@ export function useStickToBottom(
     resumeWhen = false,
     disabled = false,
     animated = true,
+    onFollowingChange,
   }: StickToBottomOptions = {},
 ) {
   const following = useRef(true),
     resumed = useRef(resumeWhen),
-    config = useRef({ threshold, disabled, animated });
+    config = useRef({ threshold, disabled, animated, onFollowingChange });
   useLayoutEffect(() => {
-    config.current = { threshold, disabled, animated };
+    config.current = { threshold, disabled, animated, onFollowingChange };
   });
   useEffect(() => {
-    if (resumeWhen && !resumed.current) following.current = true;
+    if (resumeWhen && !resumed.current) {
+      following.current = true;
+      config.current.onFollowingChange?.(true);
+    }
     resumed.current = resumeWhen;
   }, [resumeWhen]);
   // Stable identity so callers can list it as an effect dependency.
   return useMemo(() => {
     let dragging = false,
       userScrolling = false;
+    const follow = (value: boolean) => {
+      if (following.current === value) return;
+      following.current = value;
+      config.current.onFollowingChange?.(value);
+    };
     // Only user-driven scrolls decide whether to follow; programmatic glides pass through mid-way offsets.
     const measure = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
       const { contentOffset, contentSize, layoutMeasurement } =
         event.nativeEvent;
-      following.current =
+      follow(
         contentSize.height - layoutMeasurement.height - contentOffset.y <
-        config.current.threshold;
+          config.current.threshold,
+      );
     };
-    const scrollToEnd = (options: { animated?: boolean } = {}) => {
-      if (!config.current.disabled && !dragging && following.current) {
+    const scrollToEnd = (
+      options: { animated?: boolean } = {},
+      force = false,
+    ) => {
+      if (
+        (!config.current.disabled || force) &&
+        !dragging &&
+        following.current
+      ) {
         // A programmatic glide can finish at an old bottom while content grows.
         // Its momentum events must not change the reader's follow preference.
         userScrolling = false;
@@ -80,7 +98,11 @@ export function useStickToBottom(
     return {
       scrollToEnd,
       pause: () => {
-        following.current = false;
+        follow(false);
+      },
+      resume: () => {
+        follow(true);
+        scrollToEnd({}, true);
       },
       listProps: {
         scrollEventThrottle: 32,

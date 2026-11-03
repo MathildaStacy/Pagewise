@@ -107,7 +107,7 @@ export const googleLight: Tokens = {
     title: text(20, 26.0, '400'),
     body: text(16, 23.2),
     aiBody: text(16, 26.4),
-    bookBody: text(17, 31.45, '400', 'serif'),
+    bookBody: text(17, 29.75, '400', 'serif'),
     continueTitle: text(26, 33.800000000000004, '400'),
     label: text(14, 20.3, '500'),
     caption: text(13, 18.85),

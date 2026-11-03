@@ -202,6 +202,7 @@ it('presents equation and table comparisons as readable content rather than sour
   const table = presentRefinementContent(before);
   expect(table).toEqual({
     kind: 'table',
+    grid: expect.objectContaining({ rows: 2, columns: 2 }),
     rows: [
       ['Item', 'Count'],
       ['Example', 'l'],

@@ -14,7 +14,7 @@ import {
 import { createReaderRuntime, setReaderRuntime } from '@app/readerRuntime';
 import { loadStudyReader } from '@app/usecases/studyReader';
 import { FlatList } from 'react-native';
-import { Button, PageOrig } from '@ui/kit';
+import { Button, IconButton, PageOrig, Row } from '@ui/kit';
 import {
   useStudyVM,
   useReaderVM,
@@ -269,7 +269,8 @@ it('cancels a closed translation and ignores its late response after a new trans
     });
     expect(vm().state.overlay).toEqual(current);
     const cached = await c.db.get<{ content: string }>(
-      "SELECT content FROM section_translation WHERE book_id='aima' AND section_id='3.5.2'",
+      "SELECT content FROM ai_task_cache WHERE book_id='aima' AND scope=?",
+      [JSON.stringify(['bilingualSection', '3.5.2'])],
     );
     expect(cached?.content).toBeTruthy();
     expect(cached?.content).not.toContain('迟到的旧译文');
@@ -305,13 +306,23 @@ it('retries a failed chapter translation through the resume path instead of forc
 it('stops a translation while keeping the original and received Chinese visible', async () => {
   const vm = await mount(() => useReaderVM('aima', '3.5.2'));
   const session = getStudySession(c, 'aima');
+  const block = (await c.repos.blocks.reading.bySection('aima', '3.5.2'))[0];
   let signal: AbortSignal | undefined;
   const translation = jest
     .spyOn(session, 'translateSection')
     .mockImplementation(
-      async (_id, requestSignal, _config, _refresh, onText) => {
+      async (_id, requestSignal, _config, _refresh, _onText, onPassages) => {
         signal = requestSignal;
-        onText?.('已经收到的中文译文。');
+        onPassages?.([
+          {
+            id: `${block.seq}:0`,
+            block,
+            source: block.text,
+            translate: true,
+            answer: '已经收到的中文译文。',
+            complete: false,
+          },
+        ]);
         return new Promise<string>((_resolve, reject) => {
           requestSignal?.addEventListener(
             'abort',
@@ -331,7 +342,20 @@ it('stops a translation while keeping the original and received Chinese visible'
     if (before?.kind !== 'sectionTranslation')
       throw new Error('Missing translation');
     expect(before.quote?.length).toBeGreaterThan(0);
-    expect(before.answer).toBeTruthy();
+    expect(before.passages?.[0].source.length).toBeGreaterThan(0);
+    expect(JSON.stringify(before.passages?.[0].answer)).toContain(
+      '已经收到的中文译文。',
+    );
+    await act(() => vm().intents.pressCite(block.seq));
+    expect(vm().state.referenceOverlay).toMatchObject({
+      kind: 'peek',
+      seq: block.seq,
+    });
+    expect(vm().state.overlay).toBe(before);
+    expect(signal?.aborted).toBe(false);
+    await act(() => vm().intents.closeReference?.());
+    expect(vm().state.referenceOverlay).toBeNull();
+    expect(vm().state.overlay).toBe(before);
     await act(() => vm().intents.overlayAction('stop'));
     expect(signal?.aborted).toBe(true);
     expect(vm().state.overlay).toEqual({
@@ -342,6 +366,21 @@ it('stops a translation while keeping the original and received Chinese visible'
   } finally {
     translation.mockRestore();
   }
+});
+it('saves reading appearance in place without losing the current section', async () => {
+  const vm = await mount(() => useReaderVM('aima', '3.5.2'));
+  const heading = vm().state.header.title;
+  await act(async () => {
+    vm().intents.setReadingAppearance?.({ readingSize: 'l', scheme: 'dark' });
+    await c.appearance.flush();
+  });
+  expect(vm().state.reading).toMatchObject({
+    readingSize: 'l',
+    scheme: 'dark',
+  });
+  expect(vm().state.header.title).toBe(heading);
+  expect(await c.repos.settings.get('ui.readingSize', '')).toBe('l');
+  expect(nav.open).not.toHaveBeenCalled();
 });
 it.each([false, true])(
   'prefills and focuses a shelf question without sending or starting AI (warm session: %s)',
@@ -1118,13 +1157,18 @@ const doneIntents: SectionDoneIntents = {
   retry: noop,
   save: noop,
 };
-it('opens refinement from both source readers and gives adopted blocks a visible label', async () => {
+it('opens refinement from both readers and shows adopted details on selection', async () => {
   const openRefinement = jest.fn();
   const read = {
     ...readerSamples.normal.read,
     items: readerSamples.normal.read.items.map(item =>
       item.kind === 'block' && item.seq === 2
-        ? { ...item, refined: true, continuesFrom: 1 }
+        ? {
+            ...item,
+            refined: true,
+            continuesFrom: 1,
+            marks: [...item.marks, 'selected' as const],
+          }
         : item,
     ),
   };
@@ -1146,10 +1190,19 @@ it('opens refinement from both source readers and gives adopted blocks a visible
         </SkinProvider>,
       );
     });
-    const buttons = renderer!.root.findAllByType(Button);
-    const entry = buttons.find(b => b.props.label === '精修本节')!;
-    const badge = buttons.find(b => b.props.label === 'AI 精修 · 接续上段')!;
-    expect(entry.props.disabled).toBe(false);
+    await act(() =>
+      renderer!.root
+        .findAllByType(IconButton)
+        .find(b => b.props.label === '阅读工具')!
+        .props.onPress(),
+    );
+    const entry = renderer!.root
+      .findAllByType(Row)
+      .find(row => row.props.title === '精修本节')!;
+    const badge = renderer!.root
+      .findAllByType(Button)
+      .find(b => b.props.label === 'AI 精修 · 接续上段')!;
+    expect(entry.props.onPress).toEqual(expect.any(Function));
     expect(badge).toBeDefined();
     await act(() => entry.props.onPress());
     await act(() => badge.props.onPress());

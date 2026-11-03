@@ -134,8 +134,8 @@ describe('design token completeness', () => {
       lineHeight: 28.48,
     });
     expect(paperTokens.light.type.bookBody).toMatchObject({
-      fontSize: 16.5,
-      lineHeight: 31.35,
+      fontSize: 17,
+      lineHeight: 29.75,
     });
     expect(paperTokens.light.shape.sheet).toBe(18);
     expect(paperTokens.light.motion).toMatchObject({

@@ -228,8 +228,8 @@ it('图片按原始比例排版，切换图片后忽略过期加载事件', asyn
   await act(async () =>
     oldLoad({ nativeEvent: { source: { width: 800, height: 200 } } }),
   );
-  expect(imageStyle().aspectRatio).toBe(4);
-  expect(imageStyle().height).toBeUndefined();
+  expect(imageStyle().width / imageStyle().height).toBe(4);
+  expect(imageStyle().width).toBeLessThanOrEqual(800);
   await act(async () =>
     renderer.update(
       <SkinProvider skinId="glass" scheme="light" reduceMotion>
@@ -245,7 +245,8 @@ it('图片按原始比例排版，切换图片后忽略过期加载事件', asyn
   await act(async () =>
     oldLoad({ nativeEvent: { source: { width: 800, height: 200 } } }),
   );
-  expect(imageStyle().aspectRatio).toBe(0.25);
+  expect(imageStyle().width / imageStyle().height).toBe(0.25);
+  expect(imageStyle().width).toBeLessThanOrEqual(200);
 });
 
 it.each(['sm', 'md', 'lg'] as const)(

@@ -6,6 +6,49 @@ export interface TranslationChunk {
   translate: boolean;
 }
 
+export interface TranslationPassage {
+  id: string;
+  block: Block;
+  source: string;
+  translate: boolean;
+}
+
+export interface TranslationProgress extends TranslationPassage {
+  answer: string | null;
+  complete: boolean;
+}
+
+/** Alignment is owned by the source, never inferred from the model's paragraphs. */
+export function translationPassages(
+  blocks: readonly Block[],
+): TranslationPassage[] {
+  return blocks.flatMap(block => {
+    if (block.type === 'table') {
+      const source = block.html || block.text;
+      return [
+        { id: `${block.seq}:0`, block, source, translate: !!source.trim() },
+      ];
+    }
+    if (
+      block.type === 'image' &&
+      (block.refinement?.visual || !block.text.trim())
+    ) {
+      return [
+        { id: `${block.seq}:0`, block, source: block.text, translate: false },
+      ];
+    }
+    // Keep the heading level in the source block instead of asking the model to recreate it.
+    const chunks = translationChunks([
+      { ...block, type: block.type === 'title' ? 'text' : block.type },
+    ]);
+    return chunks.map((chunk, index) => ({
+      ...chunk,
+      id: `${block.seq}:${index}`,
+      block: chunks.length === 1 ? block : { ...block, text: chunk.source },
+    }));
+  });
+}
+
 /** 按原文顺序覆盖整节；代码和独立公式直接保留，不交给模型改写。 */
 export function translationChunks(
   blocks: readonly Block[],

@@ -340,6 +340,51 @@ it('invalidates cached translations on adoption/undo and refreshes subsequent ch
   expect(complete).toHaveBeenCalled();
 });
 
+it('persists an image reconstruction, loads it into reading, and restores the scan on undo', async () => {
+  await source([''], { type: 'image', image_path: 'file:///scan.jpg' });
+  const visual = {
+    kind: 'diagram',
+    title: '投资流程',
+    description: '从信号到组合',
+    nodes: [
+      { id: 'a', label: '信号', x: 0.5, y: 0 },
+      { id: 'b', label: '组合', x: 0.5, y: 1 },
+    ],
+    edges: [{ from: 'a', to: 'b', label: '' }],
+  };
+  setRefinementImageLoader(c, async () => [
+    { data: 'source-pixels', mime: 'image/png', label: '原 PDF 第 1 页' },
+  ]);
+  const complete = jest
+    .spyOn(c.ai, 'complete')
+    .mockResolvedValue(
+      response({ edits: [{ seq: 1, visual, reason: '复原流程' }], issues: [] }),
+    );
+  const run = await generate({ mode: 'vision' });
+  expect(complete.mock.calls[0][1].system).toContain('不能仅用首尾直线');
+  expect(
+    JSON.parse(complete.mock.calls[0][1].contextBlocks[0].text).targets[0].type,
+  ).toBe('image');
+  await applyRefinement(c, run.id, [1]);
+  expect(
+    (await loadStudyReader(c, 'aima', sectionId)).blocks[0].refinement?.visual,
+  ).toEqual(visual);
+  expect(
+    (await c.repos.refinements.get(run.id))?.document.edits[0].visual,
+  ).toEqual(visual);
+  expect((await c.repos.blocks.get('aima', 1))?.refinement).toBeUndefined();
+  expect(JSON.stringify(await c.repos.refinements.get(run.id))).not.toContain(
+    'source-pixels',
+  );
+  await undoRefinement(c, run.id);
+  expect((await loadStudyReader(c, 'aima', sectionId)).blocks[0]).toMatchObject(
+    { type: 'image', image_path: 'file:///scan.jpg' },
+  );
+  expect(
+    (await loadStudyReader(c, 'aima', sectionId)).blocks[0].refinement,
+  ).toBeUndefined();
+});
+
 it('keeps source-page review unavailable for a backup whose original PDF was omitted', async () => {
   await source(['text']);
   await c.repos.settings.set('backup.missingOriginals', [
@@ -349,6 +394,69 @@ it('keeps source-page review unavailable for a backup whose original PDF was omi
   setRefinementImageLoader(c, loader);
   await expect(generate({ mode: 'vision' })).rejects.toThrow('重新导入原 PDF');
   expect(loader).not.toHaveBeenCalled();
+});
+
+it('returns invalid reconstruction coordinates to the model once with the same source images, then retains an unresolved scan', async () => {
+  await source([''], { type: 'image', image_path: 'file:///scan.jpg' });
+  setRefinementImageLoader(c, async () => [
+    { data: 'source-pixels', mime: 'image/png', label: '原图' },
+  ]);
+  const invalid = {
+    kind: 'chart',
+    title: '',
+    description: '走势',
+    x: {
+      label: '',
+      min: 0,
+      max: 10,
+      scale: 'linear',
+      ticks: [
+        { value: 0, label: '0' },
+        { value: 10, label: '10' },
+      ],
+    },
+    y: {
+      label: '',
+      min: 0,
+      max: 10,
+      scale: 'linear',
+      ticks: [
+        { value: 0, label: '0' },
+        { value: 10, label: '10' },
+      ],
+    },
+    series: [
+      {
+        name: '',
+        type: 'line',
+        points: [
+          [0, 1],
+          [11, 2],
+        ],
+        dashed: false,
+      },
+    ],
+    annotations: [],
+  };
+  const complete = jest
+    .spyOn(c.ai, 'complete')
+    .mockResolvedValue(
+      response({ edits: [{ seq: 1, visual: invalid }], issues: [] }),
+    );
+  const run = await generate({ mode: 'vision' });
+  expect(complete).toHaveBeenCalledTimes(2);
+  const repair = JSON.parse(
+    complete.mock.calls[1][1].contextBlocks[0].text,
+  ).repair;
+  expect(repair.errors[0].reason).toContain('11 超出轴范围 [0, 10]');
+  expect(complete.mock.calls[1][1].images).toEqual(
+    complete.mock.calls[0][1].images,
+  );
+  expect(run.document.edits).toHaveLength(0);
+  expect(run.document.issues[0].reason).toContain('保留原文');
+  expect(
+    (await c.repos.blocks.reading.get('aima', 1))?.refinement,
+  ).toBeUndefined();
 });
 
 it.each([false, true])(
