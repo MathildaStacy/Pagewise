@@ -16,12 +16,14 @@ export function AiOptionsControl({
   disabled,
   inline = false,
   compact = false,
+  labelOnly = false,
 }: {
   state?: AiOptionsState;
   onChange?(patch: Partial<ConversationConfig>): void;
   disabled?: boolean;
   inline?: boolean;
   compact?: boolean;
+  labelOnly?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const s = useStyles();
@@ -79,6 +81,7 @@ export function AiOptionsControl({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="模型与推理设置"
+        accessibilityHint={selected?.label}
         accessibilityState={{ disabled, expanded: open }}
         disabled={disabled}
         onPress={() => setOpen(true)}
@@ -89,7 +92,9 @@ export function AiOptionsControl({
         ]}
       >
         <Text numberOfLines={compact ? 1 : 2} style={s.label}>
-          {compact
+          {labelOnly
+            ? '模型'
+            : compact
             ? selected?.model ?? '选择 AI 模型'
             : `${selected?.label ?? '选择 AI 模型'}${
                 effort ? ' · 推理' + effort : ''

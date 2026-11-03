@@ -20,13 +20,15 @@ import {
 import { ScrollView } from 'react-native-gesture-handler';
 import { SvgXml } from 'react-native-svg';
 import Clipboard from '@react-native-clipboard/clipboard';
-import type { KitProps, RichDoc, RichInline, Tone } from '../contracts';
+import { copyableText } from '../richText';
+import type { KitProps, RichInline, Tone } from '../contracts';
 import { useSkin, useTokens } from '../context';
 import { Icon } from '../Icon';
 import { makeStyles } from '../makeStyles';
 import { CodeBlock, codeFontFamily } from '../code/CodeBlock';
 import * as Kit from '../proxy';
 import { BookVisualView } from '../BookVisualView';
+import { TableView } from '../TableView';
 import { useMathRenderer, type FormulaRender } from '../MathProvider';
 import {
   RevealContext,
@@ -256,6 +258,15 @@ const RichBlockView = memo(function RichBlock({
       );
     case 'code':
       return <CodeBlock text={block.text} language={block.language} />;
+    case 'table':
+      return (
+        <TableView
+          rows={block.rows.map(row => row.map(c => [{ t: 'p', c }]))}
+          selectable={selectable}
+          onCite={onCite}
+          onFigure={onFigure}
+        />
+      );
     case 'list':
       return (
         <View style={s.list}>
@@ -587,47 +598,6 @@ export function AiMessage({
       ) : null}
     </View>
   );
-}
-
-function copyableText(doc: RichDoc): string {
-  const inline = (nodes: RichInline[]): string =>
-    nodes
-      .map(node =>
-        node.t === 'text' || node.t === 'code'
-          ? node.v
-          : node.t === 'b'
-          ? inline(node.c)
-          : node.t === 'math'
-          ? `$${node.tex}$`
-          : node.t === 'cite'
-          ? `[${node.label ?? `b${node.ref}`}]`
-          : '（未核实）',
-      )
-      .join('');
-  return doc
-    .map(block =>
-      block.t === 'p' || block.t === 'check'
-        ? inline(block.c)
-        : block.t === 'list'
-        ? block.items
-            .map(
-              (item, index) =>
-                `${
-                  block.ordered ? `${(block.start ?? 1) + index}.` : '•'
-                } ${inline(item)}`,
-            )
-            .join('\n')
-        : block.t === 'math'
-        ? `$$${block.tex}$$`
-        : block.t === 'code'
-        ? block.text
-        : block.t === 'aux'
-        ? copyableText(block.body)
-        : block.t === 'visual'
-        ? `${block.data.title}\n${block.data.description}`
-        : block.text ?? block.label ?? `[b${block.ref}]`,
-    )
-    .join('\n\n');
 }
 
 export function RevealSkip({

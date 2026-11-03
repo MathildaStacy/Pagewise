@@ -48,6 +48,7 @@ function AppBar({
   right,
   scrollY = 0,
   part = 'all',
+  titleLines = 1,
 }: AppBarProps) {
   const t = useTokens();
   const root = variant === 'root';
@@ -194,7 +195,7 @@ function AppBar({
           ]}
         >
           <Text
-            numberOfLines={1}
+            numberOfLines={titleLines}
             style={[
               t.type.title,
               StyleSheet.create({ root: { color: t.color.ink } }).root,

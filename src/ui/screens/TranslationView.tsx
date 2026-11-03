@@ -2,6 +2,7 @@ import { useLayoutEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import {
   Button,
+  CopyTextButton,
   Icon,
   Note,
   RevealContext,
@@ -87,6 +88,7 @@ export function TranslationView({
             onChange={intents.setAiOptions}
             disabled={overlay.streaming}
             compact
+            labelOnly
           />
         </View>
       </View>
@@ -179,6 +181,12 @@ export function TranslationView({
       </View>
       {!overlay.streaming && !overlay.error && !overlay.stopped ? (
         <View style={s.footer}>
+          {!busy && overlay.answer?.length ? (
+            <CopyTextButton
+              doc={overlay.answer}
+              label={explain ? '复制讲解' : '复制译文'}
+            />
+          ) : null}
           <Button
             variant="text"
             icon="sync"

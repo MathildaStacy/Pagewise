@@ -199,7 +199,7 @@ it('parses nested auxiliary content with citations, formulas, lists and a check'
     ],
   });
 });
-it('handles markdown headings, both list kinds and plain-text tables', () => {
+it('handles markdown headings, both list kinds and tables', () => {
   expect(
     parse(
       '# 小标题\r\n\r\n正文第一行\r第二行\n\n- 一\n- 二\n1. first\n2. **second**\n\n| A | B |\n|---|---|',
@@ -213,10 +213,54 @@ it('handles markdown headings, both list kinds and plain-text tables', () => {
       ordered: true,
       items: [[text('first')], [{ t: 'b', c: [text('second')] }]],
     },
-    paragraph('| A | B |\n|---|---|'),
+    { t: 'table', rows: [[[text('A')], [text('B')]]] },
   ]);
   expect(parse('### 正文标题 ###')).toEqual([
     { t: 'p', heading: 3, c: [{ t: 'b', c: [text('正文标题')] }] },
+  ]);
+});
+it('parses table rows with escaped pipes, code and math in cells', () => {
+  expect(
+    parse(
+      '说明\n| 指标 | 公式 |\n| :--- | ---: |\n| `a|b` | $x|y$ |\n| A \\| B |\n\n结论',
+    ),
+  ).toEqual([
+    paragraph('说明'),
+    {
+      t: 'table',
+      rows: [
+        [[text('指标')], [text('公式')]],
+        [[{ t: 'code', v: 'a|b' }], [{ t: 'math', tex: 'x|y' }]],
+        [[text('A | B')], []],
+      ],
+    },
+    paragraph('结论'),
+  ]);
+  expect(parse('| A | B |\n| --- |')).toEqual([
+    paragraph('| A | B |\n| --- |'),
+  ]);
+});
+it('holds back a streaming table row until all of its columns arrive', () => {
+  expect(
+    parse('| A | B |\n|---|---|\n| 1 | 2 |\n| 3', { streaming: true }),
+  ).toEqual([
+    {
+      t: 'table',
+      rows: [
+        [[text('A')], [text('B')]],
+        [[text('1')], [text('2')]],
+      ],
+    },
+  ]);
+  expect(parse('| A | B |\n|---|---|\n| 1 | 2 |\n| 3')).toEqual([
+    {
+      t: 'table',
+      rows: [
+        [[text('A')], [text('B')]],
+        [[text('1')], [text('2')]],
+        [[text('3')], []],
+      ],
+    },
   ]);
 });
 it('keeps list numbering across separately parsed book blocks and accepts printed bullets', () => {

@@ -49,6 +49,7 @@ import type {
   StudyIntents,
   StudyOverlay,
   StudyState,
+  TranslationReadingMode,
 } from './types';
 
 function errorText(error: unknown) {
@@ -145,6 +146,7 @@ export function useStudyVM(
   const mounted = useRef(true),
     explainRequest = useRef(0);
   const pendingRefs = useRef(new Set<number>());
+  const translationModes = useRef(new Map<string, TranslationReadingMode>());
   const mode = standalone ? 'read' : raw.mode;
   useEffect(() => {
     if (mode === 'read') setComposerFocusRequest(undefined);
@@ -604,6 +606,8 @@ export function useStudyVM(
     return true;
   };
   const closeOverlay = () => {
+    if (overlay?.kind === 'sectionTranslation' && anchorRef.current !== null)
+      setLocalScroll({ ref: `b${anchorRef.current}`, token: Date.now() });
     setReferenceOverlay(null);
     explanationController.current?.abort();
     explainRequest.current++;
@@ -619,6 +623,8 @@ export function useStudyVM(
     setOverlay({
       kind: 'sectionTranslation',
       sectionId: readerId,
+      initialRef: anchorRef.current ?? raw.readAnchor ?? undefined,
+      initialMode: translationModes.current.get(readerId),
       quote: reader?.blocks.flatMap(block => blockDoc(block, raw.book)),
       passages: presentTranslation(
         translationPassages(reader?.blocks ?? []).map(part => ({
@@ -1033,6 +1039,9 @@ export function useStudyVM(
     openConversations,
     newConversation,
     translateSection: startTranslation,
+    setTranslationMode: value => {
+      if (readerId) translationModes.current.set(readerId, value);
+    },
     openRefinement: refinement.open,
     refinementAction: refinement.action,
     refinementMode: refinement.setMode,
@@ -1332,7 +1341,13 @@ export function useStudyVM(
       }
       if (key === 'regenerate') {
         if (shown.kind === 'sectionTranslation')
-          startTranslation(shown.error || shown.stopped ? 'resume' : true);
+          startTranslation(
+            shown.error ||
+              shown.stopped ||
+              shown.passages?.some(part => !part.preserved && !part.complete)
+              ? 'resume'
+              : true,
+          );
         else if (shown.kind === 'explain' || shown.kind === 'translate')
           menuAction(shown.kind, true);
         return;
@@ -1473,6 +1488,15 @@ function docText(doc: import('@ui/kit').RichDoc): string {
         ? `$$${b.tex}$$`
         : b.t === 'list'
         ? b.items.map(inline).join('\n')
+        : b.t === 'table'
+        ? b.rows
+            .map(
+              (row, index) =>
+                `| ${row.map(inline).join(' | ')} |${
+                  index === 0 ? `\n| ${row.map(() => '---').join(' | ')} |` : ''
+                }`,
+            )
+            .join('\n')
         : b.t === 'aux'
         ? docText(b.body)
         : b.t === 'code'

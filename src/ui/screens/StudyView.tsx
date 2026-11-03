@@ -119,6 +119,7 @@ export function StudyView({
       <View style={s.root}>
         <AppBar
           variant="push"
+          titleLines={2}
           title={
             paperReader ? `原文 · ${state.header.title}` : state.header.title
           }
@@ -254,7 +255,7 @@ export function StudyView({
                 pointerEvents="box-none"
               >
                 {floatingChrome ? <BottomFade /> : null}
-                {!keyboardOpen && visibleActions.length ? (
+                {!keyboardOpen && !comp.streaming && visibleActions.length ? (
                   <QuickActions
                     items={[
                       ...visibleActions,

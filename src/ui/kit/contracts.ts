@@ -100,6 +100,7 @@ export interface AppBarProps {
   right?: ReactNode;
   scrollY?: number;
   part?: 'all' | 'navigation' | 'largeTitle';
+  titleLines?: number;
 }
 export interface TabBarProps {
   items: {
@@ -325,6 +326,7 @@ export type RichBlock =
   | { t: 'p'; c: RichInline[]; heading?: number }
   | { t: 'math'; tex: string }
   | { t: 'list'; ordered: boolean; start?: number; items: RichInline[][] }
+  | { t: 'table'; rows: RichInline[][][] }
   | {
       t: 'quote' | 'figure';
       ref: number;

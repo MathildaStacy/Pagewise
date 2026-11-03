@@ -159,6 +159,7 @@ export interface TranslationReadingPassage {
   complete: boolean;
   preserved: boolean;
 }
+export type TranslationReadingMode = 'parallel' | 'chinese' | 'source';
 export interface ReaderOriginalPage {
   page: number;
   label: string;
@@ -207,6 +208,8 @@ export type StudyOverlay =
       kind: 'sectionTranslation';
       passages?: TranslationReadingPassage[];
       sectionId: string;
+      initialRef?: number;
+      initialMode?: TranslationReadingMode;
       quote?: RichDoc;
       answer: RichDoc | null;
       streaming: boolean;
@@ -347,6 +350,7 @@ export interface StudyIntents {
   openConversations?(): void;
   newConversation?(): void;
   translateSection?(): void;
+  setTranslationMode?(mode: TranslationReadingMode): void;
   back(): void;
   setMode(mode: 'listen' | 'read'): void;
   openMenu(): void;
