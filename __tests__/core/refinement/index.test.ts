@@ -76,7 +76,7 @@ it('repairs every wrapped line, CJK spacing and hyphenation while preserving par
   ).toEqual([]);
 });
 
-it('covers complete blocks once, respects two-page image batches and leaves code/images as read-only context', () => {
+it('covers complete blocks once, isolates images for visual reconstruction and leaves code as read-only context', () => {
   const source = [
     block(1, 'a'.repeat(8)),
     block(2, 'b'.repeat(8)),
@@ -91,7 +91,7 @@ it('covers complete blocks once, respects two-page image batches and leaves code
     { seqs: [6], context: [5] },
   ]);
   const chunks = refinementChunks(source, 'vision', 100);
-  expect(chunks.flatMap(c => c.seqs)).toEqual([1, 2, 4, 6]);
+  expect(chunks.flatMap(c => c.seqs)).toEqual([1, 2, 4, 5, 6]);
   expect(
     chunks.every(
       c =>
@@ -195,7 +195,7 @@ it('fails a batch only for unreadable output, and relocates issues instead of re
     expect(
       parse([block(1, 'code', { type })], [edit(1, 'new')], 'vision').issues[0]
         .reason,
-    ).toContain('不能修改');
+    ).toContain(type === 'code' ? '不能修改' : '图片需要完整');
 });
 
 it('permits image-verified formula and table corrections even with empty OCR text, and never clears their content', () => {

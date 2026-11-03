@@ -25,6 +25,7 @@ import { Icon } from '../Icon';
 import { makeStyles } from '../makeStyles';
 import { CodeBlock, codeFontFamily } from '../code/CodeBlock';
 import * as Kit from '../proxy';
+import { BookVisualView } from '../BookVisualView';
 import { useMathRenderer, type FormulaRender } from '../MathProvider';
 import {
   RevealContext,
@@ -142,6 +143,10 @@ export function RichView({
       ? s.dialogQuoteText
       : typography === 'sheetQuote'
       ? s.sheetQuoteText
+      : typography === 'book'
+      ? s.bookText
+      : typography === 'bookCaption'
+      ? s.bookCaption
       : study === 'source'
       ? s.sourceText
       : study === 'aux'
@@ -158,7 +163,11 @@ export function RichView({
     <View
       style={[s.rich, study === 'aux' && s.auxRich]}
       accessibilityRole="none"
-      accessibilityLabel="讲解内容"
+      accessibilityLabel={
+        book || typography === 'book' || typography === 'bookCaption'
+          ? '书籍内容'
+          : '讲解内容'
+      }
       accessibilityState={{}}
     >
       <InlineFontSize.Provider value={StyleSheet.flatten(textStyle)?.fontSize}>
@@ -194,10 +203,47 @@ const RichBlockView = memo(function RichBlock({
   onFigure?: KitProps['RichView']['onFigure'];
 }) {
   const s = useStyles();
+  const t = useTokens();
   switch (block.t) {
+    case 'visual':
+      return (
+        <BookVisualView
+          data={block.data}
+          onOriginal={onFigure ? () => onFigure(block.ref) : undefined}
+        />
+      );
     case 'p':
       return (
-        <Text style={textStyle} selectable={selectable}>
+        <Text
+          accessibilityRole={block.heading ? 'header' : undefined}
+          style={[
+            textStyle,
+            block.heading ? s.richHeading : undefined,
+            block.heading
+              ? {
+                  fontFamily: t.type.sansFamily,
+                  fontSize:
+                    (StyleSheet.flatten(textStyle)?.fontSize ??
+                      t.type.bookBody.fontSize) *
+                    (block.heading === 1
+                      ? 1.5
+                      : block.heading === 2
+                      ? 1.25
+                      : 1.1),
+                  lineHeight:
+                    (StyleSheet.flatten(textStyle)?.fontSize ??
+                      t.type.bookBody.fontSize) *
+                    (block.heading === 1
+                      ? 1.5
+                      : block.heading === 2
+                      ? 1.25
+                      : 1.1) *
+                    1.4,
+                }
+              : undefined,
+          ]}
+          selectable={selectable}
+        >
           <Inline nodes={block.c} onCite={onCite} />
         </Text>
       );
@@ -215,7 +261,7 @@ const RichBlockView = memo(function RichBlock({
           {block.items.map((items, itemIndex) => (
             <View key={itemIndex} style={s.listItem}>
               <Text style={textStyle} selectable={selectable}>
-                {block.ordered ? `${itemIndex + 1}.` : '•'}
+                {block.ordered ? `${itemIndex + (block.start ?? 1)}.` : '•'}
               </Text>
               <Text style={[textStyle, s.grow]} selectable={selectable}>
                 <Inline nodes={items} onCite={onCite} />
@@ -405,18 +451,37 @@ export function CiteChip({
 
 function FigureImage({ uri, caption }: KitProps['FigureView']) {
   const s = useStyles();
-  const [aspectRatio, setAspectRatio] = useState(1);
+  const {
+    width: windowWidth,
+    height: windowHeight,
+    scale,
+  } = useWindowDimensions();
+  const [containerWidth, setContainerWidth] = useState(0);
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  const aspectRatio = size.width && size.height ? size.width / size.height : 1;
+  const width = Math.min(
+    size.width ? size.width / scale : windowWidth,
+    containerWidth || windowWidth,
+    windowHeight * 0.7 * aspectRatio,
+  );
+  const imageSize = { width, height: width / aspectRatio };
   return (
-    <Image
-      source={{ uri }}
-      resizeMode="contain"
-      onLoad={event => {
-        const { width, height } = event.nativeEvent.source;
-        if (width > 0 && height > 0) setAspectRatio(width / height);
-      }}
-      style={[s.figureImage, StyleSheet.create({ root: { aspectRatio } }).root]}
-      accessibilityLabel={caption}
-    />
+    <View
+      style={s.figureImage}
+      onLayout={event => setContainerWidth(event.nativeEvent.layout.width)}
+    >
+      <Image
+        source={{ uri }}
+        resizeMode="contain"
+        onLoad={event => {
+          const source = event.nativeEvent.source;
+          if (source.width > 0 && source.height > 0)
+            setSize({ width: source.width, height: source.height });
+        }}
+        style={imageSize}
+        accessibilityLabel={caption}
+      />
+    </View>
   );
 }
 
@@ -425,7 +490,7 @@ export function FigureView({ uri, caption, onPress }: KitProps['FigureView']) {
   const content = (
     <>
       <FigureImage key={uri} uri={uri} caption={caption} />
-      <Text style={s.bookCaption}>{caption}</Text>
+      {caption ? <Text style={s.bookCaption}>{caption}</Text> : null}
     </>
   );
   return onPress ? (
@@ -1563,6 +1628,7 @@ export function LayerRow({
 }
 
 const useStyles = makeStyles(t => ({
+  richHeading: { fontWeight: '700', marginTop: 12, marginBottom: 4 },
   rich: { gap: 10 },
   grow: { flex: 1, minWidth: 0 },
   inline: { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -1587,7 +1653,9 @@ const useStyles = makeStyles(t => ({
     color: t.color.ink2,
   },
   bookCaption: {
-    ...t.type.caption,
+    ...t.type.bookBody,
+    fontSize: t.type.bookBody.fontSize * 0.86,
+    lineHeight: t.type.bookBody.fontSize * 0.86 * 1.65,
     fontFamily: t.type.serifFamily,
     color: t.color.ink2,
   },
@@ -1599,7 +1667,12 @@ const useStyles = makeStyles(t => ({
     paddingLeft: 8,
   },
   mathText: { ...t.type.aiBody, ...t.type.num, color: t.color.ink },
-  tableCellText: { ...t.type.body, color: t.color.ink },
+  tableCellText: {
+    ...t.type.bookBody,
+    fontSize: t.type.bookBody.fontSize * 0.9,
+    lineHeight: t.type.bookBody.fontSize * 0.9 * 1.6,
+    color: t.color.ink,
+  },
   mathFallback: {
     ...t.type.aiBody,
     fontFamily: 'monospace',
@@ -1633,7 +1706,7 @@ const useStyles = makeStyles(t => ({
     backgroundColor: t.layout.groupedLists ? 'transparent' : t.color.paper,
     gap: 6,
   },
-  figureImage: { width: '100%' },
+  figureImage: { width: '100%', alignItems: 'center' },
   user: {
     alignSelf: 'flex-end',
     maxWidth: t.layout.groupedLists ? '80%' : '84%',

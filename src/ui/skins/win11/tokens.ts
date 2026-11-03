@@ -166,7 +166,7 @@ export const win11Light: Tokens = {
     title: text(16, 20.8, '600'),
     body: text(14, 20.3),
     aiBody: text(15.5, 26.349999999999998),
-    bookBody: text(16.5, 31.35, '400', 'serif'),
+    bookBody: text(17, 29.75, '400', 'serif'),
     continueTitle: text(24, 31.200000000000003, '600'),
     label: text(14, 20.3, '500'),
     caption: text(12, 18),

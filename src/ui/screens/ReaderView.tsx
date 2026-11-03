@@ -26,6 +26,7 @@ import {
 } from 'react-native';
 import {
   AppBar,
+  BookVisualView,
   BlockView,
   Button,
   Dialog,
@@ -219,18 +220,17 @@ export function ReaderContent({
       ...page.blocks.map((block, blockIndex) => ({
         id: block.ref,
         block,
-        start: blockIndex === 0 && (!t.layout.groupedLists || pageIndex === 0),
+        start: blockIndex === 0 && pageIndex === 0,
         end: false,
       })),
       {
         id: `number-${page.id}`,
         label: page.label,
-        start:
-          !page.blocks.length && (!t.layout.groupedLists || pageIndex === 0),
-        end: !t.layout.groupedLists || pageIndex === pages.length - 1,
+        start: !page.blocks.length && pageIndex === 0,
+        end: pageIndex === pages.length - 1,
       },
     ]);
-  }, [state.items, state.format, t.layout.groupedLists]);
+  }, [state.items, state.format]);
   const latest = useRef({ rows, reportAnchor: intents.reportAnchor });
   latest.current = { rows, reportAnchor: intents.reportAnchor };
   const settleTarget = useRef(() => {});
@@ -293,7 +293,14 @@ export function ReaderContent({
     <View style={s.footerSpace} />
   );
   const renderItem = ({ item }: { item: FlowRow }) => (
-    <View style={[s.flowRow, item.start && s.flowStart, item.end && s.flowEnd]}>
+    <View
+      style={[
+        s.flowRow,
+        { width: Math.min(width - 32, 760) },
+        item.start && s.flowStart,
+        item.end && s.flowEnd,
+      ]}
+    >
       {item.block ? (
         <ReaderBlockRow item={item.block} intents={intents} />
       ) : (
@@ -432,6 +439,8 @@ export function ReaderContent({
                     style={[
                       s.articleBackdrop,
                       {
+                        left: (width - Math.min(width - 32, 760)) / 2,
+                        right: (width - Math.min(width - 32, 760)) / 2,
                         height: Math.max(
                           0,
                           contentHeight - headerHeight - footerHeight,
@@ -777,7 +786,8 @@ function ReaderBlockRow({
         item.marks.includes('flash') ? s.flash : undefined,
       ]}
     >
-      {item.refined || item.joined?.length ? (
+      {(item.refined || item.joined?.length) &&
+      item.marks.includes('selected') ? (
         <Button
           variant="text"
           size="sm"
@@ -819,28 +829,43 @@ function ReaderBlockRow({
           </Text>
         </View>
       ) : item.type === 'table' ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="查看表格"
-          onPress={select}
-        >
-          <View style={s.tablePreview}>
-            <TableView rows={item.table ?? []} preview />
-            <Button
-              variant="text"
-              size="sm"
-              onPress={() => intents.pressTable(item.ref)}
-            >
-              展开表格
-            </Button>
-          </View>
-        </Pressable>
+        <View style={s.tablePreview}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="查看表格"
+            onPress={() => intents.pressTable(item.ref)}
+            onLongPress={select}
+          >
+            <TableView rows={item.table ?? []} grid={item.tableGrid} preview />
+          </Pressable>
+          <Button
+            variant="text"
+            size="sm"
+            onPress={() => intents.pressTable(item.ref)}
+          >
+            展开表格
+          </Button>
+        </View>
+      ) : item.doc[0]?.t === 'visual' ? (
+        <BookVisualView
+          data={item.doc[0].data}
+          onOriginal={() => intents.pressFigure(item.seq)}
+        />
       ) : item.note ? (
         <View style={s.note}>
           <Text style={s.noteText} accessibilityLabel={`页边术语 ${noteText}`}>
             {noteText}
           </Text>
         </View>
+      ) : item.type === 'caption' || item.type === 'footnote' ? (
+        <Pressable
+          onPress={select}
+          accessibilityRole="button"
+          accessibilityLabel={item.type === 'footnote' ? '脚注' : '图注'}
+          style={s.bookNote}
+        >
+          <RichView doc={item.doc} typography="bookCaption" />
+        </Pressable>
       ) : (
         <BlockView
           doc={item.doc}
@@ -971,6 +996,22 @@ export function StudyOverlays({
         kind: 'primary',
         onPress: intents.closeOverlay,
       });
+  } else if (
+    overlay.kind === 'sectionTranslation' &&
+    (overlay.streaming || overlay.error || overlay.stopped)
+  ) {
+    actions.push({
+      label: overlay.streaming
+        ? '停止翻译'
+        : overlay.error
+        ? '重试翻译'
+        : overlay.stopped
+        ? '继续翻译'
+        : '重新翻译',
+      kind: 'secondary',
+      onPress: () =>
+        intents.overlayAction(overlay.streaming ? 'stop' : 'regenerate'),
+    });
   } else if (overlay.kind === 'pin') {
     actions.push(
       {
@@ -999,7 +1040,7 @@ export function StudyOverlays({
       : overlay.kind === 'translate'
       ? '翻译'
       : overlay.kind === 'sectionTranslation'
-      ? '本节翻译'
+      ? '双语阅读'
       : overlay.kind === 'pin'
       ? overlay.title
       : '查看表格';
@@ -1026,10 +1067,11 @@ export function StudyOverlays({
         overlay.kind === 'conversations'
       }
       detent={
-        overlay.kind === 'figure' ||
-        overlay.kind === 'table' ||
-        overlay.kind === 'translate' ||
         overlay.kind === 'sectionTranslation'
+          ? 'reading'
+          : overlay.kind === 'figure' ||
+            overlay.kind === 'table' ||
+            overlay.kind === 'translate'
           ? 'full'
           : 'auto'
       }
@@ -1119,15 +1161,7 @@ export function StudyOverlays({
         </View>
       ) : null}
       {overlay.kind === 'figure' ? (
-        <ScrollView contentContainerStyle={s.overlayBody}>
-          <Image
-            source={{ uri: overlay.uri }}
-            style={s.figure}
-            resizeMode="contain"
-            accessibilityLabel={overlay.caption}
-          />
-          <Text style={s.body}>{overlay.caption}</Text>
-        </ScrollView>
+        <FigureDetail key={overlay.uri} figure={overlay} />
       ) : null}
       {overlay.kind === 'translate' || overlay.kind === 'sectionTranslation' ? (
         <TranslationView
@@ -1185,11 +1219,47 @@ export function StudyOverlays({
       ) : null}
       {overlay.kind === 'table' ? (
         <View style={s.overlayBody}>
-          <TableView rows={overlay.rows} />
+          <TableView rows={overlay.rows} grid={overlay.grid} />
           <Text style={s.hint}>{overlay.caption}</Text>
         </View>
       ) : null}
     </Sheet>
+  );
+}
+
+function FigureDetail({
+  figure,
+}: {
+  figure: Extract<StudyOverlay, { kind: 'figure' }>;
+}) {
+  const s = useStyles();
+  const [mode, setMode] = useState('scan');
+  return (
+    <ScrollView contentContainerStyle={s.overlayBody}>
+      {figure.visual ? (
+        <Segmented
+          value={mode}
+          options={[
+            { key: 'drawing', label: '清晰重绘' },
+            { key: 'scan', label: '原扫描图' },
+          ]}
+          onChange={setMode}
+        />
+      ) : null}
+      {figure.visual && mode === 'drawing' ? (
+        <BookVisualView data={figure.visual} />
+      ) : (
+        <>
+          <Image
+            source={{ uri: figure.uri }}
+            style={s.figure}
+            resizeMode="contain"
+            accessibilityLabel={figure.caption}
+          />
+          <Text style={s.body}>{figure.caption}</Text>
+        </>
+      )}
+    </ScrollView>
   );
 }
 const useStyles = makeStyles(t => ({
@@ -1237,11 +1307,10 @@ const useStyles = makeStyles(t => ({
         : undefined,
   },
   flowRow: {
-    marginHorizontal: t.layout.groupedLists ? 16 : 12,
+    alignSelf: 'center',
     paddingHorizontal:
       t.brand?.kind === 'google' ? 22 : t.layout.groupedLists ? 20 : 16,
-    backgroundColor: t.layout.groupedLists ? t.color.paper : undefined,
-    ...(t.brand ? { marginHorizontal: t.brand.kind === 'meta' ? 0 : 16 } : {}),
+    backgroundColor: t.color.paper,
   },
   flowStart: {
     paddingTop: t.layout.groupedLists ? 22 : 18,
@@ -1360,17 +1429,21 @@ const useStyles = makeStyles(t => ({
       ? t.type.num.fontFamily
       : t.type.sansFamily,
     color: t.color.readerPageLabel,
-    textAlign: t.layout.groupedLists ? 'center' : 'left',
-    borderTopWidth: t.layout.groupedLists ? 0 : 1,
+    textAlign: 'center',
+    borderTopWidth: 0,
     borderTopColor: t.color.readerPageRule,
     borderStyle: 'dashed',
-    paddingTop: t.layout.groupedLists ? 0 : 4,
+    paddingTop: 0,
     marginTop: t.layout.groupedLists ? 4 : 6,
-    marginBottom: t.layout.groupedLists ? 14 : 0,
+    marginBottom: 10,
   },
   block: {
     marginHorizontal: t.layout.groupedLists ? -10 : -4,
     marginBottom: t.layout.groupedLists ? 8 : 6,
+  },
+  bookNote: {
+    paddingHorizontal: t.layout.groupedLists ? 10 : 4,
+    paddingVertical: 6,
   },
   selected: { backgroundColor: t.color.pressed, borderRadius: t.shape.md },
   flash: { backgroundColor: t.color.accentBg, borderRadius: t.shape.md },
@@ -1385,7 +1458,7 @@ const useStyles = makeStyles(t => ({
     paddingHorizontal: t.layout.groupedLists ? 10 : 4,
     paddingVertical: t.layout.groupedLists ? 3 : 2,
   },
-  titleBlock: { marginBottom: t.layout.groupedLists ? 12 : 8 },
+  titleBlock: { marginTop: 16, marginBottom: 12 },
   // Scaled from the reader heading so a chapter reads larger than a section, and a
   // subsection still stands above body text.
   refinedHeadingMajor: {
@@ -1394,7 +1467,7 @@ const useStyles = makeStyles(t => ({
   },
   refinedHeadingMinor: {
     fontSize: t.type.bookBody.fontSize * 1.1,
-    lineHeight: t.type.bookBody.fontSize * 1.1 * 1.6,
+    lineHeight: t.type.bookBody.fontSize * 1.1 * 1.4,
   },
   runInHeading: {
     ...t.type.bookBody,
@@ -1422,8 +1495,7 @@ const useStyles = makeStyles(t => ({
     fontFamily: t.type.sansFamily,
     fontSize: t.type.bookBody.fontSize * (t.layout.groupedLists ? 1.3 : 1.25),
     lineHeight:
-      t.type.bookBody.fontSize *
-      (t.layout.groupedLists ? 1.3 * 1.4 : 1.25 * 1.9),
+      t.type.bookBody.fontSize * (t.layout.groupedLists ? 1.3 : 1.25) * 1.4,
     fontWeight: '700',
     color: t.color.paperInk,
     letterSpacing: t.layout.groupedLists

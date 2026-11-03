@@ -19,6 +19,7 @@ import type { RefinementRun } from '@core/refinement';
 import type { ConversationConfig } from '@features/settings/types';
 import type { RefinementState } from './types';
 import { presentRefinementContent } from './presenters';
+import { resolveStudyBlockImage } from '@app/bookImages';
 
 export function useRefinementVM(
   bookId: string,
@@ -209,7 +210,9 @@ export function useRefinementVM(
           return {
             seq: e.seq,
             location: location(e.seq),
-            before: presentRefinementContent(source),
+            before: presentRefinementContent(
+              resolveStudyBlockImage(c, bookId, source),
+            ),
             after: presentRefinementContent(e),
             reason: [
               e.reason,

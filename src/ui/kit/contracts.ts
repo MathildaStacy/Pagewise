@@ -260,7 +260,7 @@ export interface SheetProps {
     disabled?: boolean;
     onPress(): void;
   }[];
-  detent?: 'auto' | 'half' | 'full';
+  detent?: 'auto' | 'half' | 'full' | 'reading';
   /** Keep text-heavy panels legible above the reader in translucent skins. */
   opaque?: boolean;
   children?: ReactNode;
@@ -319,9 +319,10 @@ export type RichInline =
     }
   | { t: 'unverified' };
 export type RichBlock =
-  | { t: 'p'; c: RichInline[] }
+  | { t: 'visual'; ref: number; data: BookVisualData }
+  | { t: 'p'; c: RichInline[]; heading?: number }
   | { t: 'math'; tex: string }
-  | { t: 'list'; ordered: boolean; items: RichInline[][] }
+  | { t: 'list'; ordered: boolean; start?: number; items: RichInline[][] }
   | {
       t: 'quote' | 'figure';
       ref: number;
@@ -334,9 +335,56 @@ export type RichBlock =
   | { t: 'check'; c: RichInline[] }
   | { t: 'code'; text: string; language?: string };
 export type RichDoc = RichBlock[];
+/** Screen-ready data, independent of the persistence and model contracts. */
+export interface BookVisualAxis {
+  label: string;
+  min: number;
+  max: number;
+  scale: 'linear' | 'log';
+  ticks: { value: number; label: string }[];
+}
+export type BookVisualData =
+  | {
+      kind: 'chart';
+      title: string;
+      description: string;
+      x: BookVisualAxis;
+      y: BookVisualAxis;
+      series: {
+        name: string;
+        type: 'line' | 'bar' | 'scatter';
+        points: [number, number][];
+        dashed: boolean;
+      }[];
+      annotations: { x: number; y: number; text: string }[];
+    }
+  | {
+      kind: 'diagram';
+      title: string;
+      description: string;
+      nodes: { id: string; label: string; x: number; y: number }[];
+      edges: { from: string; to: string; label: string }[];
+    };
+export interface RichTable {
+  rows: number;
+  columns: number;
+  cells: {
+    row: number;
+    col: number;
+    rowSpan: number;
+    colSpan: number;
+    header: boolean;
+    doc: RichDoc;
+  }[];
+}
 export interface RichViewProps {
   doc: RichDoc;
-  typography?: 'dialogQuote' | 'sheetQuote' | 'tableCell';
+  typography?:
+    | 'dialogQuote'
+    | 'sheetQuote'
+    | 'tableCell'
+    | 'book'
+    | 'bookCaption';
   selectable?: boolean;
   onCite?(ref: number): void;
   onFigure?(ref: number): void;

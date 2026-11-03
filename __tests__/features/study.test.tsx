@@ -269,7 +269,8 @@ it('cancels a closed translation and ignores its late response after a new trans
     });
     expect(vm().state.overlay).toEqual(current);
     const cached = await c.db.get<{ content: string }>(
-      "SELECT content FROM section_translation WHERE book_id='aima' AND section_id='3.5.2'",
+      "SELECT content FROM ai_task_cache WHERE book_id='aima' AND scope=?",
+      [JSON.stringify(['bilingualSection', '3.5.2'])],
     );
     expect(cached?.content).toBeTruthy();
     expect(cached?.content).not.toContain('迟到的旧译文');
@@ -305,13 +306,23 @@ it('retries a failed chapter translation through the resume path instead of forc
 it('stops a translation while keeping the original and received Chinese visible', async () => {
   const vm = await mount(() => useReaderVM('aima', '3.5.2'));
   const session = getStudySession(c, 'aima');
+  const block = (await c.repos.blocks.reading.bySection('aima', '3.5.2'))[0];
   let signal: AbortSignal | undefined;
   const translation = jest
     .spyOn(session, 'translateSection')
     .mockImplementation(
-      async (_id, requestSignal, _config, _refresh, onText) => {
+      async (_id, requestSignal, _config, _refresh, _onText, onPassages) => {
         signal = requestSignal;
-        onText?.('已经收到的中文译文。');
+        onPassages?.([
+          {
+            id: `${block.seq}:0`,
+            block,
+            source: block.text,
+            translate: true,
+            answer: '已经收到的中文译文。',
+            complete: false,
+          },
+        ]);
         return new Promise<string>((_resolve, reject) => {
           requestSignal?.addEventListener(
             'abort',
@@ -331,7 +342,10 @@ it('stops a translation while keeping the original and received Chinese visible'
     if (before?.kind !== 'sectionTranslation')
       throw new Error('Missing translation');
     expect(before.quote?.length).toBeGreaterThan(0);
-    expect(before.answer).toBeTruthy();
+    expect(before.passages?.[0].source.length).toBeGreaterThan(0);
+    expect(JSON.stringify(before.passages?.[0].answer)).toContain(
+      '已经收到的中文译文。',
+    );
     await act(() => vm().intents.overlayAction('stop'));
     expect(signal?.aborted).toBe(true);
     expect(vm().state.overlay).toEqual({
@@ -1118,13 +1132,18 @@ const doneIntents: SectionDoneIntents = {
   retry: noop,
   save: noop,
 };
-it('opens refinement from both source readers and gives adopted blocks a visible label', async () => {
+it('opens refinement from both readers and shows adopted details on selection', async () => {
   const openRefinement = jest.fn();
   const read = {
     ...readerSamples.normal.read,
     items: readerSamples.normal.read.items.map(item =>
       item.kind === 'block' && item.seq === 2
-        ? { ...item, refined: true, continuesFrom: 1 }
+        ? {
+            ...item,
+            refined: true,
+            continuesFrom: 1,
+            marks: [...item.marks, 'selected' as const],
+          }
         : item,
     ),
   };

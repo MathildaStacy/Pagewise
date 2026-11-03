@@ -1,6 +1,8 @@
 import { Text, View } from 'react-native';
 import {
   Button,
+  BookVisualView,
+  FigureView,
   CheckRow,
   MathView,
   Note,
@@ -109,7 +111,7 @@ export function RefinementSheet({
         />
         <Text style={s.detail}>
           {state.mode === 'vision'
-            ? '将本节对应的 PDF 页面发给所选 AI，核对错字、公式和表格。'
+            ? '将本节 PDF 原页发给所选 AI，校正文字、公式，重建表格与图表。重绘曲线标注为估读，可逐项预览和采纳。'
             : '处理换行、断词与标题层级。涉及改字的疑点会保留原文，供原页复核。'}
         </Text>
         {!state.canVision ? (
@@ -255,10 +257,17 @@ function RefinementPreview({
   original?: boolean;
 }) {
   const s = useStyles();
+  if (content.kind === 'visual') return <BookVisualView data={content.data} />;
+  if (content.kind === 'image')
+    return content.uri ? (
+      <FigureView uri={content.uri} caption={content.text} />
+    ) : (
+      <Text style={s.before}>请点「查看原页」核对扫描图。</Text>
+    );
   if (content.kind === 'equation')
     return <MathView tex={content.tex} display />;
   if (content.kind === 'table')
-    return <TableView rows={content.rows} selectable />;
+    return <TableView rows={content.rows} grid={content.grid} selectable />;
   return (
     <Text selectable style={original ? s.before : s.after}>
       {content.text}

@@ -104,12 +104,20 @@ export function formatBlocks(
           : block.loc
           ? ` loc="${escapeXml(block.loc)}"`
           : '';
-      const text =
+      let text =
         block.type === 'equation'
           ? block.latex ?? block.text
           : block.type === 'table'
           ? block.html ?? block.text
           : block.text;
+      if (block.refinement?.visual) {
+        const v = block.refinement.visual;
+        text += `\n[AI 图表重绘；${
+          v.kind === 'chart'
+            ? '数值由扫描图估读，不是精确原始数据'
+            : '结构据原图复原'
+        }]\n${JSON.stringify(v)}`;
+      }
       return `<block id="b${block.seq}"${location} type="${block.type}"${
         block.refinement ? ' source="ai_refined"' : ''
       }>${escapeXml(text)}</block>`;

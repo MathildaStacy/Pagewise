@@ -3,6 +3,7 @@ import { AppState } from 'react-native';
 import { toAppError } from '@app/errors';
 import { useRefinementVM } from './useRefinementVM';
 import { parseStudyCard } from '@app/study/types';
+import { translationPassages } from '@app/study/translation';
 import { useStore } from 'zustand';
 import { useContainer } from '@app/ContainerProvider';
 import { resolveStudyBlockImage } from '@app/bookImages';
@@ -30,12 +31,14 @@ import {
   blockPage,
   messageDoc,
   presentReaderItems,
+  presentTranslation,
   presentOriginalPages,
   presentThread,
   quickActions,
   sectionLabel,
   stepPages,
   tableContent,
+  tableGrid,
 } from './presenters';
 import type {
   BlockMenuKey,
@@ -610,6 +613,14 @@ export function useStudyVM(
       kind: 'sectionTranslation',
       sectionId: readerId,
       quote: reader?.blocks.flatMap(block => blockDoc(block, raw.book)),
+      passages: presentTranslation(
+        translationPassages(reader?.blocks ?? []).map(part => ({
+          ...part,
+          answer: null,
+          complete: !part.translate,
+        })),
+        raw.book,
+      ),
       answer: null,
       streaming: true,
       subtitle: sectionLabel(readSection) + ' · 简体中文',
@@ -620,33 +631,45 @@ export function useStudyVM(
         controller.signal,
         aiOptions.state.config ?? undefined,
         refresh,
-        (partial, fromCache) => {
+        undefined,
+        (parts, fromCache) => {
           if (
-            mounted.current &&
-            !controller.signal.aborted &&
-            explainRequest.current === request
+            !mounted.current ||
+            controller.signal.aborted ||
+            explainRequest.current !== request
           )
-            setOverlay(current =>
-              current?.kind === 'sectionTranslation' &&
-              current.sectionId === readerId
-                ? {
-                    ...current,
-                    ...(fromCache ? { fromCache: true, streaming: false } : {}),
-                    answer: messageDoc(
-                      stableStreamText(partial),
-                      [],
-                      new Map(),
-                      raw.book,
-                      readerId,
-                      true,
-                    ),
-                  }
-                : current,
-            );
+            return;
+          const images = new Map(
+            reader?.blocks.map(block => [block.seq, block.image_path]),
+          );
+          const passages = presentTranslation(
+            parts.map(part => ({
+              ...part,
+              block: {
+                ...part.block,
+                image_path: images.get(part.block.seq) ?? part.block.image_path,
+              },
+            })),
+            raw.book,
+          );
+          setOverlay(current =>
+            current?.kind === 'sectionTranslation' &&
+            current.sectionId === readerId
+              ? {
+                  ...current,
+                  passages,
+                  ...(fromCache ? { fromCache: true, streaming: false } : {}),
+                }
+              : current,
+          );
         },
       )
       .then(answer => {
-        if (mounted.current && !controller.signal.aborted)
+        if (
+          mounted.current &&
+          !controller.signal.aborted &&
+          explainRequest.current === request
+        )
           setOverlay(current =>
             current?.kind === 'sectionTranslation' &&
             current.sectionId === readerId
@@ -659,7 +682,11 @@ export function useStudyVM(
           );
       })
       .catch(error => {
-        if (mounted.current && !controller.signal.aborted)
+        if (
+          mounted.current &&
+          !controller.signal.aborted &&
+          explainRequest.current === request
+        )
           setOverlay(current =>
             current?.kind === 'sectionTranslation'
               ? { ...current, streaming: false, error: errorText(error) }
@@ -751,6 +778,7 @@ export function useStudyVM(
           uri: block.image_path,
           caption: block.text,
           page: blockPage(block, raw.book),
+          visual: block.refinement?.visual,
         });
         return;
       }
@@ -758,6 +786,7 @@ export function useStudyVM(
         setOverlay({
           kind: 'table',
           rows: tableContent(block.html, block.text),
+          grid: tableGrid(block.html, block.text),
           caption: blockPage(block, raw.book),
         });
         return;
@@ -1421,6 +1450,8 @@ function docText(doc: import('@ui/kit').RichDoc): string {
         ? docText(b.body)
         : b.t === 'code'
         ? markdownCode(b.text, { block: true, language: b.language })
+        : b.t === 'visual'
+        ? `[AI 重绘] ${b.data.title}\n${b.data.description}`
         : b.text ?? '',
     )
     .join('\n\n');

@@ -33,6 +33,7 @@ import { TOOL_DEFS } from '@services/ai/tools';
 import type { Container } from '../container';
 import { toAppError } from '../errors';
 import { defaultPrefs, readPrefs } from '../usecases/settings';
+import { parseBookTable } from '../readingTable';
 import { loadAiOptions, normalizeAiOptions } from '../usecases/aiOptions';
 import {
   buildTaskContext,
@@ -43,7 +44,11 @@ import {
 } from './prompts';
 import { finishSection } from './finishSection';
 import { deferQuizzes } from './quizSupport';
-import { translationChunks } from './translation';
+import {
+  translationChunks,
+  translationPassages,
+  type TranslationProgress,
+} from './translation';
 import {
   TaskResultCache,
   taskCacheContext,
@@ -2338,6 +2343,7 @@ export class StudySession implements StudySessionApi {
     refresh: boolean,
     onText?: (text: string, fromCache?: boolean) => void,
     citation?: number,
+    validate?: (answer: string) => void,
   ): Promise<string> {
     const address = {
       bookId: this.bookId,
@@ -2355,6 +2361,13 @@ export class StudySession implements StudySessionApi {
         const cached = context.persistent
           ? await this.c.repos.aiTaskCache.get(address)
           : null;
+        if (cached !== null && validate) {
+          try {
+            validate(cached);
+          } catch {
+            return null;
+          }
+        }
         if (cached !== null)
           this.c.log.debug('AI 本地结果命中', {
             bookId: this.bookId,
@@ -2382,6 +2395,7 @@ export class StudySession implements StudySessionApi {
         );
         const answer = stringValue(data.answer);
         if (!answer.trim()) throw new Error('AI 未返回内容，请重试');
+        validate?.(answer);
         return answer;
       },
     });
@@ -2392,7 +2406,16 @@ export class StudySession implements StudySessionApi {
     config?: ConversationConfig,
     refresh: boolean | 'resume' = false,
     onText?: (text: string, fromCache?: boolean) => void,
+    onPassages?: (parts: TranslationProgress[], fromCache?: boolean) => void,
   ): Promise<string> {
+    if (onPassages)
+      return this.translateAlignedSection(
+        sectionId,
+        signal,
+        config,
+        refresh,
+        onPassages,
+      );
     return this.withTaskSignal(signal, async taskSignal => {
       const [blocks, map, context] = await Promise.all([
         this.c.repos.blocks.reading.bySection(this.bookId, sectionId),
@@ -2473,6 +2496,143 @@ export class StudySession implements StudySessionApi {
           return answers.join('\n\n');
         },
       });
+    });
+  }
+  private async translateAlignedSection(
+    sectionId: string,
+    signal: AbortSignal | undefined,
+    config: ConversationConfig | undefined,
+    refresh: boolean | 'resume',
+    onPassages: (parts: TranslationProgress[], fromCache?: boolean) => void,
+  ): Promise<string> {
+    return this.withTaskSignal(signal, async taskSignal => {
+      const [blocks, map, context] = await Promise.all([
+        this.c.repos.blocks.reading.bySection(this.bookId, sectionId),
+        this.taskMap(),
+        taskCacheContext(this.c, 'tidy', config),
+      ]);
+      const passages = translationPassages(blocks);
+      if (!passages.length)
+        throw new Error('本节暂无可翻译的原文，请先完成解析');
+      const scope = JSON.stringify(['bilingualSection', sectionId]);
+      const address = {
+        bookId: this.bookId,
+        task: 'translate' as const,
+        scope,
+        requestKey: taskResultKey(context, 'translate', {
+          version: 'source-aligned-1',
+          passages: passages.map(({ id, source, translate, block }) => ({
+            id,
+            source,
+            translate,
+            type: block.type,
+          })),
+          target_language: '简体中文',
+          map,
+        }),
+      };
+      type Snapshot = { answers: (string | null)[]; complete: number };
+      const decode = (text: string) => JSON.parse(text) as Snapshot;
+      const content = await this.taskResults.run({
+        scope,
+        key: address.requestKey,
+        refresh: !!refresh,
+        signal: taskSignal,
+        onText: (text, fromCache) => {
+          const snapshot = decode(text);
+          onPassages(
+            passages.map((part, index) => ({
+              ...part,
+              answer: snapshot.answers[index] ?? null,
+              complete: index < snapshot.complete,
+            })),
+            fromCache,
+          );
+        },
+        read: () =>
+          context.persistent
+            ? this.c.repos.aiTaskCache.get(address)
+            : Promise.resolve(null),
+        write: text =>
+          context.persistent
+            ? this.c.repos.aiTaskCache.put(address, text)
+            : Promise.resolve(),
+        generate: async (sharedSignal, publish) => {
+          const prefix =
+            JSON.stringify(['bilingual', sectionId]).slice(0, -1) + ',';
+          if (refresh === true && context.persistent)
+            await this.c.repos.aiTaskCache.clearScopePrefix(
+              this.bookId,
+              'translate',
+              prefix,
+            );
+          const snapshot: Snapshot = { answers: [], complete: 0 };
+          const update = () => publish(JSON.stringify(snapshot));
+          update();
+          for (const [index, passage] of passages.entries()) {
+            if (sharedSignal.aborted) throw new Error('已停止翻译');
+            if (!passage.translate) snapshot.answers[index] = passage.source;
+            else
+              snapshot.answers[index] = await this.cachedTaskAnswer(
+                'translate',
+                JSON.stringify(['bilingual', sectionId, passage.id]),
+                {
+                  block: {
+                    seq: passage.block.seq,
+                    type: passage.block.type,
+                    text: passage.source,
+                  },
+                  target_language: '简体中文',
+                  ...(passage.block.type === 'table'
+                    ? {
+                        format: 'html',
+                        instruction:
+                          '保持 HTML 表格的行列、标签、数字与公式，仅翻译单元格文字。',
+                      }
+                    : {}),
+                  map,
+                },
+                context,
+                sharedSignal,
+                refresh === true,
+                answer => {
+                  snapshot.answers[index] = answer;
+                  update();
+                },
+                undefined,
+                passage.block.type === 'table'
+                  ? answer => {
+                      const shape = (text: string) => {
+                        const table = parseBookTable(
+                          text,
+                          text.includes('<') ? text : null,
+                        );
+                        return table?.cells.map(cell => [
+                          cell.row,
+                          cell.col,
+                          cell.rowSpan,
+                          cell.colSpan,
+                        ]);
+                      };
+                      const sourceShape = shape(passage.source);
+                      if (
+                        sourceShape &&
+                        JSON.stringify(sourceShape) !==
+                          JSON.stringify(shape(answer))
+                      )
+                        throw new Error(
+                          '译文表格的行列与原文不一致，请重试翻译',
+                        );
+                    }
+                  : undefined,
+              );
+            snapshot.complete = index + 1;
+            update();
+          }
+          return JSON.stringify(snapshot);
+        },
+      });
+      return decode(content).answers.filter(Boolean).join('\n\n');
     });
   }
   async explainBlock(

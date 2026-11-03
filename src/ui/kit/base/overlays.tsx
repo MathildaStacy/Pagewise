@@ -38,7 +38,7 @@ import type {
   ToastProps,
 } from '../contracts';
 import { useSkin, useTokens } from '../context';
-import { Button } from '../proxy';
+import { AppBar, Button } from '../proxy';
 import { Icon } from '../Icon';
 import { KeyboardScrollView } from '../KeyboardScrollView';
 
@@ -327,6 +327,13 @@ export function Sheet({
   );
   const s = StyleSheet.create({
     root: { flex: 1 },
+    reading: {
+      flex: 1,
+      paddingTop: safe.top,
+      paddingBottom: safe.bottom,
+      backgroundColor: tokens.color.paper,
+    },
+    readingBody: { paddingHorizontal: 24, paddingBottom: 24 },
     container: { marginHorizontal: inset ? 8 : 0 },
     scrollContent: { paddingBottom: inset ? 0 : Math.max(10, safe.bottom) },
     body: {
@@ -360,6 +367,37 @@ export function Sheet({
     ),
     [actions, s.footerSurface],
   );
+  if (detent === 'reading')
+    return (
+      <Modal
+        visible={visible}
+        statusBarTranslucent
+        animationType={reduceMotion ? 'none' : 'fade'}
+        onRequestClose={onClose}
+      >
+        <GestureHandlerRootView
+          style={s.reading}
+          accessibilityViewIsModal
+          onAccessibilityEscape={onClose}
+        >
+          <AppBar
+            variant="push"
+            title={title}
+            subtitle={subtitle}
+            onBack={onClose}
+            backLabel="返回原文"
+          />
+          <ScrollView
+            contentContainerStyle={s.readingBody}
+            keyboardShouldPersistTaps="handled"
+            testID="reading-sheet-body"
+          >
+            {children}
+          </ScrollView>
+          {actions.length ? <SheetActions actions={actions} /> : null}
+        </GestureHandlerRootView>
+      </Modal>
+    );
   return (
     <Modal
       visible={visible}

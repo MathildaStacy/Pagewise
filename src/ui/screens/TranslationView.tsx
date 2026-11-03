@@ -18,6 +18,7 @@ import {
 import type { StudyIntents, StudyOverlay } from '@features/study/types';
 import type { AiOptionsState } from '@features/settings/types';
 import { AiOptionsControl } from './AiOptionsControl';
+import { BilingualReading } from './BilingualReading';
 
 const empty: RichDoc = [];
 type Translation = Extract<
@@ -54,6 +55,14 @@ export function TranslationView({
     : busy
     ? '正在翻译'
     : '翻译完成';
+  if (overlay.kind === 'sectionTranslation' && overlay.passages)
+    return (
+      <BilingualReading
+        overlay={overlay}
+        intents={intents}
+        aiOptions={aiOptions}
+      />
+    );
   return (
     <View style={s.root}>
       <View style={s.options}>
@@ -92,7 +101,7 @@ export function TranslationView({
               </Pressable>
             ) : null}
           </View>
-          <RichView doc={source} typography="sheetQuote" />
+          <RichView doc={source} typography="book" />
           {canExpand && !expanded ? <Text style={s.ellipsis}>…</Text> : null}
         </View>
       ) : null}
@@ -114,6 +123,7 @@ export function TranslationView({
         </View>
         <RevealContext.Provider value={busy}>
           <RichView
+            typography="book"
             doc={overlay.fromCache ? overlay.answer ?? empty : reveal.doc}
             onCite={intents.pressCite}
             onFigure={intents.pressFigure}
@@ -142,29 +152,32 @@ export function TranslationView({
           <Text style={s.status}>已保留当前译文，可继续翻译。</Text>
         ) : null}
       </View>
-      <View style={s.footer}>
-        {overlay.streaming ? (
-          <Button
-            variant="text"
-            icon="stop"
-            label="停止翻译"
-            onPress={() => intents.overlayAction('stop')}
-          />
-        ) : (
-          <Button
-            variant="text"
-            icon="sync"
-            label={
-              overlay.error
-                ? '重试翻译'
-                : overlay.stopped
-                ? '继续翻译'
-                : '重新翻译'
-            }
-            onPress={() => intents.overlayAction('regenerate')}
-          />
-        )}
-      </View>
+      {overlay.kind !== 'sectionTranslation' ||
+      (!overlay.streaming && !overlay.error && !overlay.stopped) ? (
+        <View style={s.footer}>
+          {overlay.streaming ? (
+            <Button
+              variant="text"
+              icon="stop"
+              label="停止翻译"
+              onPress={() => intents.overlayAction('stop')}
+            />
+          ) : (
+            <Button
+              variant="text"
+              icon="sync"
+              label={
+                overlay.error
+                  ? '重试翻译'
+                  : overlay.stopped
+                  ? '继续翻译'
+                  : '重新翻译'
+              }
+              onPress={() => intents.overlayAction('regenerate')}
+            />
+          )}
+        </View>
+      ) : null}
     </View>
   );
 }

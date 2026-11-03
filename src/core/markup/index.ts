@@ -7,8 +7,8 @@ export type Inline =
   | { t: 'cite'; ref: number; verified: boolean; detour: boolean }
   | { t: 'unverified' };
 export type Block =
-  | { t: 'p'; c: Inline[] }
-  | { t: 'list'; ordered: boolean; items: Inline[][] }
+  | { t: 'p'; c: Inline[]; heading?: number }
+  | { t: 'list'; ordered: boolean; start?: number; items: Inline[][] }
   | { t: 'math'; tex: string }
   | { t: 'quote' | 'figure'; ref: number; verified: boolean }
   | { t: 'aux'; kind: 'derive' | 'example'; body: Block[]; open: boolean }
@@ -133,7 +133,7 @@ export function parseInline(
     if (
       text[i] === '\\' &&
       i + 1 < text.length &&
-      /[\\*`$[\]]/.test(text[i + 1])
+      /[\\*`$_~[\]]/.test(text[i + 1])
     ) {
       plain += text[i + 1];
       i += 2;
@@ -240,27 +240,34 @@ function ordinary(text: string, options: ParseOptions): RichDoc {
       });
       continue;
     }
-    const heading = /^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$/.exec(line);
+    const heading = /^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$/.exec(line);
     if (heading) {
       flush();
       doc.push({
         t: 'p',
-        c: [{ t: 'b', c: parseInline(heading[1], options) }],
+        heading: heading[1].length,
+        c: [{ t: 'b', c: parseInline(heading[2], options) }],
       });
       continue;
     }
-    const item = /^\s*(?:(-)|\d+\.)\s+(.*)$/.exec(line);
+    const item = /^\s*(?:([-*+•])|(\d+)[.)])\s+(.*)$/.exec(line);
     if (item) {
       flush();
       const ordered = !item[1];
+      const start = ordered ? Number(item[2]) : 1;
       const last = doc[doc.length - 1];
-      if (last?.t === 'list' && last.ordered === ordered)
-        last.items.push(parseInline(item[2], options));
+      if (
+        last?.t === 'list' &&
+        last.ordered === ordered &&
+        (!ordered || start === (last.start ?? 1) + last.items.length)
+      )
+        last.items.push(parseInline(item[3], options));
       else
         doc.push({
           t: 'list',
           ordered,
-          items: [parseInline(item[2], options)],
+          ...(ordered && start !== 1 ? { start } : {}),
+          items: [parseInline(item[3], options)],
         });
       continue;
     }

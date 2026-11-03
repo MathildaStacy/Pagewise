@@ -82,13 +82,13 @@ function ReadingTokens() {
 }
 
 it.each([
-  ['glass', 's', 1, 15, 15, 1.65, 1.85, 17],
-  ['glass', 'm', 1, 17, 17, 1.65, 1.85, 17],
-  ['glass', 'l', 1, 19, 19.5, 1.65, 1.85, 17],
-  ['glass', 'l', 1.3, 19, 19.5, 1.65, 1.85, 17],
-  ['paper', 's', 1, 14.72, 15.18, 1.78, 1.9, 14],
-  ['paper', 'm', 1, 16, 16.5, 1.78, 1.9, 14],
-  ['paper', 'l', 1, 18, 18.5625, 1.78, 1.9, 14],
+  ['glass', 's', 1, 15, 15, 1.65, 1.75, 17],
+  ['glass', 'm', 1, 17, 17, 1.65, 1.75, 17],
+  ['glass', 'l', 1, 19, 19.5, 1.65, 1.75, 17],
+  ['glass', 'l', 1.3, 19, 19.5, 1.65, 1.75, 17],
+  ['paper', 's', 1, 14.72, 15.64, 1.78, 1.75, 14],
+  ['paper', 'm', 1, 16, 17, 1.78, 1.75, 14],
+  ['paper', 'l', 1, 18, 19.125, 1.78, 1.75, 14],
 ] as const)(
   '%s size %s with scale %s follows its reading sizes and preserves interface type',
   async (skin, size, scale, ai, book, aiLine, bookLine, body) => {

@@ -1,5 +1,6 @@
 import { marginNotes, TERMINAL } from '../layout';
 import type { Block, BlockType } from '../types';
+import { parseVisual, type VisualReconstruction } from './visual';
 
 export type RefinementMode = 'structure' | 'vision';
 export type RefinementStatus =
@@ -26,6 +27,7 @@ export interface RefinementEdit {
   /** Optional so runs saved before structural roles still load. */
   heading?: RefinementHeading | null;
   role?: 'note' | null;
+  visual?: VisualReconstruction | null;
   reason: string;
 }
 export interface RefinementIssue {
@@ -112,7 +114,13 @@ export function refinementChunks(
     pages = new Set();
   };
   for (const b of blocks) {
-    if (codeContent(b) || b.type === 'image') {
+    if (codeContent(b) || (b.type === 'image' && mode === 'structure')) {
+      flush();
+      continue;
+    }
+    if (b.type === 'image') {
+      flush();
+      current.push(b.seq);
       flush();
       continue;
     }
@@ -170,7 +178,8 @@ const unchanged = (e: RefinementEdit, b: Block) =>
   e.html === b.html &&
   e.continuesFrom === null &&
   !e.heading &&
-  !e.role;
+  !e.role &&
+  !e.visual;
 const NUMBER = '[\\d一二三四五六七八九十百零〇]+';
 /** `Chapter 21` / `第 21 章` → 1, `21.1` → 2, `21.1.1` → 3; null when unnumbered. */
 export function numberedLevel(text: string): number | null {
@@ -298,6 +307,7 @@ const sameEdit = (a: RefinementEdit, b: RefinementEdit) =>
   a.html === b.html &&
   a.continuesFrom === b.continuesFrom &&
   (a.role ?? null) === (b.role ?? null) &&
+  JSON.stringify(a.visual ?? null) === JSON.stringify(b.visual ?? null) &&
   JSON.stringify(a.heading ?? null) === JSON.stringify(b.heading ?? null);
 interface Draft {
   edit: RefinementEdit;
@@ -315,12 +325,34 @@ function resolveRow(
 ): Draft {
   if (
     codeContent(b) ||
-    b.type === 'image' ||
+    (b.type === 'image' && mode === 'structure') ||
     (mode === 'structure' && ['equation', 'table'].includes(b.type))
   )
     throw new Error('本模式不能修改代码、图片或受保护的公式表格');
   const e: RefinementEdit = { ...current };
   const warnings: string[] = [];
+  if (b.type === 'image') {
+    if (row.visual != null) {
+      e.visual = parseVisual(row.visual);
+      e.type = 'image';
+      e.html = null;
+    } else if (
+      row.type === 'table' &&
+      typeof row.html === 'string' &&
+      /<table[\s>]/i.test(row.html) &&
+      /<tr[\s>]/i.test(row.html) &&
+      /<t[dh][\s>]/i.test(row.html) &&
+      /<\/table\s*>/i.test(row.html)
+    ) {
+      e.type = 'table';
+      e.html = row.html;
+      e.visual = null;
+    } else {
+      throw new Error('图片需要完整的图表重绘或表格结构');
+    }
+    return { edit: e, warnings, continues: null, reason: row.reason };
+  }
+  if (row.visual != null) throw new Error('只有原书图片可以生成图表重绘');
   const media = ['equation', 'table'].includes(b.type);
   if (row.text !== undefined) {
     if (typeof row.text !== 'string' || (!row.text.trim() && !media))
@@ -420,7 +452,12 @@ export function parseRefinement(
   chunk: RefinementChunk,
   mode: RefinementMode,
   base: readonly RefinementEdit[] = [],
-): { edits: RefinementEdit[]; issues: RefinementIssue[]; reset: number[] } {
+): {
+  edits: RefinementEdit[];
+  issues: RefinementIssue[];
+  reset: number[];
+  retryVisuals: RefinementIssue[];
+} {
   let data: Record<string, unknown>;
   try {
     data = record(
@@ -434,6 +471,7 @@ export function parseRefinement(
   const baseBySeq = new Map(base.map(e => [e.seq, e]));
   const allowed = new Set(chunk.seqs);
   const issues: RefinementIssue[] = [];
+  const retryVisuals: RefinementIssue[] = [];
   const at = (seq: unknown) =>
     typeof seq === 'number' && bySeq.has(seq) ? seq : chunk.seqs[0];
   for (const value of Array.isArray(data.issues) ? data.issues : []) {
@@ -444,6 +482,13 @@ export function parseRefinement(
     if (typeof row.reason === 'string' && row.reason.trim())
       issues.push({ seq: at(row.seq), reason: row.reason.slice(0, 500) });
   }
+  // A later batch may question a figure supplied as context. Withdraw that earlier
+  // reconstruction too; a model's own uncertainty must not become a selected edit.
+  const uncertainImages = new Set(
+    issues
+      .filter(issue => bySeq.get(issue.seq)?.b.type === 'image')
+      .map(issue => issue.seq),
+  );
   const drafts = new Map<number, Draft>();
   let ignored = 0;
   for (const value of data.edits) {
@@ -462,12 +507,18 @@ export function parseRefinement(
       continue;
     }
     const { b } = bySeq.get(seq)!;
+    if (uncertainImages.has(seq)) continue;
     try {
       drafts.set(
         seq,
         resolveRow(row, b, baseBySeq.get(seq) ?? identity(b), mode),
       );
     } catch (error) {
+      if (b.type === 'image' && mode === 'vision')
+        retryVisuals.push({
+          seq,
+          reason: error instanceof Error ? error.message : '图表结构无效',
+        });
       issues.push({
         seq,
         reason: `${
@@ -507,7 +558,7 @@ export function parseRefinement(
     return prose || title ? target.block.seq : null;
   };
   const edits: RefinementEdit[] = [],
-    reset: number[] = [];
+    reset: number[] = [...uncertainImages].filter(seq => baseBySeq.has(seq));
   for (const [seq, d] of drafts) {
     const { b, i } = bySeq.get(seq)!;
     const e = d.edit;
@@ -549,7 +600,7 @@ export function parseRefinement(
       ).slice(0, 500),
     });
   }
-  return { edits, issues, reset };
+  return { edits, issues, reset, retryVisuals };
 }
 export function projectRefinement(
   blocks: readonly Block[],
@@ -581,6 +632,7 @@ export function projectRefinement(
             originalText: b.text,
             originalType: b.type,
             reason: e.reason,
+            ...(e.visual ? { visual: e.visual } : {}),
             continuesFrom: e.continuesFrom,
             heading: e.heading ?? null,
             role: e.role ?? null,

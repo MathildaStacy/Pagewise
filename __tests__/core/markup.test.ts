@@ -205,7 +205,7 @@ it('handles markdown headings, both list kinds and plain-text tables', () => {
       '# 小标题\r\n\r\n正文第一行\r第二行\n\n- 一\n- 二\n1. first\n2. **second**\n\n| A | B |\n|---|---|',
     ),
   ).toEqual([
-    { t: 'p', c: [{ t: 'b', c: [text('小标题')] }] },
+    { t: 'p', heading: 1, c: [{ t: 'b', c: [text('小标题')] }] },
     paragraph('正文第一行\n第二行'),
     { t: 'list', ordered: false, items: [[text('一')], [text('二')]] },
     {
@@ -216,7 +216,25 @@ it('handles markdown headings, both list kinds and plain-text tables', () => {
     paragraph('| A | B |\n|---|---|'),
   ]);
   expect(parse('### 正文标题 ###')).toEqual([
-    { t: 'p', c: [{ t: 'b', c: [text('正文标题')] }] },
+    { t: 'p', heading: 3, c: [{ t: 'b', c: [text('正文标题')] }] },
+  ]);
+});
+it('keeps list numbering across separately parsed book blocks and accepts printed bullets', () => {
+  expect(parse('3) Third\n4) Fourth\n7. Seventh')).toEqual([
+    {
+      t: 'list',
+      ordered: true,
+      start: 3,
+      items: [[text('Third')], [text('Fourth')]],
+    },
+    { t: 'list', ordered: true, start: 7, items: [[text('Seventh')]] },
+  ]);
+  expect(parse('* First\n+ Second\n• Third')).toEqual([
+    {
+      t: 'list',
+      ordered: false,
+      items: [[text('First')], [text('Second')], [text('Third')]],
+    },
   ]);
 });
 it('keeps code fences literal, including markup syntax and unfinished fences', () => {
@@ -267,6 +285,14 @@ it('treats inline code as literal text, including formulas, citations and auxili
   expect(stableStreamText('调用 `尚未完成')).toBe('调用 ');
 });
 it('preserves escaped syntax, including escaped math delimiters', () => {
+  expect(parseInline(String.raw`us\_eq\_panel ≥\~2000`)).toEqual([
+    text('us_eq_panel ≥~2000'),
+  ]);
+  expect(parseInline('$x\\_y$ `us\\_eq`')).toEqual([
+    { t: 'math', tex: 'x\\_y' },
+    text(' '),
+    { t: 'code', v: 'us\\_eq' },
+  ]);
   expect(parse(String.raw`\$5 \**bold\** \[[b:1]] \\end`)).toEqual([
     paragraph('$5 **bold** [[b:1]] \\end'),
   ]);
