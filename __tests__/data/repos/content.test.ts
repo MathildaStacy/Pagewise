@@ -4,7 +4,7 @@ import { openMemoryDb } from '@data/drivers/nodeSqlite';
 import { migrate } from '@data/migrations';
 import { createBooksRepo } from '@data/repos/books';
 import { createPartsRepo } from '@data/repos/parts';
-import { createBlocksRepo } from '@data/repos/blocks';
+import { createBlocksRepo, searchTerms } from '@data/repos/blocks';
 import { createSectionsRepo } from '@data/repos/sections';
 import { lastInsertId, serializeJson } from '@data/repos/shared';
 
@@ -549,6 +549,68 @@ describe('content blocks repository', () => {
       [1003],
     );
     expect(await blocks.search('book', '启发', 1)).toHaveLength(1);
+  });
+
+  it('splits queries into terms but keeps OCR-spaced single Han characters together', () => {
+    expect(searchTerms('启 发')).toEqual(['启发']);
+    expect(searchTerms('一 致代价')).toEqual(['一致代价']);
+    expect(searchTerms('动量 崩溃  尾部风险')).toEqual([
+      '动量',
+      '崩溃',
+      '尾部风险',
+    ]);
+    expect(searchTerms('momentum crashes momentum')).toEqual([
+      'momentum',
+      'crashes',
+    ]);
+  });
+
+  it('ranks blocks by matched terms, occurrences and headings, and filters to a section subtree', async () => {
+    await sections.replaceAll('book', [
+      sectionInput('ch1', 1, { level: 1, is_leaf: false, no: '1' }),
+      sectionInput('1.1', 2, { level: 2, parent_id: 'ch1' }),
+      sectionInput('ch3', 3, { level: 1, is_leaf: false, no: '3' }),
+      sectionInput('3.5', 4, { level: 2, parent_id: 'ch3', is_leaf: false }),
+      sectionInput('3.5.2', 5, { parent_id: '3.5' }),
+      sectionInput('u5', 6, { level: 2, parent_id: 'ch3' }),
+      sectionInput('ch10', 7, { level: 1, is_leaf: false, no: '10' }),
+      sectionInput('10.1', 8, { level: 2, parent_id: 'ch10' }),
+    ]);
+    await blocks.insertMany('book', [
+      blockInput(1001, '价值、动量、低波动等因子。', { section_id: '1.1' }),
+      blockInput(
+        2001,
+        '动量组合在市场反转时出现动量崩溃，动量的尾部风险很高。',
+        {
+          section_id: '3.5.2',
+        },
+      ),
+      blockInput(2002, '3.5 动量因子', { section_id: '3.5.2', type: 'title' }),
+      blockInput(2003, '动量与动量交易，动量策略。', { section_id: 'u5' }),
+      blockInput(3001, '尾部风险的度量方法。', { section_id: '10.1' }),
+    ]);
+    // Three terms need at least two matches; one matching term is not enough.
+    expect(
+      (await blocks.search('book', '动量 崩溃 尾部风险')).map(hit => hit.seq),
+    ).toEqual([2001]);
+    expect(
+      (await blocks.search('book', '尾部风险 度量')).map(hit => hit.seq),
+    ).toEqual([3001, 2001]);
+    expect(
+      (await blocks.search('book', '动量崩溃 风险')).map(hit => hit.seq),
+    ).toEqual([2001, 3001]);
+    const short = await blocks.search('book', '动量');
+    expect(short.map(hit => hit.seq)).toEqual([2002, 2001, 2003, 1001]);
+    expect(
+      (await blocks.search('book', '动量', 8, { within: 'ch3' })).map(
+        hit => hit.seq,
+      ),
+    ).toEqual([2002, 2001, 2003]);
+    expect(
+      (await blocks.search('book', '尾部风险', 8, { within: 'ch1' })).map(
+        hit => hit.seq,
+      ),
+    ).toEqual([]);
   });
 
   it('deletes only selected pages and updates the FTS index', async () => {

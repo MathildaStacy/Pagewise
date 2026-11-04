@@ -272,6 +272,9 @@ export type StudyOverlay =
       error?: string;
       stopped?: boolean;
       fromCache?: boolean;
+      /** Sentences of a long paragraph; `focus` is the one being explained, null for the whole block. */
+      sentences?: string[];
+      focus?: number | null;
     }
   | {
       kind: 'pin';

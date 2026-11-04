@@ -44,7 +44,35 @@ const values = (
   block.chars,
 ];
 
-/** The query is a literal phrase, never an FTS expression or LIKE wildcard. */
+/**
+ * Whitespace separates literal terms; a single Han character joins its neighbour,
+ * so OCR-style spacing such as "启 发" still reads as one word.
+ */
+export function searchTerms(query: string): string[] {
+  const terms: string[] = [];
+  let previous = '';
+  for (const part of query.trim().split(/\s+/u).filter(Boolean)) {
+    const last = terms.at(-1);
+    if (
+      last &&
+      /\p{Script=Han}$/u.test(last) &&
+      /^\p{Script=Han}/u.test(part) &&
+      (Array.from(part).length === 1 || Array.from(previous).length === 1)
+    )
+      terms[terms.length - 1] = last + part;
+    else terms.push(part);
+    previous = part;
+  }
+  return [...new Set(terms)].slice(0, 6);
+}
+function occurrences(text: string, term: string): number {
+  let count = 0;
+  for (let at = text.indexOf(term); at >= 0; at = text.indexOf(term, at + 1))
+    count++;
+  return count;
+}
+
+/** Each term is a literal phrase, never an FTS expression or LIKE wildcard. */
 function snippet(text: string, query: string): string {
   const chars = Array.from(text);
   const lower = chars.map(char => char.toLocaleLowerCase());
@@ -146,30 +174,75 @@ export function createBlocksRepo(db: Db) {
         [bookId, from, to],
       );
     },
+    /**
+     * Blocks matching more of the terms rank first, then by occurrences; headings get a small boost.
+     * `within` limits results to a section and its descendants.
+     */
     async search(
       bookId: string,
       query: string,
       limit = 8,
+      options: { within?: string } = {},
     ): Promise<BlockSearchHit[]> {
-      const q = query
-        .trim()
-        .replace(/\s+/gu, ' ')
-        .replace(/(\p{Script=Han}) (?=\p{Script=Han})/gu, '$1');
+      const terms = searchTerms(query);
       const count = Math.max(0, Math.floor(limit));
-      if (!q || count === 0) {
+      if (!terms.length || count === 0) {
         return [];
       }
-      const rows =
-        Array.from(q).length >= 3
-          ? await db.all<Block>(
-              'SELECT b.* FROM block_fts JOIN block b ON b.id=block_fts.rowid WHERE block_fts MATCH ? AND block_fts.book_id=? ORDER BY rank,b.seq LIMIT ?',
-              [`"${q.replace(/"/g, '""')}"`, bookId, count],
-            )
-          : await db.all<Block>(
-              "SELECT * FROM block WHERE book_id=? AND text LIKE ? ESCAPE '\\' ORDER BY seq LIMIT ?",
-              [bookId, `%${q.replace(/[\\%_]/g, '\\$&')}%`, count],
-            );
-      return rows.map(block => ({
+      const scope = options.within
+        ? {
+            sql: ' AND b.section_id IN (WITH RECURSIVE sub(id) AS (SELECT id FROM section WHERE book_id=? AND id=? UNION SELECT s.id FROM section s JOIN sub ON s.parent_id=sub.id WHERE s.book_id=?) SELECT id FROM sub)',
+            args: [bookId, options.within, bookId],
+          }
+        : { sql: '', args: [] };
+      const pool = Math.max(50, count * 5);
+      const found = new Map<number, { block: Block; terms: string[] }>();
+      for (const term of terms) {
+        const rows =
+          Array.from(term).length >= 3
+            ? await db.all<Block>(
+                `SELECT b.* FROM block_fts JOIN block b ON b.id=block_fts.rowid WHERE block_fts MATCH ? AND block_fts.book_id=?${scope.sql} ORDER BY rank,b.seq LIMIT ?`,
+                [`"${term.replace(/"/g, '""')}"`, bookId, ...scope.args, pool],
+              )
+            : await db.all<Block>(
+                `SELECT b.* FROM block b WHERE b.book_id=? AND b.text LIKE ? ESCAPE '\\'${scope.sql} ORDER BY (length(b.text)-length(replace(lower(b.text),lower(?),'')))/length(?) DESC,b.seq LIMIT ?`,
+                [
+                  bookId,
+                  `%${term.replace(/[\\%_]/g, '\\$&')}%`,
+                  ...scope.args,
+                  term,
+                  term,
+                  pool,
+                ],
+              );
+        for (const block of rows) {
+          const match = found.get(block.seq) ?? { block, terms: [] };
+          match.terms.push(term);
+          found.set(block.seq, match);
+        }
+      }
+      const needed = Math.max(1, Math.ceil(terms.length / 2));
+      const scored = [...found.values()]
+        .filter(match => match.terms.length >= needed)
+        .map(match => {
+          const text = `${match.block.text} ${
+            match.block.latex ?? ''
+          }`.toLocaleLowerCase();
+          const hits = match.terms.reduce(
+            (sum, term) =>
+              sum + Math.min(5, occurrences(text, term.toLocaleLowerCase())),
+            0,
+          );
+          return {
+            ...match,
+            score:
+              match.terms.length * 100 +
+              hits +
+              (match.block.type === 'title' ? 10 : 0),
+          };
+        })
+        .sort((a, b) => b.score - a.score || a.block.seq - b.block.seq);
+      return scored.slice(0, count).map(({ block, terms: matched }) => ({
         book_id: block.book_id,
         seq: block.seq,
         ref: `b${block.seq}`,
@@ -179,7 +252,7 @@ export function createBlocksRepo(db: Db) {
         text: block.text,
         snippet: snippet(
           block.latex ? `${block.text} ${block.latex}` : block.text,
-          q,
+          matched[0],
         ),
       }));
     },

@@ -483,3 +483,45 @@ it('has a stable exact fixture for empty content and a current operation', () =>
     }
   `);
 });
+it('keeps a saved user turn once instead of appending the same operation again', () => {
+  const operation = '<turn>{"intent":"ask","step":1}</turn>';
+  const saved: ContextMessage = {
+    ...message(2, '为什么'),
+    parts: [
+      { t: 'text', text: '为什么' },
+      { t: 'text', text: operation },
+    ],
+  };
+  const result = buildContext(
+    fixture({
+      conversation: [{ id: 'saved', messages: [saved] }],
+      turn: { intent: 'ask', step: 1 },
+    }),
+  );
+  const last = result.history.at(-1)!;
+  expect(
+    last.parts.filter(
+      part => part.t === 'text' && part.text.startsWith('<turn>'),
+    ),
+  ).toHaveLength(1);
+  expect(result.estimate.find(layer => layer.layer === 6)?.tokens).toBe(
+    estimateTokens(`为什么\n${operation}`),
+  );
+});
+it('expands the chapter of a detour section in a large book map', () => {
+  const sections = [
+    section('ch1', null, 1, 0),
+    section('1.1', 'ch1', 2, 1),
+    section('1.1.1', '1.1', 3, 2),
+    section('ch3', null, 1, 3),
+    section('3.5', 'ch3', 2, 4),
+    section('3.5.1', '3.5', 3, 5),
+    section('3.5.2', '3.5', 3, 6),
+  ];
+  const plain = formatBookMap(sections, '1.1.1', 2);
+  expect(plain).toContain('1.1.1');
+  expect(plain).not.toContain('3.5.1');
+  const visiting = formatBookMap(sections, '1.1.1', 2, 0, ['3.5.2']);
+  expect(visiting).toContain('3.5.1');
+  expect(visiting).toContain('1.1.1');
+});

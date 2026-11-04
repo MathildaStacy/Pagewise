@@ -485,3 +485,85 @@ it.each(
     expect(closeOverlay).toHaveBeenCalledTimes(2);
   },
 );
+
+it('lets a long explained paragraph narrow to one sentence and return to the whole block', async () => {
+  const overlayAction = jest.fn();
+  const intents = { overlayAction } as unknown as StudyIntents;
+  const sentences = ['动量来自风险补偿。', '也有人认为来自行为偏差。'];
+  const view = (focus: number | null) => (
+    <SkinProvider skinId="paper" scheme="light" reduceMotion>
+      <TranslationView
+        intents={intents}
+        overlay={{
+          kind: 'explain',
+          seq: 1,
+          quote: doc(sentences.join('')),
+          answer: doc('讲解'),
+          streaming: false,
+          subtitle: 'p.1',
+          sentences,
+          focus,
+        }}
+      />
+    </SkinProvider>
+  );
+  await act(() => {
+    renderer = Renderer.create(view(null));
+  });
+  const byLabel = (label: string) =>
+    renderer.root.findAll(
+      node =>
+        node.props.accessibilityLabel === label &&
+        typeof node.props.onPress === 'function',
+    )[0];
+  await act(() => byLabel('选一句只讲这一句').props.onPress());
+  await act(() => byLabel('只讲第 2 句').props.onPress());
+  expect(overlayAction).toHaveBeenLastCalledWith('focus:1');
+  await act(() => renderer.update(view(1)));
+  expect(
+    renderer.root
+      .findByProps({ testID: 'explain-focus' })
+      .findAllByType(Button)[0].props.label,
+  ).toBe('讲整段');
+  await act(() =>
+    renderer.root
+      .findByProps({ testID: 'explain-focus' })
+      .findAllByType(Button)[0]
+      .props.onPress(),
+  );
+  expect(overlayAction).toHaveBeenLastCalledWith('focus:none');
+});
+
+it('shows a one-line preview for a collapsed AI example so it never looks empty', async () => {
+  await act(() => {
+    renderer = Renderer.create(
+      <SkinProvider skinId="paper" scheme="light" reduceMotion>
+        <RichView
+          doc={[
+            {
+              t: 'aux',
+              kind: 'example',
+              open: false,
+              body: doc('估计吃掉 5 档以内 10 万股的平均成本，L2 足够。'),
+            },
+          ]}
+        />
+      </SkinProvider>,
+    );
+  });
+  const preview = renderer.root.findAll(
+    node =>
+      node.props.accessibilityLabel ===
+        '展开AI 举例：估计吃掉 5 档以内 10 万股的平均成本，L2 足够。' &&
+      typeof node.props.onPress === 'function',
+  )[0];
+  expect(preview).toBeDefined();
+  await act(() => preview.props.onPress());
+  expect(
+    renderer.root.findAll(
+      node =>
+        node.props.accessibilityLabel === '收起AI 举例' &&
+        typeof node.props.onPress === 'function',
+    ),
+  ).toHaveLength(1);
+});

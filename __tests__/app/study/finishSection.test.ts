@@ -59,6 +59,18 @@ it('executes source searches, figures and notes from the actual repositories wit
   });
   expect(search.allowedRefs.length).toBeGreaterThan(0);
   expect(search.allowedRefs).toEqual(search.blocks.map(block => block.seq));
+  const scoped = await executeReadTool(c, 'aima', 'search_book', {
+    query: '搜索',
+    chapter: '第3章',
+  });
+  const hits = JSON.parse(scoped.output) as {
+    section: string;
+    section_title: string | null;
+  }[];
+  expect(hits.length).toBeGreaterThan(0);
+  expect(hits.every(hit => hit.section.startsWith('3.'))).toBe(true);
+  expect(hits[0].section_title).toBeTruthy();
+  expect(scoped.label).toContain('在 ch3 搜索');
   const image = (await c.repos.blocks.bySection('aima', '3.5.2')).find(
     block => block.type === 'image',
   )!;

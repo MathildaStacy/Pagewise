@@ -1051,3 +1051,45 @@ it('retries a failed context summary without appending the same question again',
     state().messages.filter(message => message.content === '需要重试的问题'),
   ).toHaveLength(1);
 });
+it('asks about one sentence of another section as a detour without planning the main section first', async () => {
+  let ref = 0;
+  let request: GatewayRequest | undefined;
+  const ai = scripted([
+    req => {
+      request = req;
+      return text(`这一句说的是代价。[[b:${ref}]]`);
+    },
+  ]);
+  await setup(ai);
+  await session.open({ sectionId: '3.5.1', autoStart: false });
+  expect(state().plan).toBeNull();
+  const complete = jest.spyOn(c.ai, 'complete');
+  const source = await c.repos.blocks.bySection('aima', '3.4.2');
+  ref = source[0].seq;
+  session.setQuote(ref, '  只看这一句。 ');
+  expect(state().pendingQuoteFocus).toBe('只看这一句。');
+  await session.send('这句话什么意思？');
+  expect(
+    complete.mock.calls.some(args =>
+      args[1].system.includes('<task name="plan">'),
+    ),
+  ).toBe(false);
+  expect(state().plan).toBeNull();
+  expect(state().detours.at(-1)?.sectionId).toBe('3.4.2');
+  expect(state().pendingQuoteFocus).toBeNull();
+  const last = request!.history.at(-1)!;
+  const turns = last.parts.filter(
+    part => part.t === 'text' && part.text.startsWith('<turn>'),
+  );
+  expect(turns).toHaveLength(1);
+  const turn = JSON.parse(
+    (turns[0] as { text: string }).text.slice(6, -7),
+  ) as Record<string, unknown>;
+  expect(turn).toMatchObject({
+    intent: 'ask',
+    quote_seq: ref,
+    quote_focus: '只看这一句。',
+    detour_section: '3.4.2',
+  });
+  expect(request!.contextBlocks[0].text).toContain('3.4.2');
+});

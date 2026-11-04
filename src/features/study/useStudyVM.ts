@@ -21,6 +21,7 @@ import {
 } from '@app/usecases/studyReader';
 import { pageRangeLabel, parseBlockRef } from '@core/ids';
 import { stableStreamText } from '@core/markup';
+import { splitSentences } from '@core/text';
 import type { Block, Section } from '@core/types';
 import { useAppNav } from '@features/nav';
 import { presentConversation } from '@features/library/presenters';
@@ -411,6 +412,14 @@ export function useStudyVM(
     ? raw.sections.find(s => s.id === active.sectionId)
     : null;
   const readSection = reader?.section;
+  // Reading off the main line continues into the next readable section instead of ending.
+  const nextRead = (() => {
+    if (!readSection || readSection.id === raw.main.sectionId) return undefined;
+    const readable = [...raw.sections]
+      .filter(section => section.is_leaf && section.block_from !== null)
+      .sort((a, b) => a.ord - b.ord);
+    return readable[readable.findIndex(s => s.id === readSection.id) + 1];
+  })();
   const originalAvailable = c.mode !== 'demo' && reader?.book.format === 'pdf';
   const guide = guideText(readSection?.guide ?? null);
   const flashSeq = localScroll
@@ -440,7 +449,9 @@ export function useStudyVM(
   const quoteBlock =
     raw.pendingQuote === null ? undefined : blocks.get(raw.pendingQuote);
   const quotePage = blockPage(quoteBlock, raw.book);
-  const quoteExcerpt = quoteBlock?.text ?? '原文';
+  const quoteExcerpt = raw.pendingQuoteFocus
+    ? `「${raw.pendingQuoteFocus}」`
+    : quoteBlock?.text ?? '原文';
   const readSubtitle = (() => {
     const section =
       mode === 'read' ? readSection : activeSection ?? raw.section;
@@ -574,11 +585,19 @@ export function useStudyVM(
         ),
       },
       scrollTo: localScroll ? { ...localScroll, flash: true } : undefined,
-      readEnd: {
-        visible: readSection?.id === raw.main.sectionId,
-        label: '读完这一节',
-        hint: '和听讲一样生成摘要和闪卡草稿',
-      },
+      readEnd: nextRead
+        ? {
+            visible: true,
+            label: `下一节 · ${sectionLabel(nextRead)}`,
+            hint: raw.section
+              ? `接着读原文，伴读仍停在 ${sectionLabel(raw.section)}`
+              : '接着读原文',
+          }
+        : {
+            visible: readSection?.id === raw.main.sectionId,
+            label: '读完这一节',
+            hint: '和听讲一样生成摘要和闪卡草稿',
+          },
       selection: selection
         ? {
             ref: `b${selection.seq}`,
@@ -835,13 +854,13 @@ export function useStudyVM(
       fail(error);
     }
   };
-  const askBlock = (seq: number, start = false) => {
+  const askBlock = (seq: number, start = false, focus?: string) => {
     closeOverlay();
     if (start) {
       run(session.setMode('listen', seq));
       if (standalone) nav.replace({ name: 'Study', bookId });
     } else {
-      session.setQuote(seq);
+      session.setQuote(seq, focus);
       run(
         session.setMode('listen').then(() => {
           if (!mounted.current) return;
@@ -857,7 +876,11 @@ export function useStudyVM(
       );
     }
   };
-  const menuAction = (key: string, refresh = false) => {
+  const menuAction = (
+    key: string,
+    refresh = false,
+    focus: number | null = null,
+  ) => {
     const seq =
       selection?.seq ??
       (overlay?.kind === 'explain' || overlay?.kind === 'translate'
@@ -897,6 +920,13 @@ export function useStudyVM(
     explanationController.current?.abort();
     const controller = new AbortController();
     explanationController.current = controller;
+    // Long paragraphs can be narrowed to one sentence; the whole block stays as context.
+    const sentences =
+      key === 'explain' && block.type === 'text'
+        ? splitSentences(block.text)
+        : [];
+    const focused =
+      focus !== null && sentences[focus] !== undefined ? focus : null;
     setOverlay({
       kind: key,
       seq,
@@ -904,6 +934,7 @@ export function useStudyVM(
       answer: null,
       streaming: true,
       subtitle: blockPage(block, raw.book),
+      ...(sentences.length > 1 ? { sentences, focus: focused } : {}),
     });
     session
       .explainBlock(
@@ -911,34 +942,31 @@ export function useStudyVM(
         key,
         controller.signal,
         aiOptions.state.config ?? undefined,
-        key === 'translate'
-          ? (partial, fromCache) => {
-              if (
-                mounted.current &&
-                !controller.signal.aborted &&
-                explainRequest.current === request
-              )
-                setOverlay(current =>
-                  current?.kind === 'translate' && current.seq === seq
-                    ? {
-                        ...current,
-                        ...(fromCache
-                          ? { fromCache: true, streaming: false }
-                          : {}),
-                        answer: messageDoc(
-                          stableStreamText(partial),
-                          [seq],
-                          new Map([[seq, block]]),
-                          raw.book,
-                          raw.main.sectionId,
-                          true,
-                        ),
-                      }
-                    : current,
-                );
-            }
-          : undefined,
+        (partial, fromCache) => {
+          if (
+            mounted.current &&
+            !controller.signal.aborted &&
+            explainRequest.current === request
+          )
+            setOverlay(current =>
+              current?.kind === key && current.seq === seq
+                ? {
+                    ...current,
+                    ...(fromCache ? { fromCache: true, streaming: false } : {}),
+                    answer: messageDoc(
+                      stableStreamText(partial),
+                      [seq],
+                      new Map([[seq, block]]),
+                      raw.book,
+                      raw.main.sectionId,
+                      true,
+                    ),
+                  }
+                : current,
+            );
+        },
         refresh,
+        focused === null ? undefined : sentences[focused],
       )
       .then(answer => {
         if (
@@ -1321,7 +1349,10 @@ export function useStudyVM(
           subtitle: blockPage(blocks.get(pin.block_seq), raw.book),
         });
     },
-    finishReading: finish,
+    finishReading: () =>
+      nextRead
+        ? nav.replace({ name: 'Reader', bookId, sectionId: nextRead.id })
+        : finish(),
     closeOverlay,
     setNoteText: value =>
       setOverlay(old => (old?.kind === 'note' ? { ...old, value } : old)),
@@ -1349,7 +1380,16 @@ export function useStudyVM(
               : true,
           );
         else if (shown.kind === 'explain' || shown.kind === 'translate')
-          menuAction(shown.kind, true);
+          menuAction(shown.kind, true, shown.focus ?? null);
+        return;
+      }
+      if (shown.kind === 'explain' && key.startsWith('focus:')) {
+        const index = Number(key.slice(6));
+        menuAction(
+          'explain',
+          false,
+          Number.isInteger(index) && index >= 0 ? index : null,
+        );
         return;
       }
       if (key === 'close') {
@@ -1380,7 +1420,13 @@ export function useStudyVM(
           shown.kind === 'pin') &&
         key === 'ask'
       ) {
-        askBlock(shown.seq);
+        askBlock(
+          shown.seq,
+          false,
+          shown.kind === 'explain' && shown.focus != null
+            ? shown.sentences?.[shown.focus]
+            : undefined,
+        );
         return;
       }
       if (

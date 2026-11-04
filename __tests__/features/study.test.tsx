@@ -117,7 +117,6 @@ it('starts a blank conversation from the independent reader without sending an a
 });
 
 it('uses the chosen model, reasoning effort and search for explanation and translation requests', async () => {
-  const complete = jest.spyOn(c.ai, 'complete');
   const stream = jest.spyOn(c.ai, 'stream');
   const vm = await mount(() => useReaderVM('aima', '3.5.2'));
   const model = vm().state.aiOptions!.models.find(item =>
@@ -145,7 +144,9 @@ it('uses the chosen model, reasoning effort and search for explanation and trans
     vm().intents.pressBlock(block.ref, { x: 0, y: 0, w: 100, h: 100 }),
   );
   await act(() => vm().intents.menuAction('explain'));
-  expect(complete.mock.calls.at(-1)![1]).toMatchObject({
+  // Explanations stream like translations, so the answer appears as it arrives.
+  expect(stream.mock.calls.at(-1)![0]).toBe('teach');
+  expect(stream.mock.calls.at(-1)![1]).toMatchObject({
     config: selected,
     noTools: false,
   });
@@ -193,7 +194,7 @@ it.each(['translate', 'explain'] as const)(
   'reopens a saved block %s and regenerates only on explicit request',
   async kind => {
     const vm = await mount(() => useReaderVM('aima', '3.5.2'));
-    const spy = jest.spyOn(c.ai, kind === 'translate' ? 'stream' : 'complete');
+    const spy = jest.spyOn(c.ai, 'stream');
     const block = vm().state.read.items.find(
       item => item.kind === 'block' && item.type === 'text',
     )!;
@@ -1384,4 +1385,27 @@ it('keeps Demo and EPUB original mode guidance explicit', async () => {
   await act(() => vm().intents.setView('orig'));
   expect(vm().state.toast).toContain('Demo');
   expect(vm().state.read.view).toBe('flow');
+});
+
+it('continues an off-main source reader into the next section while keeping the main reader end', async () => {
+  const vm = await mount(() => useReaderVM('aima', '3.4.2'));
+  const sections = await c.repos.sections.tree('aima');
+  const readable = sections
+    .filter(section => section.is_leaf && section.block_from !== null)
+    .sort((a, b) => a.ord - b.ord);
+  const next = readable[readable.findIndex(s => s.id === '3.4.2') + 1];
+  expect(vm().state.read.readEnd).toMatchObject({
+    visible: true,
+    label: expect.stringContaining('下一节'),
+    hint: expect.stringContaining('伴读仍停在'),
+  });
+  await act(() => vm().intents.finishReading());
+  expect(nav.replace).toHaveBeenLastCalledWith({
+    name: 'Reader',
+    bookId: 'aima',
+    sectionId: next.id,
+  });
+  await ReactTestRenderer.act(async () => renderer!.unmount());
+  const main = await mount(() => useReaderVM('aima', '3.5.2'));
+  expect(main().state.read.readEnd.label).toBe('读完这一节');
 });

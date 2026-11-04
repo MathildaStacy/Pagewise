@@ -16,6 +16,7 @@ import {
   type LoadedContext,
 } from '@core/context';
 import { reduceDetour } from '@core/detour';
+import { learningSelection } from '@core/learningScope';
 import { resolveLessonPlan } from '@core/lesson';
 import { parse } from '@core/markup';
 import { advanceCitationStreak, validateCitations } from '@core/citations';
@@ -45,6 +46,7 @@ import {
 import { finishSection } from './finishSection';
 import { deferQuizzes } from './quizSupport';
 import {
+  translationBackground,
   translationChunks,
   translationPassages,
   type TranslationProgress,
@@ -56,6 +58,7 @@ import {
   type TaskCacheContext,
 } from './taskCache';
 import { executeReadTool, jsonObject, parseToolArgs } from './toolExec';
+import { explainInput } from './explainContext';
 import {
   asJson,
   parseStudyCard,
@@ -177,6 +180,7 @@ export class StudySession implements StudySessionApi {
       busy: false,
       loading: false,
       pendingQuote: null,
+      pendingQuoteFocus: null,
       tools: [],
       error: null,
       notice: null,
@@ -374,6 +378,7 @@ export class StudySession implements StudySessionApi {
               this.state.sections.find(s => s.id === options.sectionId)
                 ?.block_from ?? null,
             pendingQuote: null,
+            pendingQuoteFocus: null,
           });
         }
         // An explicit chapter entry must leave any previous source peek behind.
@@ -535,6 +540,7 @@ export class StudySession implements StudySessionApi {
           ? normalizeAiOptions(config, options.providers)
           : options.config,
         pendingQuote: null,
+        pendingQuoteFocus: null,
         streamKeys: {},
         tools: [],
         error: null,
@@ -743,9 +749,20 @@ export class StudySession implements StudySessionApi {
     purpose: 'teach' | 'tidy' = 'tidy',
     config?: ConversationConfig,
     onAnswer?: (answer: string) => void,
+    /** Reference material sent with the request but kept out of the task's cache identity. */
+    background?: string,
   ): Promise<Record<string, JsonValue>> {
+    const built = buildTaskContext(task, input);
     const request: GatewayRequest = {
-      ...buildTaskContext(task, input),
+      ...built,
+      // The task input stays last; reference material sits between the cached map and it.
+      contextBlocks: background
+        ? [
+            ...built.contextBlocks.slice(0, -1),
+            { text: background, cache: false },
+            ...built.contextBlocks.slice(-1),
+          ]
+        : built.contextBlocks,
       tools: [],
       noTools: !config?.search,
       bookId: this.bookId,
@@ -901,6 +918,14 @@ export class StudySession implements StudySessionApi {
           .filter(item => item.status === 'skipped')
           .map(item => item.no) ?? [],
       reminder: this.reminder,
+      ...(this.top()
+        ? {
+            detour_section: this.top()!.sectionId,
+            detour_title:
+              s.sections.find(item => item.id === this.top()!.sectionId)
+                ?.title ?? '',
+          }
+        : {}),
       ...extra,
     };
     this.reminder = null;
@@ -916,6 +941,7 @@ export class StudySession implements StudySessionApi {
     if (this.controller?.signal.aborted) return;
     await this.refreshReadingSource();
     const quote = existingUser?.quote_seq ?? this.state.pendingQuote;
+    const focus = existingUser ? null : this.state.pendingQuoteFocus ?? null;
     if (!existingUser && question && quote !== null) {
       const block = await this.c.repos.blocks.get(this.bookId, quote);
       if (block?.section_id) {
@@ -935,6 +961,7 @@ export class StudySession implements StudySessionApi {
         : this.turn(intent, {
             ...extra,
             ...(quote !== null ? { quote_seq: quote } : {}),
+            ...(quote !== null && focus ? { quote_focus: focus } : {}),
           });
     const operation = `<turn>${stableStringify(turn).replace(
       /</g,
@@ -953,6 +980,7 @@ export class StudySession implements StudySessionApi {
     this.retryAction = () => this.request(intent, text, question, extra, user);
     this.set({
       pendingQuote: null,
+      pendingQuoteFocus: null,
       phase: intent === 'quiz' ? 'quiz' : 'teaching',
     });
     await this.checkpoint();
@@ -1105,6 +1133,7 @@ export class StudySession implements StudySessionApi {
         loaded,
         turn,
         pageOffset: this.state.book?.page_offset ?? 0,
+        visitingSectionIds: this.state.detours.map(frame => frame.sectionId),
       });
     let context = assemble();
     if (context.overBudget) {
@@ -1595,7 +1624,16 @@ export class StudySession implements StudySessionApi {
     }
     return this.run(async () => {
       await this.deferPendingQuizzes();
-      await this.ensurePlan();
+      // A quoted question about another section is a detour; it must not plan the main section first.
+      const quoted =
+        this.state.pendingQuote === null
+          ? undefined
+          : await this.c.repos.blocks.get(this.bookId, this.state.pendingQuote);
+      if (
+        !quoted?.section_id ||
+        quoted.section_id === this.state.main.sectionId
+      )
+        await this.ensurePlan();
       await this.request('ask', text.trim(), true);
     });
   }
@@ -2055,8 +2093,11 @@ export class StudySession implements StudySessionApi {
     }
     return this.anchorWrite.then(() => undefined);
   }
-  setQuote(seq: number | null) {
-    this.set({ pendingQuote: seq });
+  setQuote(seq: number | null, focus?: string) {
+    this.set({
+      pendingQuote: seq,
+      pendingQuoteFocus: seq === null ? null : focus?.trim() || null,
+    });
   }
   answerQuiz(messageId: number, index: number): Promise<void> {
     return this.run(async () => {
@@ -2328,6 +2369,40 @@ export class StudySession implements StudySessionApi {
       this.extraControllers.delete(controller);
     }
   }
+  /** A single block is explained with its place in the book, its neighbours and what it mentions. */
+  private async explainSource(block: Block, focus?: string) {
+    const [sections, scope, book] = await Promise.all([
+      this.c.repos.sections.tree(this.bookId),
+      this.c.repos.sections.learningScope(this.bookId),
+      this.c.repos.books.get(this.bookId),
+    ]);
+    const section = block.section_id
+      ? await this.c.repos.blocks.reading.bySection(
+          this.bookId,
+          block.section_id,
+        )
+      : [block];
+    // PDF seqs are page * 1000 + n; figures and tables often sit a page away from the text.
+    const nearby =
+      block.page != null
+        ? await this.c.repos.blocks.reading.range(
+            this.bookId,
+            (block.page - 1) * 1000,
+            (block.page + 2) * 1000 - 1,
+          )
+        : section;
+    return explainInput({
+      block,
+      section,
+      nearby: [
+        ...new Map([...section, ...nearby].map(b => [b.seq, b])).values(),
+      ].sort((a, b) => a.seq - b.seq),
+      sections,
+      roles: learningSelection(sections, scope, book?.title),
+      page: pageLabel(book ?? { page_offset: 0 }, block.page, block.loc),
+      focus,
+    });
+  }
   private async taskMap() {
     return (await this.c.repos.sections.tree(this.bookId)).map(section => ({
       id: section.id,
@@ -2344,6 +2419,7 @@ export class StudySession implements StudySessionApi {
     onText?: (text: string, fromCache?: boolean) => void,
     citation?: number,
     validate?: (answer: string) => void,
+    background?: string,
   ): Promise<string> {
     const address = {
       bookId: this.bookId,
@@ -2392,6 +2468,7 @@ export class StudySession implements StudySessionApi {
           kind === 'explain' ? 'teach' : 'tidy',
           context.config,
           onText ? publish : undefined,
+          background,
         );
         const answer = stringValue(data.answer);
         if (!answer.trim()) throw new Error('AI 未返回内容，请重试');
@@ -2506,10 +2583,11 @@ export class StudySession implements StudySessionApi {
     onPassages: (parts: TranslationProgress[], fromCache?: boolean) => void,
   ): Promise<string> {
     return this.withTaskSignal(signal, async taskSignal => {
-      const [blocks, map, context] = await Promise.all([
+      const [blocks, map, context, section] = await Promise.all([
         this.c.repos.blocks.reading.bySection(this.bookId, sectionId),
         this.taskMap(),
         taskCacheContext(this.c, 'tidy', config),
+        this.c.repos.sections.get(this.bookId, sectionId),
       ]);
       const passages = translationPassages(blocks);
       if (!passages.length)
@@ -2625,6 +2703,18 @@ export class StudySession implements StudySessionApi {
                         );
                     }
                   : undefined,
+                translationBackground(
+                  section?.title ?? '',
+                  passages
+                    .map((item, at) => ({
+                      source: item.source,
+                      answer: snapshot.answers[at],
+                      translate: item.translate,
+                    }))
+                    .slice(0, index)
+                    .reverse()
+                    .find(item => item.translate && item.answer),
+                ),
               );
             snapshot.complete = index + 1;
             update();
@@ -2642,28 +2732,31 @@ export class StudySession implements StudySessionApi {
     config?: ConversationConfig,
     onText?: (text: string, fromCache?: boolean) => void,
     refresh = false,
+    focus?: string,
   ): Promise<string> {
     return this.withTaskSignal(signal, async taskSignal => {
       const [block, map, context] = await Promise.all([
         this.c.repos.blocks.reading.get(this.bookId, seq),
-        this.taskMap(),
+        kind === 'translate' ? this.taskMap() : Promise.resolve(null),
         taskCacheContext(this.c, kind === 'explain' ? 'teach' : 'tidy', config),
       ]);
       if (!block) throw new Error('找不到这段原文');
       return this.cachedTaskAnswer(
         kind,
-        JSON.stringify(['block', seq]),
-        {
-          seq,
-          block: {
-            seq,
-            type: block.type,
-            text: block.text,
-            latex: block.latex,
-          },
-          ...(kind === 'translate' ? { target_language: '简体中文' } : {}),
-          map,
-        },
+        JSON.stringify(['block', seq, ...(focus ? [focus] : [])]),
+        kind === 'explain'
+          ? await this.explainSource(block, focus)
+          : {
+              seq,
+              block: {
+                seq,
+                type: block.type,
+                text: block.text,
+                latex: block.latex,
+              },
+              target_language: '简体中文',
+              map,
+            },
         context,
         taskSignal,
         refresh,

@@ -22,7 +22,8 @@ export const TOOL_DEFS: ToolDef[] = [
   },
   {
     name: 'search_book',
-    description: '搜索当前书，返回最多八个命中的内容块及位置',
+    description:
+      '搜索当前书，返回最多八个命中的内容块及位置。query 可用空格分隔多个关键词，命中词越多越靠前；chapter 填章或小节编号（如 3 或 3.5）时只在其中搜索',
     schema: object({ query: string, chapter: string }, ['query']),
   },
   {

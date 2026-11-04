@@ -440,6 +440,8 @@ export interface AuxBlockProps {
   kind: 'derive' | 'example';
   children?: ReactNode;
   open?: boolean;
+  /** One line shown while collapsed, so a closed card never looks empty. */
+  preview?: string;
 }
 export interface CheckCardProps {
   children?: ReactNode;
