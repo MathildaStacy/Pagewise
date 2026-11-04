@@ -9,7 +9,7 @@
 
 ## 当前状态
 
-当前 Android 应用代码版本为 v0.0.24，已实现导入、伴读、阅读、笔记、复习、备份及五套皮肤。发布内容见 [v0.0.24 发布说明](docs/dev/releases/v0.0.24.md)，本轮让中文原书译成英文、单段讲解可带上其他章节的图表与公式，延续 [v0.0.23 的讲解上下文、逐句讲解与多词检索](docs/dev/releases/v0.0.23.md)；公式、表格与皮肤验证见 [阅读渲染修复](docs/dev/reader-rendering-fixes-v0.0.17.md)，OCR 问题与对照验证见 [OCR 质量复核](docs/dev/ocr-quality-audit-20261102.md)，章节与阅读验收见 [六本书完整解析验收](docs/dev/downloads-books-audit-20261102.md)。V1 长期使用目标尚未全部验收。
+当前 Android 应用代码版本为 v0.0.25，已实现导入、伴读、阅读、笔记、复习、备份及五套皮肤。发布内容见 [v0.0.25 发布说明](docs/dev/releases/v0.0.25.md)，本轮为伴读增加按段读原文、目录与计算工具，让多轮对话更多命中提示词缓存，并修复模型开岔路后回主线的请求错误，延续 [v0.0.24 的中文原书英译与跨章图表](docs/dev/releases/v0.0.24.md)；公式、表格与皮肤验证见 [阅读渲染修复](docs/dev/reader-rendering-fixes-v0.0.17.md)，OCR 问题与对照验证见 [OCR 质量复核](docs/dev/ocr-quality-audit-20261102.md)，章节与阅读验收见 [六本书完整解析验收](docs/dev/downloads-books-audit-20261102.md)。V1 长期使用目标尚未全部验收。
 
 | 文档 | 内容 |
 | --- | --- |
