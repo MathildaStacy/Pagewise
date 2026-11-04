@@ -479,6 +479,37 @@ it('accepts or dismisses write proposals without eager changes', async () => {
   await session.resolveProposal(advance.message.id, true);
   expect(state().main.step).toBe(2);
 });
+it('rejects a reply with no text or tool call instead of saving a blank answer, and retries it', async () => {
+  const ai = scripted([
+    text('  \n '),
+    // Reasoning-only replies carry no parts; the thinking lives in the raw output.
+    {
+      ...response([]),
+      raw: {
+        protocol: 'chat',
+        model: 'test',
+        items: [{ type: 'reasoning', text: '只想了，没写答案' }],
+      },
+    },
+    text('恢复后的回答'),
+  ]);
+  await setup(ai);
+  const answers = () => state().messages.filter(m => m.kind === 'assistant');
+  const before = answers().length;
+  await session.send('为什么？');
+  expect(state().error).toBe('AI 未返回内容，请重试');
+  expect(state().errorSettings).toBe(false);
+  expect(answers()).toHaveLength(before);
+  await session.retry();
+  expect(state().error).toBe('AI 未返回内容，请重试');
+  expect(answers()).toHaveLength(before);
+  await session.retry();
+  expect(state().error).toBeNull();
+  expect(answers().at(-1)?.content).toContain('恢复后的回答');
+  expect(
+    state().messages.filter(m => m.kind === 'user' && m.content === '为什么？'),
+  ).toHaveLength(1);
+});
 it('retries with identical request history without duplicating the user question', async () => {
   const ai = scripted([
     new AiError('network', 'offline'),
@@ -942,6 +973,70 @@ it('loads a quoted block from another section before answering and keeps later d
     .at(-1)!;
   expect(answer.allowed_refs).toContain(ref);
   expect(answer.unverified).toBe(0);
+});
+it('stops pending tool calls without running them or entering a detour, and still pairs every saved call', async () => {
+  const ai = scripted([
+    response([
+      { t: 'call', name: 'search_book', args: '{"query":"搜索"}', id: 'c1' },
+      { t: 'call', name: 'load_section', args: '{"id":"3.4.2"}', id: 'c2' },
+    ]),
+    text('不应再请求'),
+  ]);
+  await setup(ai);
+  const detours = state().detours.length;
+  const search = c.repos.blocks.search.bind(c.repos.blocks);
+  jest.spyOn(c.repos.blocks, 'search').mockImplementation(async (...args) => {
+    session.stop();
+    return search(...args);
+  });
+  const load = jest.spyOn(c.repos.blocks.reading, 'bySection');
+  await session.send('搜一下');
+  expect(state().detours).toHaveLength(detours);
+  expect(load).not.toHaveBeenCalledWith('aima', '3.4.2');
+  expect(ai.stream).toHaveBeenCalledTimes(1);
+  // Every saved call keeps a paired result, or the next request would be rejected.
+  const results = state()
+    .messages.filter(m => m.kind === 'tool')
+    .flatMap(m => m.parts as unknown as Part[])
+    .filter((p): p is Extract<Part, { t: 'result' }> => p.t === 'result');
+  expect(results.map(p => p.id)).toEqual(['c1', 'c2']);
+  expect(JSON.parse(results[1].output)).toEqual({
+    error: '用户已停止，本次工具未执行',
+  });
+});
+it('cites a block read with get_blocks without entering a detour, and keeps calculations uncitable', async () => {
+  let ref = 0;
+  const ai = scripted([
+    () => call('get_blocks', { ids: [`b${ref}`] }),
+    () =>
+      call(
+        'calculate',
+        { expressions: [{ label: 'A', expression: '1+50' }] },
+        'call-2',
+      ),
+    () => text(`读过原文了。[[b:${ref}]] 51 是算出来的。`),
+  ]);
+  await setup(ai);
+  ref = (await c.repos.blocks.bySection('aima', '3.4.2'))[0].seq;
+  const detours = state().detours.length;
+  await session.send('3.4.2 开头说了什么？');
+  const answer = state()
+    .messages.filter(message => message.kind === 'assistant')
+    .at(-1)!;
+  expect(state().detours).toHaveLength(detours);
+  expect(answer.allowed_refs).toContain(ref);
+  expect(answer.unverified).toBe(0);
+  const results = jest
+    .mocked(ai.stream)
+    .mock.calls[2][1].history.flatMap(entry => entry.parts)
+    .filter(
+      (part): part is Extract<Part, { t: 'result' }> => part.t === 'result',
+    );
+  expect(results.map(part => part.name)).toEqual(['get_blocks', 'calculate']);
+  expect(JSON.parse(results[1].output).minimum).toEqual({
+    value: 51,
+    labels: ['A'],
+  });
 });
 it('reviews a forgotten card with its original source and resolves the new stuck item only after understood', async () => {
   let ref = 0;

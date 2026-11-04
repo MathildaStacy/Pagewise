@@ -69,6 +69,18 @@ it('parses emphasis, inline math and literal content refs in mixed Chinese and E
     { t: 'p', c: [{ t: 'cite', ref: 0, verified: false, detour: false }] },
   ]);
 });
+it('accepts a numeric citation with a missing colon, preserving literal code, escapes and unsafe IDs', () => {
+  expect(parse('UCS 扩展最小代价结点[[b90001]]')).toEqual(
+    parse('UCS 扩展最小代价结点[[b:90001]]'),
+  );
+  expect(parse('```\n[[b90001]]\n```')).toEqual([
+    { t: 'code', text: '[[b90001]]' },
+  ]);
+  expect(parse(String.raw`\[[b90001]]`)).toEqual([paragraph('[[b90001]]')]);
+  expect(parse('[[b9007199254740992]] [[b-1]] [[bx1]]')).toEqual([
+    paragraph('[[b9007199254740992]] [[b-1]] [[bx1]]'),
+  ]);
+});
 it('renders display math as a block and leaves math contents untouched', () => {
   expect(parse('前面\n\n$$\nf(n) = g(n) + h(n)\n$$\n\n后面')).toEqual([
     paragraph('前面'),
@@ -363,6 +375,8 @@ it.each([
   '[[b:',
   '[[b:12',
   '[[b:12]',
+  '[[b12',
+  '[[b12]',
   '[[q:103',
   '[[fig:10',
   '[[der',

@@ -1,7 +1,11 @@
 import type { Section } from '@core/types';
 import { pageLabel, pageRangeLabel } from '@core/ids';
 import { sectionName } from '@features/sectionName';
-import type { BookNotesData, NoteDetailData } from '@app/usecases/notes';
+import type {
+  BookNotesData,
+  NoteDetailData,
+  NotesOverviewData,
+} from '@app/usecases/notes';
 import type { NotesState, NotesBookState, NoteDetailState } from './types';
 
 export function sectionHasNotes(data: BookNotesData, s: Section): boolean {
@@ -14,32 +18,22 @@ export function sectionHasNotes(data: BookNotesData, s: Section): boolean {
     data.blocks.some(b => b.section_id === s.id)
   );
 }
-export function presentNotes(data: BookNotesData[]): NotesState {
+export function presentNotes(data: NotesOverviewData): NotesState {
   return {
     loading: false,
-    books: data.flatMap(d =>
-      d.book
-        ? [
-            {
-              id: d.book.id,
-              title: d.book.title,
-              cover: {
-                title: d.book.title,
-                color: d.book.cover_color,
-                uri: d.book.coverUri,
-              },
-              meta: d.sections.some(s => sectionHasNotes(d, s))
-                ? `${
-                    d.sections.filter(s => sectionHasNotes(d, s)).length
-                  } 节有笔记 · ${d.qa.length} 条问答 · ${
-                    d.highlights.length
-                  } 处批注`
-                : '还没有笔记',
-              hasNotes: d.sections.some(s => sectionHasNotes(d, s)),
-            },
-          ]
-        : [],
-    ),
+    books: data.map(d => ({
+      id: d.book.id,
+      title: d.book.title,
+      cover: {
+        title: d.book.title,
+        color: d.book.cover_color,
+        uri: d.book.coverUri,
+      },
+      meta: d.sectionCount
+        ? `${d.sectionCount} 节有笔记 · ${d.qaCount} 条问答 · ${d.highlightCount} 处批注`
+        : '还没有笔记',
+      hasNotes: d.sectionCount > 0,
+    })),
   };
 }
 function chapterOf(sections: Section[], s: Section): Section {

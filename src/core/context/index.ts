@@ -3,7 +3,8 @@ import { escapeXml, estimateTokens, stableStringify } from '../text';
 
 export const DEFAULT_INPUT_BUDGET = 24_000;
 export type ContextPart =
-  | { t: 'text'; text: string }
+  /** volatile: rebuilt every turn, so providers must not treat it as a reusable prefix. */
+  | { t: 'text'; text: string; volatile?: true }
   | { t: 'call'; id: string; name: string; args: string }
   | { t: 'result'; id: string; name: string; output: string };
 /** Structural protocol boundary: no dependency from core to the AI service layer. */
@@ -259,13 +260,12 @@ function summaryText(group: {
     group.sectionId ? ` section="${escapeXml(group.sectionId)}"` : ''
   }>${escapeXml(group.summary ?? '')}</${tag}>`;
 }
+const isTurnPart = (part: ContextPart) =>
+  part.t === 'text' && part.text.startsWith('<turn>');
 /** Saved user turns already carry their operation; appending it again would repeat <turn>. */
 function carriesTurn(messages: readonly ContextMessage<unknown>[]): boolean {
   const last = messages.at(-1);
-  return (
-    last?.role === 'user' &&
-    last.parts.some(part => part.t === 'text' && part.text.startsWith('<turn>'))
-  );
+  return last?.role === 'user' && last.parts.some(isTurnPart);
 }
 function compressLoaded<Ui>(group: LoadedContext<Ui>): ContextMessage<Ui>[] {
   const text = `<section_summary section="${escapeXml(
@@ -346,24 +346,45 @@ export function buildContext<Ui = never>(
     )
     .map(item => ({ layer: 6, id: item.group.id, reason: 'missing' }));
   const budget = input.budget ?? DEFAULT_INPUT_BUDGET;
+  /**
+   * The study record changes every turn, so it rides at the very end, just before <turn>:
+   * everything earlier stays byte-identical across turns and providers can reuse it as a prefix.
+   */
   function composeHistory(): ContextMessage<Ui>[] {
     const messages = [
-      record,
       ...loaded.flatMap(group => group.messages),
       ...conversation.flatMap(group => group.messages),
     ];
+    const recordPart = {
+      ...(record.parts[0] as { t: 'text'; text: string }),
+      volatile: true as const,
+    };
+    const turnPart = { t: 'text' as const, text: operation };
     const last = messages.at(-1);
-    if (carriesTurn(messages)) return messages;
-    if (last?.role === 'user' && last !== record) {
+    if (last?.role === 'user') {
+      // A saved user turn already carries its own <turn>; keep it last and don't repeat it.
+      const turns = carriesTurn(messages)
+        ? last.parts.filter(isTurnPart)
+        : [turnPart];
       return [
         ...messages.slice(0, -1),
         {
           ...last,
-          parts: [...last.parts, { t: 'text' as const, text: operation }],
+          parts: [
+            ...last.parts.filter(part => !isTurnPart(part)),
+            recordPart,
+            ...turns,
+          ],
         },
       ];
     }
-    return [...messages, synthetic<Ui>(-2, input.threadId ?? 0, operation)];
+    return [
+      ...messages,
+      {
+        ...synthetic<Ui>(-2, input.threadId ?? 0, operation),
+        parts: [recordPart, turnPart],
+      },
+    ];
   }
   function estimates(): LayerEstimate[] {
     return [

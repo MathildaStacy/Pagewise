@@ -23,6 +23,7 @@ import { advanceCitationStreak, validateCitations } from '@core/citations';
 import { pageLabel, parseBlockRef } from '@core/ids';
 import { stableStringify, truncateText } from '@core/text';
 import type { GatewayRequest } from '@services/ai/gateway';
+import { AiError } from '@services/ai/http';
 import type {
   ConversationConfig,
   Part,
@@ -1244,6 +1245,11 @@ export class StudySession implements StudySessionApi {
   private async loop(round: Round) {
     const signal = this.controller!.signal;
     for (;;) {
+      if (signal.aborted) {
+        this.set({ notice: '已停止' });
+        this.retryAction = null;
+        return;
+      }
       if (round.rounds >= 6) {
         this.set({ error: 'AI 服务未遵守工具调用上限，请重试' });
         return;
@@ -1299,6 +1305,9 @@ export class StudySession implements StudySessionApi {
         (part): part is Extract<Part, { t: 'call' }> => part.t === 'call',
       );
       const content = textOf(response.parts);
+      // A reply without text or tool calls would be saved as a blank answer; offer a retry instead.
+      if (!calls.length && !content.trim())
+        throw new AiError('empty', 'AI 未返回讲解内容');
       const saved = await this.saveAnswer(
         content,
         response.parts,
@@ -1318,9 +1327,22 @@ export class StudySession implements StudySessionApi {
       }
       let deferred = false;
       for (const call of calls) {
-        round.calls++;
         let output: string;
         let sourceRefs: number[] = [];
+        if (signal.aborted) {
+          // The call is already saved; pair it with a result, but run nothing after Stop.
+          const result = await this.toolResult(
+            call.id,
+            call.name,
+            JSON.stringify({ error: '用户已停止，本次工具未执行' }),
+          );
+          round.request = {
+            ...round.request,
+            history: [...round.request.history, stored(result)],
+          };
+          continue;
+        }
+        round.calls++;
         if (deferred) {
           output = JSON.stringify({
             error: '已有操作等待用户处理，请先等待用户选择',
@@ -1411,12 +1433,16 @@ export class StudySession implements StudySessionApi {
               args,
             );
             let entered = true;
+            // A section read that finishes after Stop must not open a detour.
             if (call.name === 'load_section' && result.section)
-              entered = await this.enterDetour(result.section.id);
+              entered =
+                !signal.aborted && (await this.enterDetour(result.section.id));
             output = entered
               ? result.output
               : JSON.stringify({
-                  error: '已在第 2 层岔路，先请用户决定是否回主线',
+                  error: signal.aborted
+                    ? '用户已停止，本次工具未执行'
+                    : '已在第 2 层岔路，先请用户决定是否回主线',
                 });
             if (entered) {
               sourceRefs = result.allowedRefs;

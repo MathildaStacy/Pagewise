@@ -138,10 +138,12 @@ export function createAiGateway(deps: GatewayDependencies): AiGateway {
     const disabled = unsupported.get(identity) ?? new Set<'cache' | 'effort'>();
     unsupported.set(identity, disabled);
     let published = false;
+    let streamingFallback = false;
     for (;;) {
       const noEffort = disabled.has('effort');
       const input: RequestInput = {
         ...req,
+        ...(streamingFallback ? { stream: true } : {}),
         service: noEffort
           ? {
               ...service,
@@ -182,6 +184,19 @@ export function createAiGateway(deps: GatewayDependencies): AiGateway {
           },
         );
       } catch (error) {
+        // Some relays time out buffering a complete response yet serve SSE fine.
+        // Retry once over SSE, before any output has reached the caller.
+        if (
+          error instanceof AiError &&
+          !published &&
+          !req.stream &&
+          !streamingFallback &&
+          [502, 503, 504].includes(error.status ?? 0) &&
+          !opts.signal?.aborted
+        ) {
+          streamingFallback = true;
+          continue;
+        }
         if (
           error instanceof AiError &&
           error.compat &&

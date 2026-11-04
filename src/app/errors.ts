@@ -46,6 +46,7 @@ const aiMessages: Record<AiErrorCode, { message: string; retry: boolean }> = {
     message: 'AI 服务返回了无法读取的内容，请检查协议设置后重试',
     retry: true,
   },
+  empty: { message: 'AI 未返回内容，请重试', retry: true },
 };
 
 export function toAppError(error: unknown): AppError {

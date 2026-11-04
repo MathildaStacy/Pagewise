@@ -130,13 +130,21 @@ it('assembles six layers in order with stable cached prefix bytes and appends tu
   expect(result.contextBlocks[1].text).toContain(
     '<block id="b103001" page="103" type="equation">f(n)=g(n)+h(n)</block>',
   );
-  expect(result.history[0].parts).toEqual([
-    { t: 'text', text: expect.stringContaining('<study_record>') },
+  // The per-turn record sits just before <turn>, after every stable message.
+  expect(result.history.at(-1)?.parts.slice(-2)).toEqual([
+    {
+      t: 'text',
+      text: expect.stringContaining('<study_record>'),
+      volatile: true,
+    },
+    { t: 'text', text: '<turn>{"intent":"next","step":1}</turn>' },
   ]);
-  expect(result.history.at(-1)?.parts.at(-1)).toEqual({
-    t: 'text',
-    text: '<turn>{"intent":"next","step":1}</turn>',
-  });
+  expect(
+    result.history
+      .slice(0, -1)
+      .flatMap(m => m.parts)
+      .some(part => part.t === 'text' && part.text.includes('<study_record>')),
+  ).toBe(false);
   const next = buildContext({
     ...input,
     studyRecord: { progress: { step: 2 }, recentQuestions: ['新的问题'] },
@@ -191,6 +199,65 @@ it('formats PDFs, EPUB locations, image descriptions and learned map summaries w
     formatBookMap([section('a', 'b', 3, 0), section('b', 'a', 3, 1)], 'a', 0),
   ).toContain('a a');
 });
+it('keeps the previous turn byte-identical as the next request prefix, with only the record and turn changing', () => {
+  const asked = (id: number, text: string, turn: string): ContextMessage => ({
+    ...message(id, text),
+    parts: [
+      { t: 'text', text },
+      { t: 'text', text: `<turn>${turn}</turn>` },
+    ],
+  });
+  const first = asked(1, '为什么', '{"intent":"ask","question":"为什么"}');
+  const turn1 = buildContext(
+    fixture({
+      conversation: [{ id: 'recent', messages: [first] }],
+      studyRecord: { progress: { step: 1 }, recentQuestions: ['为什么'] },
+      turn: { intent: 'ask', question: '为什么' },
+    }),
+  );
+  const turn2 = buildContext(
+    fixture({
+      conversation: [
+        {
+          id: 'recent',
+          messages: [
+            first,
+            message(2, '因为……', 'assistant'),
+            asked(3, '再举个例子', '{"intent":"ask","question":"再举个例子"}'),
+          ],
+        },
+      ],
+      studyRecord: {
+        progress: { step: 2 },
+        recentQuestions: ['为什么', '再举个例子'],
+      },
+      turn: { intent: 'ask', question: '再举个例子' },
+    }),
+  );
+  // Dropping turn 1's record leaves exactly the history turn 2 starts with.
+  const stable = turn1.history.map(m => ({
+    ...m,
+    parts: m.parts.filter(part => !(part.t === 'text' && part.volatile)),
+  }));
+  expect(turn2.history.slice(0, stable.length)).toEqual(stable);
+  expect(turn2.history.at(-1)?.parts).toEqual([
+    { t: 'text', text: '再举个例子' },
+    {
+      t: 'text',
+      text: expect.stringContaining('<question>再举个例子</question>'),
+      volatile: true,
+    },
+    {
+      t: 'text',
+      text: '<turn>{"intent":"ask","question":"再举个例子"}</turn>',
+    },
+  ]);
+  expect(
+    turn2.history
+      .flatMap(m => m.parts)
+      .filter(part => part.t === 'text' && part.volatile),
+  ).toHaveLength(1);
+});
 it('preserves raw assistant output and tool call IDs and keeps only the last ten questions', () => {
   const call: ContextMessage = {
     ...message(2, '', 'assistant'),
@@ -218,9 +285,9 @@ it('preserves raw assistant output and tool call IDs and keeps only the last ten
       },
     }),
   );
-  expect(output.history.slice(1, 3)).toEqual([call, tool]);
-  expect(output.history[1].raw).toBe(call.raw);
-  const record = output.history[0].parts[0];
+  expect(output.history.slice(0, 2)).toEqual([call, tool]);
+  expect(output.history[0].raw).toBe(call.raw);
+  const record = output.history.at(-1)!.parts[0];
   expect(record.t === 'text' && record.text).not.toContain(
     '<question>q1</question>',
   );
@@ -445,7 +512,7 @@ it('has a stable exact fixture for empty content and a current operation', () =>
         {
           "compacted": false,
           "createdAt": "",
-          "id": -1,
+          "id": -2,
           "parts": [
             {
               "t": "text",
@@ -456,18 +523,8 @@ it('has a stable exact fixture for empty content and a current operation', () =>
 
     </recent_questions>
     </study_record>",
+              "volatile": true,
             },
-          ],
-          "raw": null,
-          "role": "user",
-          "threadId": 0,
-          "ui": null,
-        },
-        {
-          "compacted": false,
-          "createdAt": "",
-          "id": -2,
-          "parts": [
             {
               "t": "text",
               "text": "<turn>{"intent":"next"}</turn>",

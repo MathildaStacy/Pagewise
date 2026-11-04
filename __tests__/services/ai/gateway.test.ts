@@ -211,6 +211,61 @@ test('a heartbeat-only relay completion retries once with SSE and records one re
   expect(config.recordUsage).toHaveBeenCalledTimes(1);
 });
 
+test.each([502, 503, 504])(
+  'a buffered HTTP %s completion switches to streamed transport once, preserving the result and usage',
+  async status => {
+    const fetchImpl = jest.fn<ReturnType<FetchLike>, Parameters<FetchLike>>(
+      createRecordedFetch([
+        { status, chunks: ['upstream unavailable'] },
+        {
+          status: 200,
+          chunks: [sse(aStart, aText, aDelta('完整整理结果'), ...aEnd)],
+        },
+      ]),
+    );
+    const config = deps(fetchImpl);
+    const result = await createAiGateway(config).complete('tidy', req);
+    expect(result.parts).toContainEqual({ t: 'text', text: '完整整理结果' });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(fetchImpl.mock.calls[1][1].body).stream).toBe(true);
+    expect(config.recordUsage).toHaveBeenCalledTimes(1);
+  },
+);
+
+test('a relay that fails both transports stops after one fallback without hiding the failure', async () => {
+  const fetchImpl = jest.fn<ReturnType<FetchLike>, Parameters<FetchLike>>(
+    createRecordedFetch([
+      { status: 502, chunks: ['buffered failure'] },
+      { status: 502, chunks: ['streaming failure'] },
+    ]),
+  );
+  const config = deps(fetchImpl);
+  await expect(
+    createAiGateway(config).complete('tidy', req),
+  ).rejects.toMatchObject({ status: 502 });
+  expect(fetchImpl).toHaveBeenCalledTimes(2);
+  expect(config.recordUsage).not.toHaveBeenCalled();
+});
+
+test('a streamed request that fails with HTTP 502 is not repeated', async () => {
+  const fetchImpl = jest.fn<ReturnType<FetchLike>, Parameters<FetchLike>>(
+    createRecordedFetch([
+      { status: 502, chunks: ['streaming failure'] },
+      {
+        status: 200,
+        chunks: [sse(aStart, aText, aDelta('不应请求'), ...aEnd)],
+      },
+    ]),
+  );
+  await expect(
+    createAiGateway(deps(fetchImpl)).stream('teach', req, {
+      signal: new AbortController().signal,
+      onText: () => undefined,
+    }),
+  ).rejects.toMatchObject({ status: 502 });
+  expect(fetchImpl).toHaveBeenCalledTimes(1);
+});
+
 test('a relay that also truncates its streaming retry stops with protocol error', async () => {
   const fetchImpl = jest.fn<ReturnType<FetchLike>, Parameters<FetchLike>>(
     createRecordedFetch([
