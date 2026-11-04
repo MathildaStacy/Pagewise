@@ -456,6 +456,26 @@ describe('响应解析', () => {
 });
 
 describe('兼容服务和 Key 保护', () => {
+  test('Chat 协议只对官方 OpenAI 带 prompt_cache_key，兼容服务和关闭缓存时都不带', () => {
+    const chat = (providerKind?: 'openai' | 'deepseek' | 'zhipu' | 'custom') =>
+      ({
+        protocol: 'chat' as const,
+        model: 'm',
+        baseUrl: 'https://x.test/v1',
+        ...(providerKind ? { providerKind } : {}),
+      } as RequestInput['service']);
+    const key = (service: RequestInput['service'], cache = true) =>
+      (
+        buildRequest({ ...base(service, [user1]), cache }).body as {
+          prompt_cache_key?: string;
+        }
+      ).prompt_cache_key;
+    expect(key(chat('openai'))).toBe('pagewise-test');
+    expect(key(chat('openai'), false)).toBeUndefined();
+    for (const kind of ['deepseek', 'zhipu', 'custom', undefined] as const)
+      expect(key(chat(kind))).toBeUndefined();
+  });
+
   test('400 里说的是缓存或思考字段', () => {
     expect(compatOf('cache_control: Extra inputs are not permitted')).toBe(
       'cache',

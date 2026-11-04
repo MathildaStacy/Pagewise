@@ -542,6 +542,11 @@ function chatBody(input: RequestInput): Record<string, unknown> {
     ...(kind === 'openai'
       ? { max_completion_tokens: MAX_OUTPUT_TOKENS }
       : { max_tokens: MAX_OUTPUT_TOKENS }),
+    // Only official OpenAI documents prompt_cache_key here; compatible services may reject
+    // unknown fields without naming them, which the cache fallback could not recognise.
+    ...(input.cache && kind === 'openai'
+      ? { prompt_cache_key: input.cacheKey }
+      : {}),
     ...(input.stream
       ? { stream: true, stream_options: { include_usage: true } }
       : {}),

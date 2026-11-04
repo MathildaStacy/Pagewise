@@ -42,6 +42,11 @@ export interface LoadedContext<Ui = never> {
   messages: readonly ContextMessage<Ui>[];
   detour?: boolean;
   summary?: string;
+  /**
+   * Id of the conversation (or loaded) group that followed this read when it happened. The read
+   * goes back there, so later turns never move it in front of history that was already sent.
+   */
+  before?: string;
 }
 export interface StudyRecordInput {
   progress: JsonValue;
@@ -351,10 +356,23 @@ export function buildContext<Ui = never>(
    * everything earlier stays byte-identical across turns and providers can reuse it as a prefix.
    */
   function composeHistory(): ContextMessage<Ui>[] {
-    const messages = [
-      ...loaded.flatMap(group => group.messages),
-      ...conversation.flatMap(group => group.messages),
-    ];
+    const sequence = conversation.map(item => ({
+      id: item.group.id,
+      messages: item.messages,
+    }));
+    // Latest first, so a read that preceded another read can find it already placed.
+    for (const item of [...loaded].reverse()) {
+      const at =
+        item.group.before === undefined
+          ? -1
+          : sequence.findIndex(entry => entry.id === item.group.before);
+      // Without a known place, keep the former layout: reads ahead of the conversation.
+      sequence.splice(Math.max(at, 0), 0, {
+        id: item.group.id,
+        messages: item.messages,
+      });
+    }
+    const messages = sequence.flatMap(entry => entry.messages);
     const recordPart = {
       ...(record.parts[0] as { t: 'text'; text: string }),
       volatile: true as const,

@@ -297,6 +297,60 @@ it('preserves raw assistant output and tool call IDs and keeps only the last ten
   expect(output.history.at(-1)?.role).toBe('user');
   expect(output.history.at(-1)?.id).toBe(-2);
 });
+it('puts reads back where they happened, chaining consecutive reads, and keeps the old front placement without a place', () => {
+  const read = (id: number, name: string): ContextMessage[] => [
+    {
+      ...message(id, '', 'assistant'),
+      parts: [{ t: 'call', id: `c${id}`, name, args: '{}' }],
+    },
+    {
+      ...message(id + 1, ''),
+      role: 'tool',
+      parts: [{ t: 'result', id: `c${id}`, name, output: `结果${id}` }],
+    },
+  ];
+  const turn = (id: number, text: string) => ({
+    id: String(id),
+    messages: [message(id, text)],
+  });
+  const ids = (input: Partial<ContextInput>) =>
+    buildContext(fixture(input)).history.map(m => m.id);
+  const conversation = [turn(1, '问一'), turn(10, '问二'), turn(20, '问三')];
+  // Two reads in a row after 问一, the second pointing at the first's follower.
+  expect(
+    ids({
+      conversation,
+      loaded: [
+        {
+          id: '2',
+          sectionId: '3.4.2',
+          messages: read(2, 'search_book'),
+          before: '4',
+        },
+        {
+          id: '4',
+          sectionId: '3.4.2',
+          messages: read(4, 'load_section'),
+          before: '10',
+        },
+      ],
+    }),
+  ).toEqual([1, 2, 3, 4, 5, 10, 20]);
+  expect(
+    ids({
+      conversation,
+      loaded: [
+        { id: '2', sectionId: '3.4.2', messages: read(2, 'search_book') },
+        {
+          id: '12',
+          sectionId: '3.4.2',
+          messages: read(12, 'get_blocks'),
+          before: 'gone',
+        },
+      ],
+    }),
+  ).toEqual([2, 3, 12, 13, 1, 10, 20]);
+});
 it('compresses older dialogue first and then the oldest detour source, without changing the three cached layers', () => {
   const load = (id: number) => ({
     id: `load${id}`,

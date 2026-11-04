@@ -974,7 +974,7 @@ it('loads a quoted block from another section before answering and keeps later d
   expect(answer.allowed_refs).toContain(ref);
   expect(answer.unverified).toBe(0);
 });
-it('keeps every earlier turn as the next request prefix while steps advance, so providers can reuse it', async () => {
+it('keeps every earlier turn as the next request prefix while steps advance and detours load sources, so providers can reuse it', async () => {
   const seen: GatewayRequest[] = [];
   await setup({
     ...demo,
@@ -987,7 +987,17 @@ it('keeps every earlier turn as the next request prefix while steps advance, so 
   await session.act('next');
   await session.send('如果 h(n) 估大了会怎样？');
   await session.act('next');
-  expect(seen.length).toBeGreaterThanOrEqual(4);
+  // The demo answers this with load_section, so the next turn replays a loaded detour source.
+  await session.send('这和贪心最佳优先搜索有什么不同？');
+  await session.send('再说说贪心为什么不最优');
+  expect(
+    seen
+      .flatMap(req => req.history)
+      .some(m =>
+        m.parts.some(p => p.t === 'call' && p.name === 'load_section'),
+      ),
+  ).toBe(true);
+  expect(seen.length).toBeGreaterThanOrEqual(7);
   for (const protocol of ['openai', 'chat', 'anthropic'] as const) {
     const body = (req: GatewayRequest) =>
       JSON.stringify(
@@ -1004,6 +1014,9 @@ it('keeps every earlier turn as the next request prefix while steps advance, so 
         .flatMap(m => m.parts)
         .find(p => p.t === 'text' && p.volatile);
       if (!record || record.t !== 'text') continue;
+      // Folding or compressing earlier messages legitimately rewrites history; only check otherwise.
+      const kept = new Set(seen[i].history.map(m => m.id));
+      if (seen[i - 1].history.some(m => m.id > 0 && !kept.has(m.id))) continue;
       // Everything before the previous turn's record must reappear unchanged.
       const before = body(seen[i - 1]);
       const stable = before.slice(
@@ -1067,6 +1080,7 @@ it('cites a block read with get_blocks without entering a detour, and keeps calc
         'call-2',
       ),
     () => text(`读过原文了。[[b:${ref}]] 51 是算出来的。`),
+    () => text(`下一轮仍可引用刚读过的原文。[[b:${ref}]]`),
   ]);
   await setup(ai);
   ref = (await c.repos.blocks.bySection('aima', '3.4.2'))[0].seq;
@@ -1089,6 +1103,13 @@ it('cites a block read with get_blocks without entering a detour, and keeps calc
     value: 51,
     labels: ['A'],
   });
+  // A block read in an earlier turn stays citable later, like load_section sources.
+  await session.send('接着说');
+  const later = state()
+    .messages.filter(message => message.kind === 'assistant')
+    .at(-1)!;
+  expect(later.allowed_refs).toContain(ref);
+  expect(later.unverified).toBe(0);
 });
 it('reviews a forgotten card with its original source and resolves the new stuck item only after understood', async () => {
   let ref = 0;

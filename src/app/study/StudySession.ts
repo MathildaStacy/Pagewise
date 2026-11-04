@@ -1023,6 +1023,7 @@ export class StudySession implements StudySessionApi {
     const readNames = new Set([
       'load_section',
       'search_book',
+      'get_blocks',
       'get_figure',
       'get_notes',
     ]);
@@ -1072,6 +1073,7 @@ export class StudySession implements StudySessionApi {
         summary:
           this.state.sections.find(section => section.id === sectionId)
             ?.summary ?? undefined,
+        before: groups[following]?.id,
       });
       groups.splice(index, following - index);
       index--;
