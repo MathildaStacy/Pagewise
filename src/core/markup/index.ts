@@ -115,7 +115,7 @@ function pendingTag(tail: string): boolean {
   ];
   return (
     literal.some(tag => tag.startsWith(tail)) ||
-    /^\[\[(?:b|q|fig)(?::\d*\]?)?$/.test(tail) ||
+    /^\[\[(?:b:?\d*|q:\d*|fig:\d*)\]?$/.test(tail) ||
     ['[[b:', '[[q:', '[[fig:'].some(tag => tag.startsWith(tail))
   );
 }
@@ -160,7 +160,8 @@ export function parseInline(
         break;
       }
       const raw = text.slice(i, end + 2);
-      const matched = /^\[\[b:(\d+)\]\]$/.exec(raw);
+      // Models occasionally omit the colon ([[b123]]); the same citation checks still apply.
+      const matched = /^\[\[b:?(\d+)\]\]$/.exec(raw);
       if (matched && Number.isSafeInteger(Number(matched[1]))) {
         flush();
         nodes.push({

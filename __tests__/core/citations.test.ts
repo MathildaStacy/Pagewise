@@ -52,6 +52,15 @@ it('checks allow-list and block existence separately and marks detour refs', () 
     404,
   ]);
 });
+it('keeps the same source permissions for citations whose colon was omitted', () => {
+  const result = validateCitations(
+    parse('已读[[b1]] 未读[[b4]] 不存在[[b404]] 占位[[b0]]。'),
+    context,
+  );
+  expect(result.verifiedRefs).toEqual([1]);
+  expect(result.invalidRefs).toEqual([4, 404, 0]);
+  expect(result.invalidCitations).toBe(3);
+});
 it('removes invalid capsules and inserts one unverified marker at each affected sentence end', () => {
   const result = validateCitations(
     parse(

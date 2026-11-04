@@ -117,7 +117,8 @@ export interface AiService {
 
 /** 协议无关的消息内容。args / output 是字符串，原样发送，保证每次发送的字节相同（缓存）。 */
 export type Part =
-  | { t: 'text'; text: string }
+  /** volatile: rebuilt every turn (never stored); cache breakpoints go before it. */
+  | { t: 'text'; text: string; volatile?: true }
   | { t: 'call'; id: string; name: string; args: string }
   | { t: 'result'; id: string; name: string; output: string };
 

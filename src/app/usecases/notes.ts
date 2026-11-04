@@ -28,7 +28,7 @@ export async function saveUserNote(
 }
 export async function loadBookNotes(c: Container, bookId: string) {
   await pendingWrites.get(c);
-  const [book, sections, qa, stuck, highlights, pins, cardCount] =
+  const [book, sections, qa, stuck, highlights, pins, cardCount, userNotes] =
     await Promise.all([
       c.repos.books.get(bookId),
       c.repos.sections.tree(bookId),
@@ -40,13 +40,21 @@ export async function loadBookNotes(c: Container, bookId: string) {
         'SELECT COUNT(*) AS count FROM card WHERE book_id=?',
         [bookId],
       ),
+      c.repos.notes.userText.list(bookId),
     ]);
-  const userNotes = await Promise.all(
-    sections.map(s => c.repos.notes.userText.get(bookId, s.id)),
+  // One batched read instead of a query per highlight; duplicates keep their slot.
+  const bySeq = new Map(
+    (
+      await c.repos.blocks.byRefs(
+        bookId,
+        highlights.map(h => h.block_seq),
+      )
+    ).map(block => [block.seq, block]),
   );
-  const blocks = await Promise.all(
-    highlights.map(h => c.repos.blocks.get(bookId, h.block_seq)),
-  );
+  const blocks = highlights.flatMap(h => {
+    const block = bySeq.get(h.block_seq);
+    return block ? [block] : [];
+  });
   return {
     book: book ? await withBookCover(c, book) : undefined,
     sections,
@@ -54,30 +62,55 @@ export async function loadBookNotes(c: Container, bookId: string) {
     stuck,
     highlights,
     pins,
-    userNotes: userNotes.filter(n => n !== undefined),
-    blocks: blocks.filter(b => b !== undefined),
+    userNotes,
+    blocks,
     cardCount: cardCount?.count ?? 0,
   };
 }
 export type BookNotesData = Awaited<ReturnType<typeof loadBookNotes>>;
+/** The notes shelf only shows counts, so it never loads every book's notes. */
 export async function loadNotes(c: Container) {
-  const books = await c.repos.books.list();
-  return Promise.all(books.map(b => loadBookNotes(c, b.id)));
+  await pendingWrites.get(c);
+  const [books, counts] = await Promise.all([
+    c.repos.books.list(),
+    c.repos.notes.counts(),
+  ]);
+  const byBook = new Map(counts.map(row => [row.book_id, row]));
+  return Promise.all(
+    books.map(async book => ({
+      book: await withBookCover(c, book),
+      sectionCount: byBook.get(book.id)?.section_count ?? 0,
+      qaCount: byBook.get(book.id)?.qa_count ?? 0,
+      highlightCount: byBook.get(book.id)?.highlight_count ?? 0,
+    })),
+  );
 }
+export type NotesOverviewData = Awaited<ReturnType<typeof loadNotes>>;
 export async function loadNoteDetail(
   c: Container,
   bookId: string,
   sectionId: string,
 ) {
   await pendingWrites.get(c);
-  const [data, userNote, blocks] = await Promise.all([
-    loadBookNotes(c, bookId),
-    c.repos.notes.userText.get(bookId, sectionId),
-    c.repos.blocks.bySection(bookId, sectionId),
-  ]);
+  // Only this section's rows; the detail page never needs the rest of the book.
+  const [book, section, qa, stuck, highlights, pins, userNote, blocks] =
+    await Promise.all([
+      c.repos.books.get(bookId),
+      c.repos.sections.get(bookId, sectionId),
+      c.repos.notes.qa.list(bookId, sectionId),
+      c.repos.notes.stuck.list(bookId, sectionId),
+      c.repos.notes.highlights.list(bookId, sectionId),
+      c.repos.notes.pins.list(bookId, sectionId),
+      c.repos.notes.userText.get(bookId, sectionId),
+      c.repos.blocks.bySection(bookId, sectionId),
+    ]);
   return {
-    ...data,
-    section: data.sections.find(s => s.id === sectionId),
+    book,
+    section,
+    qa,
+    stuck,
+    highlights,
+    pins,
     userNote,
     sectionBlocks: blocks,
   };

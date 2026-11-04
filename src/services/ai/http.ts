@@ -110,7 +110,9 @@ export type AiErrorCode =
   | 'network'
   | 'timeout'
   | 'cancelled'
-  | 'protocol';
+  | 'protocol'
+  /** The reply carried neither text nor a tool call. */
+  | 'empty';
 
 export class AiError extends Error {
   constructor(

@@ -217,15 +217,83 @@ describe('Anthropic Messages 请求', () => {
     );
   });
 
-  test('前缀稳定：追加一轮后，之前的消息逐字节不变（缓存能读）', () => {
-    const a = JSON.stringify(
-      buildRequest(base(anth, [user1, call1, result1, answer1])).body,
+  // Anthropic 按内容匹配前缀，并会检查断点之前的块边界；断点标记本身每轮可以移动。
+  const content = (input: RequestInput) =>
+    JSON.stringify(buildRequest(input).body).replace(
+      /,"cache_control":\{"type":"ephemeral"\}/g,
+      '',
     );
-    const b = JSON.stringify(
-      buildRequest(base(anth, [user1, call1, result1, answer1, user2])).body,
-    );
+  test('前缀稳定：追加一轮后，之前的消息内容逐字节不变（缓存能读）', () => {
+    const a = content(base(anth, [user1, call1, result1, answer1]));
+    const b = content(base(anth, [user1, call1, result1, answer1, user2]));
     // 去掉 a 末尾的 ]} 后应该是 b 的前缀
     expect(b.startsWith(a.slice(0, -2))).toBe(true);
+  });
+  const record = (text: string) => ({
+    t: 'text' as const,
+    text,
+    volatile: true as const,
+  });
+  const marks = (input: RequestInput) => {
+    const body = buildRequest(input).body as {
+      system: { cache_control?: unknown }[];
+      messages: {
+        content: { text?: string; type: string; cache_control?: unknown }[];
+      }[];
+    };
+    const blocks = body.messages.flatMap(m => m.content);
+    return {
+      total:
+        body.system.filter(b => b.cache_control).length +
+        blocks.filter(b => b.cache_control).length,
+      marked: blocks.filter(b => b.cache_control).map(b => b.text ?? b.type),
+    };
+  };
+  test('本轮的学习记录每轮都变：对话断点放在它前面，下一轮能复用整段历史', () => {
+    const asked = msg('user', [
+      { t: 'text', text: '那怎么理解？' },
+      record('<study_record>第 2 步</study_record>'),
+      { t: 'text', text: '<turn>{}</turn>' },
+    ]);
+    const turn = marks(base(anth, [user1, call1, result1, answer1, asked]));
+    expect(turn.marked).toEqual(['<map>示意目录</map>', '那怎么理解？']);
+    expect(turn.total).toBe(3);
+    // 记录是本轮第一块时，断点落在上一条消息末尾。
+    const next = msg('user', [
+      record('<study_record>第 3 步</study_record>'),
+      { t: 'text', text: '<turn>{"intent":"next"}</turn>' },
+    ]);
+    expect(
+      marks(base(anth, [user1, call1, result1, answer1, next])).marked,
+    ).toEqual(['<map>示意目录</map>', '你现在没有小节。']);
+  });
+  test('本轮工具调用之后，断点放在请求末尾；回放的原始输出不被改写', () => {
+    const asked = msg('user', [
+      { t: 'text', text: '我的小节怎么样？' },
+      record('<study_record/>'),
+      { t: 'text', text: '<turn>{}</turn>' },
+    ]);
+    const raw = JSON.stringify(anthRaw1);
+    expect(marks(base(anth, [asked, call1, result1])).marked).toEqual([
+      '<map>示意目录</map>',
+      'tool_result',
+    ]);
+    expect(marks(base(anth, [asked, call1])).marked).toEqual([
+      '<map>示意目录</map>',
+      'tool_use',
+    ]);
+    expect(JSON.stringify(anthRaw1)).toBe(raw);
+  });
+  test('关闭缓存或来源已占满断点时不再加对话断点，总数不超过 4 个', () => {
+    expect(marks({ ...base(anth, [user1]), cache: false }).total).toBe(0);
+    const full = {
+      ...base(anth, [user1, call1, result1, answer1, user2]),
+      contextBlocks: [1, 2, 3].map(i => ({ text: `<src${i}/>`, cache: true })),
+    };
+    expect(marks(full)).toEqual({
+      total: 4,
+      marked: ['<src1/>', '<src2/>', '<src3/>'],
+    });
   });
 });
 

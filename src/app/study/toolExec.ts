@@ -2,6 +2,7 @@ import type { Block, JsonValue, Section } from '@core/types';
 import { pageLabel, pageRangeLabel, parseBlockRef } from '@core/ids';
 import { formatBlocks } from '@core/context';
 import { learningSelection } from '@core/learningScope';
+import { evaluateArithmetic } from '@core/arithmetic';
 import type { Container } from '../container';
 
 export interface ReadToolResult {
@@ -30,6 +31,7 @@ export async function executeReadTool(
   name: string,
   args: Record<string, unknown>,
 ): Promise<ReadToolResult> {
+  if (name === 'calculate') return calculate(args);
   const book = await c.repos.books.get(bookId);
   const pageOffset = book?.page_offset ?? 0;
   const result = (
@@ -148,6 +150,87 @@ export async function executeReadTool(
       blocks,
     );
   }
+  if (name === 'get_blocks') {
+    const ids = args.ids;
+    if (!Array.isArray(ids) || ids.length < 1 || ids.length > 12)
+      throw new Error('每次读取 1–12 个块');
+    const refs = ids.map(ref =>
+      typeof ref === 'string' ? parseBlockRef(ref) : null,
+    );
+    if (refs.some(ref => ref === null))
+      throw new Error('请使用 b 加数字的块 ID');
+    const blocks = await c.repos.blocks.reading.byRefs(
+      bookId,
+      refs as number[],
+    );
+    const found = new Set(blocks.map(block => block.seq));
+    const missing = ids.filter((_, i) => !found.has(refs[i]!));
+    return result(
+      `${
+        missing.length ? `${JSON.stringify({ missing })}\n` : ''
+      }${formatBlocks(blocks, pageOffset)}`,
+      `读取原文 · ${blocks.length} 段`,
+      blocks,
+    );
+  }
+  if (name === 'get_outline') {
+    const [sections, scope] = await Promise.all([
+      c.repos.sections.tree(bookId),
+      c.repos.sections.learningScope(bookId),
+    ]);
+    const parent =
+      typeof args.parent_id === 'string' && args.parent_id.trim()
+        ? chapterSection(sections, args.parent_id)
+        : undefined;
+    if (typeof args.parent_id === 'string' && args.parent_id.trim() && !parent)
+      return result(
+        JSON.stringify({ error: '章节不存在' }),
+        `没有找到 ${args.parent_id}`,
+      );
+    const ids = new Set(parent ? [parent.id] : sections.map(s => s.id));
+    // Repeat until stable: sibling order alone does not put every parent first.
+    for (let grew = !!parent; grew; ) {
+      grew = false;
+      for (const section of sections)
+        if (
+          section.parent_id &&
+          ids.has(section.parent_id) &&
+          !ids.has(section.id)
+        ) {
+          ids.add(section.id);
+          grew = true;
+        }
+    }
+    const listed = sections.filter(section => ids.has(section.id));
+    const offset =
+      typeof args.offset === 'number' &&
+      Number.isInteger(args.offset) &&
+      args.offset >= 0
+        ? args.offset
+        : 0;
+    const roles = learningSelection(sections, scope, book?.title);
+    const page = listed.slice(offset, offset + 50);
+    return result(
+      JSON.stringify({
+        citable: false,
+        source_kind: 'outline',
+        sections: page.map(section => ({
+          id: section.id,
+          title: section.title,
+          parent_id: section.parent_id,
+          level: section.level,
+          parts: section.parts,
+          page:
+            section.page_from === null ? null : section.page_from - pageOffset,
+          ...(roles.get(section.id)?.role === 'reference'
+            ? { reference: true }
+            : {}),
+        })),
+        next_offset: offset + 50 < listed.length ? offset + 50 : null,
+      }),
+      `查看目录${parent ? ` ${parent.id}` : ''} · ${page.length} 节`,
+    );
+  }
   if (name === 'get_figure') {
     const ref = requiredString(args, 'id'),
       seq = parseBlockRef(ref),
@@ -187,6 +270,63 @@ export async function executeReadTool(
     JSON.stringify({ error: '不支持的工具' }),
     `无法执行工具 ${name}`,
   );
+}
+/** Numbers for teaching examples; the result is never a book source. */
+function calculate(args: Record<string, unknown>): ReadToolResult {
+  const items = args.expressions;
+  if (!Array.isArray(items) || !items.length || items.length > 12)
+    throw new Error('每次核对 1–12 个表达式');
+  const calculations = items.map((item: unknown) => {
+    const value = jsonObject(item);
+    if (
+      !value ||
+      typeof value.label !== 'string' ||
+      typeof value.expression !== 'string'
+    )
+      throw new Error('每个表达式需要 label 和 expression');
+    try {
+      return {
+        label: value.label,
+        expression: value.expression,
+        value: evaluateArithmetic(value.expression),
+      };
+    } catch (error) {
+      return {
+        label: value.label,
+        expression: value.expression,
+        error: error instanceof Error ? error.message : '计算失败',
+      };
+    }
+  });
+  const ascending = calculations
+    .filter(
+      (item): item is typeof item & { value: number } =>
+        item.value !== undefined,
+    )
+    .sort((a, b) => a.value - b.value);
+  // Ties are listed in full so a "pick the smallest" rule never hides an equal option.
+  const extremum = (value: number | undefined) =>
+    value === undefined
+      ? null
+      : {
+          value,
+          labels: ascending
+            .filter(item => item.value === value)
+            .map(item => item.label),
+        };
+  return {
+    output: JSON.stringify({
+      citable: false,
+      source_kind: 'calculation',
+      results: calculations,
+      ascending: ascending.map(item => item.label),
+      minimum: extremum(ascending[0]?.value),
+      maximum: extremum(ascending.at(-1)?.value),
+    }),
+    label: `核对计算 · ${calculations.length} 个式子`,
+    allowedRefs: [],
+    blocks: [],
+  };
 }
 export function jsonObject(value: unknown): Record<string, JsonValue> | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;

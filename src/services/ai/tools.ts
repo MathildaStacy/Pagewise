@@ -27,6 +27,24 @@ export const TOOL_DEFS: ToolDef[] = [
     schema: object({ query: string, chapter: string }, ['query']),
   },
   {
+    name: 'get_blocks',
+    description:
+      '按块 ID（如 search_book 返回的 b103005）读取完整原文、公式或图表说明，一次 1–12 块；不改变学习位置，也不进入岔路。search_book 只给摘要，引用前先读完整块',
+    schema: object(
+      { ids: { type: 'array', items: string, minItems: 1, maxItems: 12 } },
+      ['ids'],
+    ),
+  },
+  {
+    name: 'get_outline',
+    description:
+      '查看当前书的小节 ID、标题、层级、页码和段数。parent_id 只看某章或某节之下；offset 向后翻页，每页最多五十项。目录不是原书证据，不能引用',
+    schema: object(
+      { parent_id: string, offset: { type: 'integer', minimum: 0 } },
+      [],
+    ),
+  },
+  {
     name: 'get_figure',
     description: '读取原书图片及说明',
     schema: object({ id: string }, ['id']),
@@ -35,6 +53,25 @@ export const TOOL_DEFS: ToolDef[] = [
     name: 'get_notes',
     description: '读取某小节的摘要、问答和卡点',
     schema: object({ section_id: string }, ['section_id']),
+  },
+  {
+    name: 'calculate',
+    description:
+      '核对数值例子的代价、公式结果和大小排序。只支持数字、括号和 + - * / ^，不执行代码，也不做符号证明。返回每个表达式的结果、按值从小到大的 label 顺序，以及最小值、最大值和所有并列的 label。比较不同规则时分别调用，label 写清对象。结果不是原书证据，不能引用',
+    schema: object(
+      {
+        expressions: {
+          type: 'array',
+          minItems: 1,
+          maxItems: 12,
+          items: object({ label: string, expression: string }, [
+            'label',
+            'expression',
+          ]),
+        },
+      },
+      ['expressions'],
+    ),
   },
   {
     name: 'show_quiz',

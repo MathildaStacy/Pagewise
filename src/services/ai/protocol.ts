@@ -126,6 +126,7 @@ function anthropicMessages(input: RequestInput): AMessage[] {
     }
   };
   let cached = 0;
+  const volatile = new WeakSet<object>();
   push('user', [
     ...input.contextBlocks
       .filter(block => block.text.length > 0)
@@ -173,14 +174,51 @@ function anthropicMessages(input: RequestInput): AMessage[] {
     } else {
       push(
         'user',
-        m.parts.flatMap((p): unknown[] =>
-          p.t === 'text'
-            ? [{ type: 'text', text: p.text }]
-            : p.t === 'result'
-            ? [{ type: 'tool_result', tool_use_id: p.id, content: p.output }]
-            : [],
-        ),
+        m.parts.flatMap((p): unknown[] => {
+          if (p.t === 'result')
+            return [
+              { type: 'tool_result', tool_use_id: p.id, content: p.output },
+            ];
+          if (p.t !== 'text') return [];
+          const block = { type: 'text', text: p.text };
+          if (p.volatile) volatile.add(block);
+          return [block];
+        }),
       );
+    }
+  }
+  // System and the cached sources leave one of Anthropic's four breakpoints for the conversation.
+  // Put it just before this turn's volatile record, so the next turn reuses the whole history;
+  // once tool rounds follow the record, the end of the request is the reusable prefix instead.
+  // One-shot tasks never reuse their changing input, so a cache write there would only cost more.
+  const conversation = input.history.some(
+    m =>
+      m.role === 'assistant' ||
+      m.parts.some(part => part.t === 'text' && part.volatile),
+  );
+  if (input.cache && cached < 3 && conversation) {
+    const blocks = out.flatMap(message =>
+      message.content.map((_, index) => ({ message, index })),
+    );
+    const last = out.at(-1);
+    const first = blocks.findIndex(
+      ({ message, index }) =>
+        message === last && volatile.has(message.content[index] as object),
+    );
+    let at = first >= 0 ? first - 1 : blocks.length - 1;
+    const markable = (block: unknown) =>
+      ['text', 'tool_result', 'tool_use', 'image'].includes(
+        (block as { type?: string }).type ?? '',
+      );
+    while (at >= 0 && !markable(blocks[at].message.content[blocks[at].index]))
+      at--;
+    if (at >= 0) {
+      const { message, index } = blocks[at];
+      // Replace rather than mutate: replayed provider output is persisted byte-for-byte.
+      message.content[index] = {
+        ...(message.content[index] as object),
+        cache_control: { type: 'ephemeral' },
+      };
     }
   }
   return out;

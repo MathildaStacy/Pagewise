@@ -126,6 +126,26 @@ export function createBlocksRepo(db: Db) {
     labelIndex.set(bookId, { stamp, seqs });
     return seqs;
   };
+  const blocksByRefs = async (
+    bookId: string,
+    refs: readonly number[],
+  ): Promise<Block[]> => {
+    const unique = [...new Set(refs)].sort((a, b) => a - b);
+    const result: Block[] = [];
+    // Stay well below SQLite's bound-parameter limit.
+    for (let start = 0; start < unique.length; start += 400) {
+      const batch = unique.slice(start, start + 400);
+      result.push(
+        ...(await db.all<Block>(
+          `SELECT * FROM block WHERE book_id=? AND seq IN (${batch
+            .map(() => '?')
+            .join(',')}) ORDER BY seq`,
+          [bookId, ...batch],
+        )),
+      );
+    }
+    return result;
+  };
   return {
     /** Reading projections never replace the source rows used by PDF geometry, highlights and reparsing. */
     reading: {
@@ -151,6 +171,9 @@ export function createBlocksRepo(db: Db) {
           [bookId, seq],
         );
         return row ? (await project([row]))[0] : undefined;
+      },
+      async byRefs(bookId: string, refs: readonly number[]): Promise<Block[]> {
+        return project(await blocksByRefs(bookId, refs));
       },
       /**
        * Blocks anywhere in the book carrying these labels (see `labelKey`), at most `limit`,
@@ -211,6 +234,8 @@ export function createBlocksRepo(db: Db) {
         [bookId, sectionId],
       );
     },
+    /** Blocks for many refs at once, in seq order; missing refs are skipped. */
+    byRefs: blocksByRefs,
     async get(bookId: string, seq: number): Promise<Block | undefined> {
       return db.get<Block>('SELECT * FROM block WHERE book_id=? AND seq=?', [
         bookId,

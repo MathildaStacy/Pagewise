@@ -12,6 +12,13 @@ import type {
 import type { Db, SqlValue } from '../db';
 import { insertRow, parseJson, serializeJson } from './shared';
 
+export interface NotesCounts {
+  book_id: string;
+  section_count: number;
+  qa_count: number;
+  highlight_count: number;
+}
+
 type QaRow = Omit<Qa, 'message_ids'> & { message_ids_json: string };
 type PinRow = Omit<Pin, 'message_ids'> & { message_ids_json: string };
 function decodeQa(row: QaRow): Qa {
@@ -75,6 +82,33 @@ function sectionFilter(bookId: string, sectionId?: string) {
 
 export function createNotesRepo(db: Db, now = () => new Date().toISOString()) {
   return {
+    /** Count annotated sections per book in SQL; the notes shelf never needs the note bodies. */
+    counts: () =>
+      db.all<NotesCounts>(
+        `WITH annotated AS (
+          SELECT book_id, id AS section_id FROM section WHERE coalesce(summary, '') != ''
+          UNION SELECT book_id, section_id FROM qa
+          UNION SELECT book_id, section_id FROM stuck
+          UNION SELECT book_id, section_id FROM section_note WHERE coalesce(user_text, '') != ''
+          UNION SELECT book_id, section_id FROM pin
+          UNION SELECT b.book_id, b.section_id FROM highlight h
+            JOIN block b ON b.book_id=h.book_id AND b.seq=h.block_seq
+        ), sections AS (
+          SELECT a.book_id, COUNT(*) AS section_count FROM annotated a
+          JOIN section s ON s.book_id=a.book_id AND s.id=a.section_id
+          GROUP BY a.book_id
+        ), questions AS (
+          SELECT book_id, COUNT(*) AS qa_count FROM qa GROUP BY book_id
+        ), highlights AS (
+          SELECT book_id, COUNT(*) AS highlight_count FROM highlight GROUP BY book_id
+        ) SELECT b.id AS book_id,
+          coalesce(s.section_count, 0) AS section_count,
+          coalesce(q.qa_count, 0) AS qa_count,
+          coalesce(h.highlight_count, 0) AS highlight_count
+        FROM book b LEFT JOIN sections s ON s.book_id=b.id
+        LEFT JOIN questions q ON q.book_id=b.id
+        LEFT JOIN highlights h ON h.book_id=b.id`,
+      ),
     qa: {
       async add(input: QaInsert): Promise<Qa> {
         const { message_ids, ...values } = input;
@@ -143,6 +177,11 @@ export function createNotesRepo(db: Db, now = () => new Date().toISOString()) {
       },
     },
     userText: {
+      list: (bookId: string) =>
+        db.all<SectionNote>(
+          'SELECT * FROM section_note WHERE book_id = ? ORDER BY section_id',
+          [bookId],
+        ),
       get: (bookId: string, sectionId: string) =>
         db.get<SectionNote>(
           'SELECT * FROM section_note WHERE book_id = ? AND section_id = ?',
@@ -209,10 +248,13 @@ export function createNotesRepo(db: Db, now = () => new Date().toISOString()) {
           ))!;
         });
       },
-      list: (bookId: string) =>
+      /** With a section, only annotations on that section's own blocks. */
+      list: (bookId: string, sectionId?: string) =>
         db.all<Highlight>(
-          'SELECT * FROM highlight WHERE book_id = ? ORDER BY block_seq ASC, start ASC, id ASC',
-          [bookId],
+          sectionId === undefined
+            ? 'SELECT * FROM highlight WHERE book_id = ? ORDER BY block_seq ASC, start ASC, id ASC'
+            : 'SELECT h.* FROM highlight h JOIN block b ON b.book_id = h.book_id AND b.seq = h.block_seq WHERE h.book_id = ? AND b.section_id = ? ORDER BY h.block_seq ASC, h.start ASC, h.id ASC',
+          sectionId === undefined ? [bookId] : [bookId, sectionId],
         ),
     },
     pins: {

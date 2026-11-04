@@ -180,10 +180,11 @@ function scripted(req: GatewayRequest): ParsedResponse {
   const taskResult = tidy(req);
   if (taskResult) return taskResult;
   const user = [...req.history].reverse().find(m => m.role === 'user');
+  // The per-turn study record shares the message but is not what the user asked.
   const userText =
     user?.parts
-      .filter(p => p.t === 'text')
-      .map(p => p.text)
+      .filter(p => p.t === 'text' && !p.volatile)
+      .map(p => (p.t === 'text' ? p.text : ''))
       .join('\n') ?? '';
   const turn = decode(/<turn>([\s\S]*?)<\/turn>/.exec(userText)?.[1]);
   const step = Math.max(0, Math.min(3, Number(turn.step ?? 0)));
