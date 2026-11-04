@@ -11,6 +11,23 @@ export function countCjkCharacters(text: string): number {
   for (const character of text) if (cjk.test(character)) count++;
   return count;
 }
+const han = /\p{Script=Han}/u,
+  otherCjk = /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u;
+/**
+ * Whether prose is written in Chinese. Han characters are compared with Latin words,
+ * so English terms, names and formulas inside Chinese text do not flip the result;
+ * kana or Hangul alongside the Han characters mark Japanese or Korean instead.
+ */
+export function isChineseText(text: string): boolean {
+  let hanCount = 0,
+    otherCount = 0;
+  for (const character of text) {
+    if (han.test(character)) hanCount++;
+    else if (otherCjk.test(character)) otherCount++;
+  }
+  const words = text.match(/\p{Script=Latin}+/gu)?.length ?? 0;
+  return hanCount > words && otherCount * 10 < hanCount;
+}
 /** A budget estimate, never a substitute for the provider's reported usage. */
 export function estimateTokens(text: string): number {
   let cjkCount = 0,

@@ -4,7 +4,13 @@ import { StudySession } from '@app/study/StudySession';
 import type { GatewayRequest } from '@services/ai/gateway';
 import type { ParsedResponse } from '@services/ai/protocol';
 import { streamedTaskAnswer } from '@app/study/prompts';
-import type { TranslationProgress } from '@app/study/translation';
+import { taskCacheContext, taskResultKey } from '@app/study/taskCache';
+import {
+  translationChunks,
+  translationPassages,
+  translationTarget,
+  type TranslationProgress,
+} from '@app/study/translation';
 
 let c: Container, session: StudySession;
 const inputOf = (req: GatewayRequest) =>
@@ -488,4 +494,165 @@ it('rejects a translated table that loses merged cells and retries it without ca
     answer: translated,
     complete: true,
   });
+});
+
+it.each([
+  [
+    'Chinese with English terms and inline math',
+    '因子投资用 Fama-French 三因子模型解释股票的超额收益 $r_i - r_f$。',
+    'en',
+  ],
+  [
+    'English',
+    'The Fama-French three-factor model explains excess returns.',
+    'zh',
+  ],
+  ['Japanese', '因子モデルは株式のリターンを説明するために使われます。', 'zh'],
+  ['Korean with Hanja', '經濟 요인 모델은 주식 수익률을 설명합니다.', 'zh'],
+  ['empty', '', 'zh'],
+] as const)('picks the translation target for %s prose', (_, text, target) => {
+  expect(translationTarget([{ type: 'text', text }])).toBe(target);
+});
+
+it('decides the target from prose, not from code comments or formulas', () => {
+  expect(
+    translationTarget([
+      { type: 'code', text: '// 计算因子暴露与残差收益的中文注释' },
+      { type: 'equation', text: '$$收益 = 暴露 \\times 因子$$' },
+      { type: 'text', text: 'Factor exposure is estimated by regression.' },
+    ]),
+  ).toBe('zh');
+});
+
+async function chineseSection() {
+  await c.repos.blocks.insertMany('aima', [
+    {
+      seq: 1,
+      type: 'title',
+      level: 2,
+      text: '动量因子',
+      chars: 4,
+      section_id: '3.5.2',
+    },
+    {
+      seq: 2,
+      type: 'text',
+      text: '动量因子买入过去 12 个月表现最好的股票，卖出表现最差的股票。',
+      chars: 31,
+      section_id: '3.5.2',
+    },
+    {
+      seq: 3,
+      type: 'equation',
+      text: '$$MOM_t = R_{t-12,t-1}$$',
+      chars: 24,
+      section_id: '3.5.2',
+    },
+  ]);
+}
+
+it('translates a Chinese original into English on every path instead of Chinese into Chinese', async () => {
+  await chineseSection();
+  const answer = async (_purpose: unknown, req: GatewayRequest) =>
+    response(`English for ${inputOf(req).block.seq ?? 'chunk'}`);
+  const stream = jest.spyOn(c.ai, 'stream').mockImplementation(answer);
+  const complete = jest.spyOn(c.ai, 'complete').mockImplementation(answer);
+  const progress = jest.fn<void, [TranslationProgress[], boolean?]>();
+  await session.translateSection(
+    '3.5.2',
+    undefined,
+    undefined,
+    false,
+    undefined,
+    progress,
+  );
+  await session.translateSection('3.5.2');
+  await session.explainBlock(2, 'translate');
+  const inputs = [...stream.mock.calls, ...complete.mock.calls].map(
+    ([, req]) => inputOf(req),
+  );
+  // Title and paragraph in the bilingual view, one prose chunk, one paragraph.
+  expect(inputs).toHaveLength(4);
+  expect(inputs.map(input => input.target_language)).toEqual(
+    Array(4).fill('English'),
+  );
+  expect(progress.mock.calls.at(-1)![0].map(part => part.answer)).toEqual([
+    'English for 1',
+    'English for 2',
+    '$$\nMOM_t = R_{t-12,t-1}\n$$',
+  ]);
+});
+
+it('keeps hitting the Chinese translations an English book cached before the target followed the source', async () => {
+  await prose('An English paragraph.');
+  const [blocks, sections, context, block] = await Promise.all([
+    c.repos.blocks.reading.bySection('aima', '3.5.2'),
+    c.repos.sections.tree('aima'),
+    taskCacheContext(c, 'tidy'),
+    c.repos.blocks.reading.get('aima', 1),
+  ]);
+  const map = sections.map(({ id, title }) => ({ id, title }));
+  // Keys written exactly as v0.0.23 did, with the language spelled out.
+  await c.repos.aiTaskCache.put(
+    {
+      bookId: 'aima',
+      task: 'translate',
+      scope: JSON.stringify(['bilingualSection', '3.5.2']),
+      requestKey: taskResultKey(context, 'translate', {
+        version: 'source-aligned-1',
+        passages: translationPassages(blocks).map(
+          ({ id, source, translate, block: { type } }) => ({
+            id,
+            source,
+            translate,
+            type,
+          }),
+        ),
+        target_language: '简体中文',
+        map,
+      }),
+    },
+    JSON.stringify({ answers: ['已缓存的对照译文。'], complete: 1 }),
+  );
+  await c.repos.aiTaskCache.putSection(
+    'aima',
+    '3.5.2',
+    taskResultKey(context, 'translate', {
+      chunks: translationChunks(blocks),
+      target_language: '简体中文',
+      map,
+    }),
+    'An English paragraph.',
+    '已缓存的整节译文。',
+  );
+  await c.repos.aiTaskCache.put(
+    {
+      bookId: 'aima',
+      task: 'translate',
+      scope: JSON.stringify(['block', 1]),
+      requestKey: taskResultKey(context, 'translate', {
+        seq: 1,
+        block: { seq: 1, type: 'text', text: block!.text, latex: block!.latex },
+        target_language: '简体中文',
+        map,
+      }),
+    },
+    '已缓存的单段译文。',
+  );
+  const stream = jest.spyOn(c.ai, 'stream');
+  const complete = jest.spyOn(c.ai, 'complete');
+  expect(
+    await session.translateSection(
+      '3.5.2',
+      undefined,
+      undefined,
+      false,
+      undefined,
+      jest.fn(),
+    ),
+  ).toBe('已缓存的对照译文。');
+  expect(await session.translateSection('3.5.2')).toBe('已缓存的整节译文。');
+  expect(await session.explainBlock(1, 'translate')).toBe('已缓存的单段译文。');
+  expect(stream).not.toHaveBeenCalled();
+  expect(complete).not.toHaveBeenCalled();
 });

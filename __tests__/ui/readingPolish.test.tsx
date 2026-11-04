@@ -1,5 +1,5 @@
 import Renderer, { act } from 'react-test-renderer';
-import { FlatList, Modal } from 'react-native';
+import { FlatList, Modal, Text } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import {
   Button,
@@ -567,3 +567,81 @@ it('shows a one-line preview for a collapsed AI example so it never looks empty'
     ),
   ).toHaveLength(1);
 });
+
+it.each([
+  { target: undefined, language: '中文', other: '英文' },
+  { target: 'en' as const, language: '英文', other: '中文' },
+])(
+  'names the translation language of a $language reading, never the source language',
+  async ({ target, language, other }) => {
+    const passage = {
+      id: '0:0',
+      ref: 0,
+      page: 'p.1',
+      type: 'text',
+      source: doc('动量因子买入过去表现最好的股票。'),
+      answer: doc('The momentum factor buys recent winners.'),
+      complete: true,
+      preserved: false,
+    };
+    await act(() => {
+      renderer = Renderer.create(
+        <SkinProvider skinId="paper" scheme="light" reduceMotion>
+          <BilingualReading
+            intents={{} as StudyIntents}
+            overlay={{
+              kind: 'sectionTranslation',
+              sectionId: '1',
+              subtitle: '1',
+              target,
+              answer: null,
+              streaming: false,
+              passages: [passage],
+            }}
+          />
+        </SkinProvider>,
+      );
+    });
+    const modes = renderer.root
+      .findAllByType(Segmented)
+      .find(node => node.props.accessibilityLabel === '双语阅读方式')!;
+    expect(
+      modes.props.options.map((option: { label: string }) => option.label),
+    ).toEqual(['中英对照', language, '原文']);
+    const shown = () =>
+      renderer.root
+        .findAllByType(Text)
+        .map(node =>
+          [node.props.children]
+            .flat()
+            .filter(child => typeof child === 'string')
+            .join(''),
+        )
+        .join('\n');
+    let text = shown();
+    expect(text).toContain(`${language}译文`);
+    expect(text).not.toContain(`${other}译文`);
+    expect(text).toMatch(new RegExp(`原文在(?:左|前)，${language}`));
+    await act(() =>
+      renderer.update(
+        <SkinProvider skinId="paper" scheme="light" reduceMotion>
+          <StudyOverlays
+            intents={{} as StudyIntents}
+            overlay={{
+              kind: 'translate',
+              seq: 0,
+              quote: passage.source,
+              answer: passage.answer,
+              streaming: false,
+              subtitle: 'p.1',
+              target,
+            }}
+          />
+        </SkinProvider>,
+      ),
+    );
+    text = shown();
+    expect(text).toContain(`${language}译文`);
+    expect(text).not.toContain(`${other}译文`);
+  },
+);

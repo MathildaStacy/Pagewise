@@ -375,6 +375,48 @@ it('stops a translation while keeping the original and received Chinese visible'
     translation.mockRestore();
   }
 });
+it.each([
+  {
+    original: 'English',
+    text: 'The momentum factor buys recent winners and sells recent losers.',
+    target: 'zh',
+    language: '简体中文',
+  },
+  {
+    original: 'Chinese',
+    text: '动量因子买入过去表现最好的股票，卖出表现最差的股票。',
+    target: 'en',
+    language: '英文',
+  },
+])(
+  'opens translations of a $original section into $language',
+  async ({ text, target, language }) => {
+    await c.db.run(
+      "UPDATE block SET text=? WHERE book_id='aima' AND section_id='3.5.2' AND type IN ('title','text','image')",
+      [text],
+    );
+    const vm = await mount(() => useReaderVM('aima', '3.5.2'));
+    const session = getStudySession(c, 'aima');
+    jest.spyOn(session, 'translateSection').mockResolvedValue('');
+    jest.spyOn(session, 'explainBlock').mockResolvedValue('');
+    await act(() => vm().intents.translateSection?.());
+    expect(vm().state.overlay).toMatchObject({
+      kind: 'sectionTranslation',
+      target,
+      subtitle: expect.stringMatching(new RegExp(` · ${language}$`)),
+    });
+    await act(() => vm().intents.closeOverlay());
+    const block = vm().state.read.items.find(
+      item => item.kind === 'block' && item.type === 'text',
+    )!;
+    if (block.kind !== 'block') throw new Error('missing block');
+    await act(() =>
+      vm().intents.pressBlock(block.ref, { x: 0, y: 0, w: 100, h: 100 }),
+    );
+    await act(() => vm().intents.menuAction('translate'));
+    expect(vm().state.overlay).toMatchObject({ kind: 'translate', target });
+  },
+);
 it('saves reading appearance in place without losing the current section', async () => {
   const vm = await mount(() => useReaderVM('aima', '3.5.2'));
   const heading = vm().state.header.title;

@@ -40,6 +40,7 @@ export function BilingualReading({
   reading?: ReadingAppearance;
 }) {
   const s = useStyles();
+  const language = overlay.target === 'en' ? '英文' : '中文';
   const parts = overlay.passages ?? noPassages;
   const initial = parts.find(part => part.ref === overlay.initialRef);
   const [mode, setMode] = useState<ReadingMode>(
@@ -154,7 +155,7 @@ export function BilingualReading({
           accessibilityLabel="双语阅读方式"
           options={[
             { key: 'parallel', label: '中英对照' },
-            { key: 'chinese', label: '中文' },
+            { key: 'chinese', label: language },
             { key: 'source', label: '原文' },
           ]}
           value={mode}
@@ -217,6 +218,7 @@ export function BilingualReading({
           >
             <PassageView
               part={part}
+              language={language}
               mode={mode}
               columns={columns}
               streaming={overlay.streaming}
@@ -241,8 +243,8 @@ export function BilingualReading({
               <Text style={s.status}>
                 {mode === 'parallel'
                   ? columns
-                    ? '原文在左，中文在右'
-                    : '原文在前，中文紧随其后'
+                    ? `原文在左，${language}在右`
+                    : `原文在前，${language}紧随其后`
                   : mode === 'chinese'
                   ? '未译段落保留原文'
                   : '原文保持书籍顺序'}
@@ -272,6 +274,7 @@ export function BilingualReading({
 
 function PassageView({
   part,
+  language,
   mode,
   columns,
   streaming,
@@ -281,6 +284,7 @@ function PassageView({
   pendingLabel,
 }: {
   part: Passage;
+  language: string;
   mode: ReadingMode;
   columns: boolean;
   streaming: boolean;
@@ -356,7 +360,7 @@ function PassageView({
             testID={`translation-chinese-${part.id}`}
           >
             {mode === 'parallel' ? (
-              <Text style={s.language}>中文译文</Text>
+              <Text style={s.language}>{language}译文</Text>
             ) : null}
             {part.answer ? (
               translated
