@@ -6,7 +6,7 @@ import { parseStudyCard } from '@app/study/types';
 import { createDemoGateway } from '@app/demo/gateway';
 import { createTestClock } from '@app/clock';
 import type { AiGateway, GatewayRequest } from '@services/ai/gateway';
-import type { ParsedResponse } from '@services/ai/protocol';
+import { buildRequest, type ParsedResponse } from '@services/ai/protocol';
 import type { Part } from '@services/ai/types';
 import { AiError } from '@services/ai/http';
 import { rateReviewCard } from '@app/usecases/review';
@@ -973,6 +973,58 @@ it('loads a quoted block from another section before answering and keeps later d
     .at(-1)!;
   expect(answer.allowed_refs).toContain(ref);
   expect(answer.unverified).toBe(0);
+});
+it('keeps every earlier turn as the next request prefix while steps advance, so providers can reuse it', async () => {
+  const seen: GatewayRequest[] = [];
+  await setup({
+    ...demo,
+    stream: (purpose, req, handlers) => {
+      seen.push(req);
+      return demo.stream(purpose, req, handlers);
+    },
+  });
+  await session.act('reteachSection');
+  await session.act('next');
+  await session.send('如果 h(n) 估大了会怎样？');
+  await session.act('next');
+  expect(seen.length).toBeGreaterThanOrEqual(4);
+  for (const protocol of ['openai', 'chat', 'anthropic'] as const) {
+    const body = (req: GatewayRequest) =>
+      JSON.stringify(
+        buildRequest({
+          ...req,
+          service: { protocol, model: 'm', baseUrl: 'https://x.test/v1' },
+          cache: true,
+          cacheKey: 'k',
+          effort: 'low',
+        }).body,
+      ).replace(/,"cache_control":\{"type":"ephemeral"\}/g, '');
+    for (let i = 1; i < seen.length; i++) {
+      const record = seen[i - 1].history
+        .flatMap(m => m.parts)
+        .find(p => p.t === 'text' && p.volatile);
+      if (!record || record.t !== 'text') continue;
+      // Everything before the previous turn's record must reappear unchanged.
+      const before = body(seen[i - 1]);
+      const stable = before.slice(
+        0,
+        before.indexOf(JSON.stringify(record.text).slice(1, 40)),
+      );
+      expect(body(seen[i]).startsWith(stable)).toBe(true);
+      // ...and that prefix reaches the previous turn's conversation, not just the sources.
+      const said = seen[i - 1].history
+        .flatMap(m => m.parts)
+        .filter(
+          (p): p is Extract<Part, { t: 'text' }> =>
+            p.t === 'text' && !p.volatile && !p.text.startsWith('<turn>'),
+        )
+        .at(-1);
+      if (said)
+        expect(stable).toContain(
+          JSON.stringify(said.text).slice(1, -1).slice(0, 30),
+        );
+    }
+  }
 });
 it('stops pending tool calls without running them or entering a detour, and still pairs every saved call', async () => {
   const ai = scripted([
