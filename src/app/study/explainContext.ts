@@ -1,3 +1,4 @@
+import { blockLabels, mentionedLabels } from '@core/labels';
 import type { Block, JsonValue, Section } from '@core/types';
 import type { ContentRole } from '@core/learningScope';
 
@@ -48,79 +49,128 @@ export function blockMaterial(
   };
 }
 
-const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-/** Labels such as 表3.20, 图 3-2, 式（1.3）, Figure 4.1 or Table 2 mentioned in the text. */
-export function mentionedLabels(text: string) {
-  const labels: { kind: 'figure' | 'equation'; pattern: RegExp }[] = [];
-  for (const match of text.matchAll(
-    /([图表])\s*(\d+(?:[.\-–]\d+)*)|(Figure|Fig\.|Table|Exhibit)\s*(\d+(?:[.\-–]\d+)*)/giu,
-  )) {
-    const word = match[1] ?? match[3];
-    const number = escape(match[2] ?? match[4]);
-    labels.push({
-      kind: 'figure',
-      pattern: new RegExp(
-        /^[图表]$/u.test(word)
-          ? `^\\s*${word}\\s*${number}(?![\\d.])`
-          : `^\\s*${escape(word)}\\s*${number}(?![\\d.])`,
-        'iu',
-      ),
-    });
-  }
-  for (const match of text.matchAll(
-    /(?:式|公式|Equation|Eq\.)\s*[（(]\s*(\d+(?:\.\d+)*)\s*[)）]/giu,
-  )) {
-    const number = escape(match[1]);
-    labels.push({
-      kind: 'equation',
-      pattern: new RegExp(
-        `\\\\tag\\{\\s*${number}\\s*\\}|[（(]\\s*${number}\\s*[)）]\\s*\\$*\\s*$`,
-        'u',
-      ),
-    });
-  }
-  return labels;
+type ReferenceOptions = {
+  /** Blocks from the rest of the book that carry the labels the nearby blocks lack. */
+  elsewhere?: readonly Block[];
+  sections?: readonly Section[];
+  limit?: number;
+};
+
+/** The chapter number a section sits in, from the first numbered node on its path: 3 for 3.5.3. */
+function chapterLookup(sections: readonly Section[]) {
+  const known = new Map<string | null, string | null>();
+  return (id: string | null) => {
+    if (!known.has(id)) {
+      const no = sectionPath(sections, id).find(node => node.no)?.no;
+      const digits = no ? /^\d+/u.exec(no)?.[0] : undefined;
+      known.set(id, digits ? String(Number(digits)) : null);
+    }
+    return known.get(id) ?? null;
+  };
+}
+
+/** A figure or table with its own caption is found through the caption. */
+function labelled(blocks: readonly Block[], at: number, key: string) {
+  const item = blocks[at];
+  return (
+    (!figureLike(item) || !pairedCaption(blocks, at)) &&
+    blockLabels(item).includes(key)
+  );
 }
 
 /**
- * Find the figures, tables and equations a block refers to among nearby blocks.
- * The caption carries the label; the material is the figure or table beside it.
+ * Find the figures, tables and equations a block refers to, first among nearby blocks,
+ * then `elsewhere` in the chapter the label names (第 2 章, or 4 in 图4.3) or the current one.
+ */
+function resolveReferences(
+  block: Block,
+  nearby: readonly Block[],
+  { elsewhere = [], sections = [], limit = 3 }: ReferenceOptions,
+) {
+  const found: Record<string, JsonValue>[] = [];
+  const missing: string[] = [];
+  const chapterOf = chapterLookup(sections);
+  const seen = new Set<number>([block.seq]);
+  const own = new Set(blockLabels(block));
+  const at = nearby.findIndex(item => item.seq === block.seq);
+  if (at >= 0) {
+    for (const near of [pairedCaption(nearby, at), pairedFigure(nearby, at)])
+      if (near) {
+        seen.add(near.seq);
+        blockLabels(near).forEach(key => own.add(key));
+      }
+  }
+  const take = (pool: readonly Block[], index: number) => {
+    const item = pool[index];
+    const figure = pairedFigure(pool, index);
+    seen.add(item.seq);
+    if (figure) seen.add(figure.seq);
+    return figure
+      ? blockMaterial(figure, item, 3000)
+      : blockMaterial(item, pairedCaption(pool, index), 3000);
+  };
+  for (const label of mentionedLabels(block.text)) {
+    if (found.length >= limit) break;
+    if (own.has(label.key)) continue;
+    const local = nearby.findIndex(
+      (item, index) =>
+        !seen.has(item.seq) &&
+        labelled(nearby, index, label.key) &&
+        (!label.chapter ||
+          [null, label.chapter].includes(chapterOf(item.section_id))),
+    );
+    if (local >= 0) {
+      found.push(take(nearby, local));
+      continue;
+    }
+    const candidates = elsewhere.flatMap((item, index) =>
+      !seen.has(item.seq) && labelled(elsewhere, index, label.key)
+        ? [index]
+        : [],
+    );
+    const wanted =
+      label.chapter ?? label.numbered ?? chapterOf(block.section_id);
+    // A dotted number names its block wherever it sits; a bare one only when the book has just one.
+    const anywhere = label.numbered
+      ? !label.chapter || label.chapter === label.numbered
+      : !label.chapter && candidates.length === 1;
+    const pick =
+      candidates.find(
+        index =>
+          wanted !== null && chapterOf(elsewhere[index].section_id) === wanted,
+      ) ?? (anywhere ? candidates[0] : undefined);
+    if (pick === undefined) {
+      missing.push(label.key);
+      continue;
+    }
+    const where = sectionPath(sections, elsewhere[pick].section_id).at(-1);
+    found.push({
+      ...take(elsewhere, pick),
+      ...(where ? { section: sectionName(where) } : {}),
+    });
+  }
+  return { found, missing };
+}
+
+/**
+ * The figures, tables and equations a block refers to. The caption carries the label;
+ * the material is the figure or table beside it. Nearby blocks win over `elsewhere`.
  */
 export function referencedMaterial(
   block: Block,
   nearby: readonly Block[],
-  limit = 3,
+  options: ReferenceOptions = {},
 ): Record<string, JsonValue>[] {
-  const found: Record<string, JsonValue>[] = [];
-  const seen = new Set<number>([block.seq]);
-  const own = nearby.findIndex(item => item.seq === block.seq);
-  if (own >= 0) {
-    for (const near of [pairedCaption(nearby, own), pairedFigure(nearby, own)])
-      if (near) seen.add(near.seq);
-  }
-  for (const label of mentionedLabels(block.text)) {
-    if (found.length >= limit) break;
-    const index = nearby.findIndex(
-      (item, at) =>
-        !seen.has(item.seq) &&
-        (label.kind === 'equation'
-          ? item.type === 'equation' &&
-            label.pattern.test(item.latex ?? item.text)
-          : (item.type === 'caption' ||
-              (figureLike(item) && !pairedCaption(nearby, at))) &&
-            label.pattern.test(item.text)),
-    );
-    if (index < 0) continue;
-    const item = nearby[index];
-    const figure = pairedFigure(nearby, index);
-    const material = figure
-      ? blockMaterial(figure, item, 3000)
-      : blockMaterial(item, pairedCaption(nearby, index), 3000);
-    seen.add(item.seq);
-    if (figure) seen.add(figure.seq);
-    found.push(material);
-  }
-  return found;
+  return resolveReferences(block, nearby, options).found;
+}
+
+/** Label keys the block mentions that nearby blocks do not supply, for a whole-book lookup. */
+export function missingLabels(
+  block: Block,
+  nearby: readonly Block[],
+  sections: readonly Section[],
+): string[] {
+  return resolveReferences(block, nearby, { sections }).missing;
 }
 
 /** Chapter titles for the whole book plus the full current chapter, without front or back matter. */
@@ -172,12 +222,14 @@ export function sectionPath(
 
 /**
  * Input for explaining one block: the block itself, where it sits, its neighbours,
- * and the figures, tables or equations it mentions. Only the block is citable.
+ * and the figures, tables or equations it mentions, nearby or `elsewhere` in the book.
+ * Only the block is citable.
  */
 export function explainInput({
   block,
   section,
   nearby,
+  elsewhere,
   sections,
   roles,
   page,
@@ -186,6 +238,7 @@ export function explainInput({
   block: Block;
   section: readonly Block[];
   nearby: readonly Block[];
+  elsewhere?: readonly Block[];
   sections: readonly Section[];
   roles: Map<string, { role: ContentRole }>;
   page: string;
@@ -230,7 +283,7 @@ export function explainInput({
     },
     before: before.map(neighbour),
     after: after.slice(0, 1).map(neighbour),
-    refs: referencedMaterial(block, nearby),
+    refs: referencedMaterial(block, nearby, { elsewhere, sections }),
     ...(focus ? { focus } : {}),
     map: explainMap(sections, block.section_id, roles),
   };
