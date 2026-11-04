@@ -265,6 +265,49 @@ function summaryText(group: {
     group.sectionId ? ` section="${escapeXml(group.sectionId)}"` : ''
   }>${escapeXml(group.summary ?? '')}</${tag}>`;
 }
+/**
+ * Matches tool results to the calls they answer, in conversation order: a result answers the
+ * earliest still-open call with its id (ids can repeat across turns). Unmatched halves are stray.
+ */
+export function matchToolCalls(
+  messages: readonly { id: number; parts: readonly ContextPart[] }[],
+) {
+  type At = { message: number; part: number };
+  const open = new Map<string, At[]>();
+  const pairs: { call: At; result: At }[] = [];
+  const strayResults: At[] = [];
+  messages.forEach((message, m) =>
+    message.parts.forEach((part, p) => {
+      if (part.t === 'call')
+        open.set(part.id, [
+          ...(open.get(part.id) ?? []),
+          { message: m, part: p },
+        ]);
+      else if (part.t === 'result') {
+        const call = open.get(part.id)?.shift();
+        if (call) pairs.push({ call, result: { message: m, part: p } });
+        else strayResults.push({ message: m, part: p });
+      }
+    }),
+  );
+  return { pairs, strayCalls: [...open.values()].flat(), strayResults };
+}
+/** Strict protocols reject a call without its result or the reverse, so drop such halves. */
+function pairedOnly<Ui>(messages: ContextMessage<Ui>[]): ContextMessage<Ui>[] {
+  const { strayCalls, strayResults } = matchToolCalls(messages);
+  const drop = new Set(
+    [...strayCalls, ...strayResults].map(at => `${at.message}:${at.part}`),
+  );
+  if (!drop.size) return messages;
+  return messages.flatMap((message, m) => {
+    const parts = message.parts.filter((_, p) => !drop.has(`${m}:${p}`));
+    if (parts.length === message.parts.length) return [message];
+    // Replayed provider output would still carry the dropped call.
+    return parts.some(part => part.t !== 'text' || part.text.trim())
+      ? [{ ...message, parts, raw: null }]
+      : [];
+  });
+}
 const isTurnPart = (part: ContextPart) =>
   part.t === 'text' && part.text.startsWith('<turn>');
 /** Saved user turns already carry their operation; appending it again would repeat <turn>. */
@@ -372,7 +415,7 @@ export function buildContext<Ui = never>(
         messages: item.messages,
       });
     }
-    const messages = sequence.flatMap(entry => entry.messages);
+    const messages = pairedOnly(sequence.flatMap(entry => entry.messages));
     const recordPart = {
       ...(record.parts[0] as { t: 'text'; text: string }),
       volatile: true as const,

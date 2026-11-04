@@ -3,6 +3,7 @@ import type { Container } from '@app/container';
 import { StudySession } from '@app/study/StudySession';
 import { getStudySession, disposeContainerSessions } from '@app/study/registry';
 import { parseStudyCard } from '@app/study/types';
+import { matchToolCalls } from '@core/context';
 import { createDemoGateway } from '@app/demo/gateway';
 import { createTestClock } from '@app/clock';
 import type { AiGateway, GatewayRequest } from '@services/ai/gateway';
@@ -1038,6 +1039,70 @@ it('keeps every earlier turn as the next request prefix while steps advance and 
         );
     }
   }
+});
+describe('a detour the model opened with load_section', () => {
+  const strays = (req: GatewayRequest) => {
+    const found = matchToolCalls(req.history);
+    return found.strayCalls.length + found.strayResults.length;
+  };
+  async function detourThenBack(breakOldFold = false) {
+    const seen: GatewayRequest[] = [];
+    let ref = 0;
+    const ai = scripted([
+      call('load_section', { id: '3.4.2' }),
+      () => text(`岔路里讲完了。[[b:${ref}]]`),
+      text('回到主线继续。'),
+      text('之后的回答。'),
+    ]);
+    const stream = ai.stream;
+    ai.stream = jest.fn((purpose, req, handlers) => {
+      seen.push(req);
+      return stream(purpose, req, handlers);
+    });
+    await setup(ai);
+    ref = (await c.repos.blocks.bySection('aima', '3.4.2'))[0].seq;
+    await session.send('3.4.2 的一致代价搜索什么时候做目标测试？');
+    expect(state().detours.at(-1)?.sectionId).toBe('3.4.2');
+    const opener = state()
+      .messages.filter(m => m.kind === 'assistant')
+      .find(m =>
+        (m.parts as unknown as Part[]).some(
+          p => p.t === 'call' && p.name === 'load_section',
+        ),
+      )!;
+    // The call is made on the main line; only its result belongs to the detour.
+    expect(opener.detour_id).toBeNull();
+    if (breakOldFold) {
+      // What earlier versions left behind: the result folded, the call still in context.
+      const result = state().messages.find(
+        m => m.kind === 'tool' && m.detour_id !== null,
+      )!;
+      await c.repos.messages.markOutOfContext([result.id]);
+      session.store.setState({
+        ...state(),
+        messages: state().messages.map(m =>
+          m.id === result.id ? { ...m, in_context: false } : m,
+        ),
+      });
+      await session.send('接着问一个问题');
+    } else await session.act('backMain');
+    await session.send('那可容许性呢？');
+    return { seen, opener };
+  }
+  it('folds the opening call with its result when going back, so later requests stay paired', async () => {
+    const { seen, opener } = await detourThenBack();
+    expect(state().error).toBeNull();
+    const fold = cards().find(item => item.card?.kind === 'fold')!.card;
+    expect(fold).toMatchObject({
+      messageIds: expect.arrayContaining([opener.id]),
+    });
+    expect(seen.map(strays)).toEqual(seen.map(() => 0));
+  });
+  it('repairs conversations an earlier version left with a lone call', async () => {
+    const { seen } = await detourThenBack(true);
+    expect(state().error).toBeNull();
+    expect(seen.map(strays)).toEqual(seen.map(() => 0));
+  });
 });
 it('stops pending tool calls without running them or entering a detour, and still pairs every saved call', async () => {
   const ai = scripted([

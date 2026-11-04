@@ -2,6 +2,7 @@ import {
   buildContext,
   formatBlocks,
   formatBookMap,
+  matchToolCalls,
   type ContextInput,
   type ContextMessage,
 } from '@core/context';
@@ -297,6 +298,40 @@ it('preserves raw assistant output and tool call IDs and keeps only the last ten
   expect(output.history.at(-1)?.role).toBe('user');
   expect(output.history.at(-1)?.id).toBe(-2);
 });
+it('drops a call without its result, or a result without its call, matching repeated ids in order', () => {
+  const call = (id: number, text: string, callId: string): ContextMessage => ({
+    ...message(id, '', 'assistant'),
+    parts: [
+      ...(text ? [{ t: 'text' as const, text }] : []),
+      { t: 'call', id: callId, name: 'load_section', args: '{}' },
+    ],
+    raw: { protocol: 'openai', model: 'm', items: [{ type: 'function_call' }] },
+  });
+  const result = (id: number, callId: string): ContextMessage => ({
+    ...message(id, ''),
+    role: 'tool',
+    parts: [{ t: 'result', id: callId, name: 'load_section', output: '原文' }],
+  });
+  const history = buildContext(
+    fixture({
+      conversation: [
+        { id: '1', messages: [call(1, '', 'same'), result(2, 'same')] },
+        // Same id again, now without its result: only this second call is stray.
+        { id: '3', messages: [call(3, '我先读一下 3.4.2。', 'same')] },
+        { id: '4', messages: [call(4, '', 'lonely')] },
+        { id: '5', messages: [result(5, 'nobody')] },
+        { id: '6', messages: [message(6, '继续')] },
+      ],
+    }),
+  ).history;
+  expect(history.map(m => m.id)).toEqual([1, 2, 3, 6]);
+  expect(history[0].raw).not.toBeNull();
+  expect(history[2]).toMatchObject({
+    parts: [{ t: 'text', text: '我先读一下 3.4.2。' }],
+    raw: null,
+  });
+  expect(matchToolCalls(history).strayCalls).toEqual([]);
+});
 it('puts reads back where they happened, chaining consecutive reads, and keeps the old front placement without a place', () => {
   const read = (id: number, name: string): ContextMessage[] => [
     {
@@ -358,6 +393,17 @@ it('compresses older dialogue first and then the oldest detour source, without c
     detour: true,
     summary: '这节摘要',
     messages: [
+      {
+        ...message(id + 100, '', 'assistant'),
+        parts: [
+          {
+            t: 'call' as const,
+            id: `call${id}`,
+            name: 'load_section',
+            args: '{}',
+          },
+        ],
+      },
       {
         ...message(id, ''),
         role: 'tool' as const,

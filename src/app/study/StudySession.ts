@@ -12,6 +12,7 @@ import type {
 import {
   buildContext,
   formatBlocks,
+  matchToolCalls,
   type ConversationGroup,
   type LoadedContext,
 } from '@core/context';
@@ -1986,11 +1987,33 @@ export class StudySession implements StudySessionApi {
   private async foldDetours(rebase: boolean) {
     const s = this.state;
     if (!s.detours.length) return;
-    const ids = s.detours.map(frame => frame.detourId),
-      messages = s.messages.filter(
-        message =>
-          message.detour_id !== null && ids.includes(message.detour_id),
-      );
+    const ids = s.detours.map(frame => frame.detourId);
+    const folded = new Set(
+      s.messages
+        .filter(
+          message =>
+            message.detour_id !== null && ids.includes(message.detour_id),
+        )
+        .map(message => message.id),
+    );
+    // A detour the model opened starts with a main-line load_section call whose result belongs
+    // to the detour. Fold each call with its results, or the next request carries a lone call.
+    const live = s.messages.filter(message => message.in_context);
+    const { pairs } = matchToolCalls(
+      live.map(message => ({ id: message.id, parts: partsOf(message) })),
+    );
+    for (let grew = true; grew; ) {
+      grew = false;
+      for (const { call, result } of pairs) {
+        const [a, b] = [live[call.message].id, live[result.message].id];
+        if (folded.has(a) !== folded.has(b)) {
+          folded.add(a);
+          folded.add(b);
+          grew = true;
+        }
+      }
+    }
+    const messages = s.messages.filter(message => folded.has(message.id));
     const result = await this.task('detourTitle', {
       messages: messages.map(m => ({ kind: m.kind, content: m.content })),
     });
