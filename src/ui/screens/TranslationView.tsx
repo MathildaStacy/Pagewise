@@ -189,7 +189,11 @@ export function TranslationView({
           <View style={s.titleGroup}>
             <Icon name="spark" size={18} color={t.color.accentInk} />
             <Text accessibilityRole="header" style={s.title}>
-              {explain ? 'AI 讲解' : '中文译文'}
+              {explain
+                ? 'AI 讲解'
+                : overlay.target === 'en'
+                ? '英文译文'
+                : '中文译文'}
             </Text>
           </View>
           <Text accessibilityLiveRegion="polite" style={s.status}>

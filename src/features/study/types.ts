@@ -6,6 +6,7 @@ import type {
   RichTable,
 } from '@ui/kit';
 import type { StudyOpenOptions } from '@app/study/types';
+import type { TranslationTarget } from '@app/study/translation';
 import type { ConversationSummary } from '@features/library/types';
 import type {
   AiOptionsState,
@@ -208,6 +209,8 @@ export type StudyOverlay =
       kind: 'sectionTranslation';
       passages?: TranslationReadingPassage[];
       sectionId: string;
+      /** The language the section is translated into; absent means Chinese. */
+      target?: TranslationTarget;
       initialRef?: number;
       initialMode?: TranslationReadingMode;
       quote?: RichDoc;
@@ -269,6 +272,8 @@ export type StudyOverlay =
       answer: RichDoc | null;
       streaming: boolean;
       subtitle: string;
+      /** For a translation, the language of the answer; absent means Chinese. */
+      target?: TranslationTarget;
       error?: string;
       stopped?: boolean;
       fromCache?: boolean;

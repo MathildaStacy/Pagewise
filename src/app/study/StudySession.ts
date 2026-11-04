@@ -48,7 +48,9 @@ import { deferQuizzes } from './quizSupport';
 import {
   translationBackground,
   translationChunks,
+  translationLanguage,
   translationPassages,
+  translationTarget,
   type TranslationProgress,
 } from './translation';
 import {
@@ -2502,9 +2504,10 @@ export class StudySession implements StudySessionApi {
       const chunks = translationChunks(blocks);
       const source = chunks.map(chunk => chunk.source).join('\n\n');
       if (!source.trim()) throw new Error('本节暂无可翻译的原文，请先完成解析');
+      const language = translationLanguage[translationTarget(blocks)];
       const requestKey = taskResultKey(context, 'translate', {
         chunks,
-        target_language: '简体中文',
+        target_language: language,
         map,
       });
       return this.taskResults.run({
@@ -2557,7 +2560,7 @@ export class StudySession implements StudySessionApi {
                   JSON.stringify(['section', sectionId, index]),
                   {
                     block: { text: chunk.source },
-                    target_language: '简体中文',
+                    target_language: language,
                     map,
                   },
                   context,
@@ -2592,6 +2595,7 @@ export class StudySession implements StudySessionApi {
       const passages = translationPassages(blocks);
       if (!passages.length)
         throw new Error('本节暂无可翻译的原文，请先完成解析');
+      const language = translationLanguage[translationTarget(blocks)];
       const scope = JSON.stringify(['bilingualSection', sectionId]);
       const address = {
         bookId: this.bookId,
@@ -2605,7 +2609,7 @@ export class StudySession implements StudySessionApi {
             translate,
             type: block.type,
           })),
-          target_language: '简体中文',
+          target_language: language,
           map,
         }),
       };
@@ -2660,7 +2664,7 @@ export class StudySession implements StudySessionApi {
                     type: passage.block.type,
                     text: passage.source,
                   },
-                  target_language: '简体中文',
+                  target_language: language,
                   ...(passage.block.type === 'table'
                     ? {
                         format: 'html',
@@ -2754,7 +2758,7 @@ export class StudySession implements StudySessionApi {
                 text: block.text,
                 latex: block.latex,
               },
-              target_language: '简体中文',
+              target_language: translationLanguage[translationTarget([block])],
               map,
             },
         context,

@@ -1,5 +1,26 @@
 import { displayTex } from '@core/markup';
+import { isChineseText } from '@core/text';
 import type { Block } from '@core/types';
+
+export type TranslationTarget = 'zh' | 'en';
+/** Sent as input.target_language; '简体中文' is part of every existing cached key. */
+export const translationLanguage: Record<TranslationTarget, string> = {
+  zh: '简体中文',
+  en: 'English',
+};
+/** A Chinese original is read against English; every other book keeps its Chinese translation. */
+export function translationTarget(
+  blocks: readonly Pick<Block, 'type' | 'text'>[],
+): TranslationTarget {
+  return isChineseText(
+    blocks
+      .filter(block => block.type !== 'code' && block.type !== 'equation')
+      .map(block => block.text)
+      .join('\n'),
+  )
+    ? 'en'
+    : 'zh';
+}
 
 export interface TranslationChunk {
   source: string;

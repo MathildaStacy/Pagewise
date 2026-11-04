@@ -3,7 +3,10 @@ import { AppState } from 'react-native';
 import { toAppError } from '@app/errors';
 import { useRefinementVM } from './useRefinementVM';
 import { parseStudyCard } from '@app/study/types';
-import { translationPassages } from '@app/study/translation';
+import {
+  translationPassages,
+  translationTarget,
+} from '@app/study/translation';
 import { useStore } from 'zustand';
 import { useContainer } from '@app/ContainerProvider';
 import { resolveStudyBlockImage } from '@app/bookImages';
@@ -639,9 +642,11 @@ export function useStudyVM(
     explanationController.current?.abort();
     const controller = new AbortController();
     explanationController.current = controller;
+    const target = translationTarget(reader?.blocks ?? []);
     setOverlay({
       kind: 'sectionTranslation',
       sectionId: readerId,
+      target,
       initialRef: anchorRef.current ?? raw.readAnchor ?? undefined,
       initialMode: translationModes.current.get(readerId),
       quote: reader?.blocks.flatMap(block => blockDoc(block, raw.book)),
@@ -655,7 +660,8 @@ export function useStudyVM(
       ),
       answer: null,
       streaming: true,
-      subtitle: sectionLabel(readSection) + ' · 简体中文',
+      subtitle:
+        sectionLabel(readSection) + (target === 'en' ? ' · 英文' : ' · 简体中文'),
     });
     session
       .translateSection(
@@ -934,6 +940,7 @@ export function useStudyVM(
       answer: null,
       streaming: true,
       subtitle: blockPage(block, raw.book),
+      ...(key === 'translate' ? { target: translationTarget([block]) } : {}),
       ...(sentences.length > 1 ? { sentences, focus: focused } : {}),
     });
     session
