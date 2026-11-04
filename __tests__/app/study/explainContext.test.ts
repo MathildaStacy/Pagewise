@@ -1,9 +1,10 @@
 import {
   explainInput,
   explainMap,
-  mentionedLabels,
+  missingLabels,
   referencedMaterial,
 } from '@app/study/explainContext';
+import { blockLabels, mentionedLabels } from '@core/labels';
 import { translationBackground } from '@app/study/translation';
 import { learningSelection } from '@core/learningScope';
 import { splitSentences } from '@core/text';
@@ -121,6 +122,145 @@ it('finds the figures, tables and equations a paragraph mentions', () => {
     type: 'equation',
     latex: 'r_t = a + b x_t \\tag{3.1}',
   });
+});
+
+it('reads one key for a label however the text or caption writes it', () => {
+  expect(
+    mentionedLabels(
+      '回顾第二章式（2.5）与图 4-3，再看图4.3、Fig. 2 和表3.19，以及第 2 章的表 3',
+    ),
+  ).toEqual([
+    { key: 'figure 4.3', chapter: null, numbered: '4' },
+    { key: 'figure 2', chapter: null, numbered: null },
+    { key: 'table 3.19', chapter: null, numbered: '3' },
+    { key: 'table 3', chapter: '2', numbered: null },
+    { key: 'equation 2.5', chapter: '2', numbered: '2' },
+  ]);
+  expect(blockLabels(block(1, 'caption', 'Figure 4-3 Momentum'))).toEqual([
+    'figure 4.3',
+  ]);
+  expect(
+    blockLabels(
+      block(1, 'equation', '', { latex: 'a \\tag{2.4} \\\\ b \\tag{2.5}' }),
+    ),
+  ).toEqual(['equation 2.4', 'equation 2.5']);
+  expect(blockLabels(block(1, 'equation', 'x = y （3.2）'))).toEqual([
+    'equation 3.2',
+  ]);
+  expect(blockLabels(block(1, 'text', '图4.3 所示'))).toEqual([]);
+});
+
+const book = [
+  ...sections,
+  section('ch2', null, 1, 8, { title: '因子模型' }),
+  section('2.3', 'ch2', 2, 9, { title: '多因子模型' }),
+  section('ch4', null, 1, 10, { title: '因子组合' }),
+  section('4.1', 'ch4', 2, 11, { title: '投资组合排序' }),
+];
+const elsewhere = [
+  block(52010, 'text', '多因子模型可以写成', { section_id: '2.3' }),
+  block(52011, 'equation', 'E', {
+    latex: 'E[R_i] = \\beta_i \\lambda \\tag{2.5}',
+    section_id: '2.3',
+  }),
+  block(201001, 'image', '', {
+    image_path: 'images/p201_1.jpg',
+    section_id: '4.1',
+  }),
+  block(201002, 'caption', '图4.3 多空组合净值', { section_id: '4.1' }),
+  block(201003, 'caption', '表3.19 另一处同名表题', { section_id: '4.1' }),
+];
+
+it('brings referenced material from other chapters when nearby pages lack it, nearby first', () => {
+  const citing = block(
+    169007,
+    'text',
+    '回顾第 2 章式（2.5），如图 4.3 所示，又如表3.19。',
+  );
+  expect(missingLabels(citing, blocks, book)).toEqual([
+    'figure 4.3',
+    'equation 2.5',
+  ]);
+  const input = explainInput({
+    block: citing,
+    section: blocks,
+    nearby: blocks,
+    elsewhere,
+    sections: book,
+    roles,
+    page: 'p.169',
+  });
+  expect(input.refs).toEqual([
+    expect.objectContaining({
+      seq: 201001,
+      type: 'image',
+      caption: '图4.3 多空组合净值',
+      section: '4.1 投资组合排序',
+    }),
+    expect.objectContaining({
+      seq: 169003,
+      caption: '表3.19 动量分组的描述性统计',
+    }),
+    expect.objectContaining({
+      seq: 52011,
+      latex: 'E[R_i] = \\beta_i \\lambda \\tag{2.5}',
+      section: '2.3 多因子模型',
+    }),
+  ]);
+  expect(input.refs as object[]).not.toContainEqual(
+    expect.objectContaining({ seq: 169003, section: expect.anything() }),
+  );
+  expect(missingLabels(blocks[6], blocks, book)).toEqual([]);
+});
+
+it('matches bare numbers by chapter: the one named, else the current, else the only one in the book', () => {
+  const tables = [
+    block(52020, 'table', 'A B', {
+      html: '<table>ch2</table>',
+      section_id: '2.3',
+    }),
+    block(52021, 'caption', '表 3 第 2 章的表', { section_id: '2.3' }),
+    block(201010, 'table', 'C D', {
+      html: '<table>ch4</table>',
+      section_id: '4.1',
+    }),
+    block(201011, 'caption', '表 3 第 4 章的表', { section_id: '4.1' }),
+  ];
+  const local = [
+    ...blocks,
+    block(169008, 'table', 'E F', { html: '<table>ch3</table>' }),
+    block(169009, 'caption', '表 3 本章的表'),
+  ];
+  const refs = (text: string, nearby: Block[], pool = tables) =>
+    referencedMaterial(block(169010, 'text', text), nearby, {
+      elsewhere: pool,
+      sections: book,
+    }).map(ref => ref.html);
+  expect(refs('对比第二章表 3。', local)).toEqual(['<table>ch2</table>']);
+  expect(refs('见表 3。', local)).toEqual(['<table>ch3</table>']);
+  expect(refs('见表 3。', blocks)).toEqual([]);
+  expect(refs('见表 3。', blocks, tables.slice(0, 2))).toEqual([
+    '<table>ch2</table>',
+  ]);
+  expect(refs('对比第 5 章表 3。', blocks, tables.slice(0, 2))).toEqual([]);
+});
+
+it('keeps references from elsewhere to three and clips their tables', () => {
+  const wide = [
+    block(52030, 'table', 'wide', {
+      html: `<table>${'x'.repeat(5000)}</table>`,
+      section_id: '2.3',
+    }),
+    block(52031, 'caption', '表2.1 很宽的表', { section_id: '2.3' }),
+    ...elsewhere,
+  ];
+  const refs = referencedMaterial(
+    block(169010, 'text', '见表2.1、图4.3、表3.19 与式（2.5）。'),
+    blocks.slice(0, 3),
+    { elsewhere: wide, sections: book },
+  );
+  expect(refs.map(ref => ref.seq)).toEqual([52030, 201001, 201003]);
+  expect(Array.from(refs[0].html as string)).toHaveLength(3001);
 });
 
 it('explains a block with its place in the book, neighbours and mentioned material', () => {

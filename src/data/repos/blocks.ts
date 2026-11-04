@@ -1,3 +1,4 @@
+import { blockLabels } from '@core/labels';
 import type { Block, BlockInsert, BlockSearchHit } from '@core/types';
 import type { Db, SqlValue } from '../db';
 import { createRefinementsRepo } from './refinements';
@@ -96,6 +97,35 @@ function snippet(text: string, query: string): string {
 
 export function createBlocksRepo(db: Db) {
   const project = createRefinementsRepo(db).project;
+  const labelIndex = new Map<
+    string,
+    { stamp: string; seqs: Map<string, number[]> }
+  >();
+  /**
+   * Which blocks carry each label. Row count, ids and seqs come from an index alone and still
+   * notice imports and reparses made through other repo instances; a stale entry is only a miss,
+   * since callers check the label on the fresh block.
+   */
+  const labels = async (bookId: string) => {
+    const stamp = JSON.stringify(
+      await db.get(
+        'SELECT COUNT(*) AS n, MAX(id) AS id, TOTAL(seq) AS seqs FROM block WHERE book_id=?',
+        [bookId],
+      ),
+    );
+    const cached = labelIndex.get(bookId);
+    if (cached?.stamp === stamp) return cached.seqs;
+    const rows = await db.all<Pick<Block, 'seq' | 'type' | 'text' | 'latex'>>(
+      "SELECT seq,type,CASE WHEN type='equation' THEN text ELSE substr(text,1,40) END AS text,latex FROM block WHERE book_id=? AND type IN ('caption','image','table','equation') ORDER BY seq",
+      [bookId],
+    );
+    const seqs = new Map<string, number[]>();
+    for (const row of rows)
+      for (const key of blockLabels(row))
+        seqs.set(key, [...(seqs.get(key) ?? []), row.seq]);
+    labelIndex.set(bookId, { stamp, seqs });
+    return seqs;
+  };
   return {
     /** Reading projections never replace the source rows used by PDF geometry, highlights and reparsing. */
     reading: {
@@ -122,11 +152,34 @@ export function createBlocksRepo(db: Db) {
         );
         return row ? (await project([row]))[0] : undefined;
       },
+      /**
+       * Blocks anywhere in the book carrying these labels (see `labelKey`), at most `limit`,
+       * each with the blocks just before and after it so a caption meets its figure.
+       */
+      async labelled(
+        bookId: string,
+        keys: readonly string[],
+        limit = 32,
+      ): Promise<Block[]> {
+        const index = await labels(bookId);
+        const hits = [
+          ...new Set(keys.flatMap(key => index.get(key) ?? [])),
+        ].slice(0, limit);
+        if (!hits.length) return [];
+        const marks = hits.map(() => '(?)').join(',');
+        return project(
+          await db.all<Block>(
+            `WITH hit(seq) AS (VALUES ${marks}) SELECT * FROM block WHERE book_id=? AND seq IN (SELECT seq FROM hit UNION SELECT (SELECT MAX(b.seq) FROM block b WHERE b.book_id=? AND b.seq<hit.seq) FROM hit UNION SELECT (SELECT MIN(b.seq) FROM block b WHERE b.book_id=? AND b.seq>hit.seq) FROM hit) ORDER BY seq`,
+            [...hits, bookId, bookId, bookId],
+          ),
+        );
+      },
     },
     async insertMany(
       bookId: string,
       blocks: Omit<BlockInsert, 'book_id'>[],
     ): Promise<void> {
+      labelIndex.delete(bookId);
       await db.transaction(async tx => {
         for (let start = 0; start < blocks.length; start += 1000) {
           for (const block of blocks.slice(start, start + 1000)) {
@@ -169,6 +222,7 @@ export function createBlocksRepo(db: Db) {
       from: number,
       to: number,
     ): Promise<void> {
+      labelIndex.delete(bookId);
       await db.run(
         'DELETE FROM block WHERE book_id=? AND page BETWEEN ? AND ?',
         [bookId, from, to],
@@ -257,6 +311,7 @@ export function createBlocksRepo(db: Db) {
       }));
     },
     async clearParsed(bookId: string): Promise<void> {
+      labelIndex.delete(bookId);
       await db.transaction(async tx => {
         await tx.run('DELETE FROM block WHERE book_id=?', [bookId]);
         await tx.run('DELETE FROM section_part WHERE book_id=?', [bookId]);

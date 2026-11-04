@@ -629,6 +629,60 @@ describe('content blocks repository', () => {
     expect(await blocks.range('book', 1, 4000)).toHaveLength(2);
   });
 
+  it('finds labelled figures, tables and equations across the book with their neighbours, following later imports', async () => {
+    await blocks.insertMany('book', [
+      blockInput(52010, '多因子模型可以写成', { page: 52, section_id: '2.3' }),
+      blockInput(52011, 'E', {
+        page: 52,
+        section_id: '2.3',
+        type: 'equation',
+        latex: 'E[R_i] = \\beta_i \\lambda \\tag{2.5}',
+      }),
+      blockInput(52012, '由此可知', { page: 52, section_id: '2.3' }),
+      blockInput(100001, '见图4.3与式（2.5）', { page: 100 }),
+      blockInput(201001, '', {
+        page: 201,
+        section_id: '4.1',
+        type: 'image',
+        image_path: 'images/p201_1.jpg',
+      }),
+      blockInput(201002, '图 4-3 多空组合净值', {
+        page: 201,
+        section_id: '4.1',
+        type: 'caption',
+      }),
+      blockInput(201003, '可以看到', { page: 201, section_id: '4.1' }),
+      blockInput(201004, '下一段', { page: 201, section_id: '4.1' }),
+    ]);
+    await blocks.insertMany('other', [
+      blockInput(9001, '图4.3 另一本书', { type: 'caption' }),
+    ]);
+    const seqs = async (keys: string[], limit?: number) =>
+      (await blocks.reading.labelled('book', keys, limit)).map(b => b.seq);
+    expect(await seqs(['figure 4.3', 'equation 2.5'])).toEqual([
+      52010, 52011, 52012, 201001, 201002, 201003,
+    ]);
+    expect(await seqs(['figure 4.3', 'equation 2.5'], 1)).toEqual([
+      201001, 201002, 201003,
+    ]);
+    expect(await seqs(['table 9.9'])).toEqual([]);
+    expect(await seqs([])).toEqual([]);
+    const all = jest.spyOn(db, 'all');
+    const rebuilds = () =>
+      all.mock.calls.filter(([sql]) => sql.includes("type IN ('caption'"))
+        .length;
+    await seqs(['figure 4.3']);
+    expect(rebuilds()).toBe(0);
+    // Imports write through their own repos inside a transaction.
+    await createBlocksRepo(db).insertMany('book', [
+      blockInput(301001, '表5.1 新导入的表题', { page: 301, type: 'caption' }),
+    ]);
+    expect(await seqs(['table 5.1'])).toEqual([201004, 301001]);
+    expect(rebuilds()).toBe(1);
+    await createBlocksRepo(db).deleteByPages('book', 201, 201);
+    expect(await seqs(['figure 4.3'])).toEqual([]);
+  });
+
   it('clears parsed caches while retaining every learning record and another book', async () => {
     await seedLearning();
     await seedLearning('other');

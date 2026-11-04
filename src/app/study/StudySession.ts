@@ -60,7 +60,7 @@ import {
   type TaskCacheContext,
 } from './taskCache';
 import { executeReadTool, jsonObject, parseToolArgs } from './toolExec';
-import { explainInput } from './explainContext';
+import { explainInput, missingLabels } from './explainContext';
 import {
   asJson,
   parseStudyCard,
@@ -2393,12 +2393,18 @@ export class StudySession implements StudySessionApi {
             (block.page + 2) * 1000 - 1,
           )
         : section;
+    const pool = [
+      ...new Map([...section, ...nearby].map(b => [b.seq, b])).values(),
+    ].sort((a, b) => a.seq - b.seq);
+    // Labels from other chapters, such as 见第 2 章式（2.5）, come from the whole-book label index.
+    const missing = missingLabels(block, pool, sections);
     return explainInput({
       block,
       section,
-      nearby: [
-        ...new Map([...section, ...nearby].map(b => [b.seq, b])).values(),
-      ].sort((a, b) => a.seq - b.seq),
+      nearby: pool,
+      elsewhere: missing.length
+        ? await this.c.repos.blocks.reading.labelled(this.bookId, missing)
+        : [],
       sections,
       roles: learningSelection(sections, scope, book?.title),
       page: pageLabel(book ?? { page_offset: 0 }, block.page, block.loc),

@@ -64,7 +64,7 @@ const cnDigits: Record<string, number> = {
   八: 8,
   九: 9,
 };
-function chapterNumber(text: string): number {
+export function chapterNumber(text: string): number {
   if (/^\d+$/.test(text)) return Number(text);
   let total = 0,
     current = 0;
