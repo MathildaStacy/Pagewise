@@ -76,6 +76,8 @@ export interface StudyState {
   busy: boolean;
   loading: boolean;
   pendingQuote: number | null;
+  /** One sentence of the quoted block the question is about. */
+  pendingQuoteFocus?: string | null;
   tools: { id: string; text: string; running: boolean; detour: boolean }[];
   error: string | null;
   notice: string | null;
@@ -191,7 +193,8 @@ export interface StudySessionApi {
   deferQuiz?(messageId: number): Promise<void>;
   resolveProposal(messageId: number, accept: boolean): Promise<void>;
   resume(action: 'go' | 'review'): Promise<void>;
-  setQuote(seq: number | null): void;
+  /** `focus` narrows a quoted question to one sentence of the block. */
+  setQuote(seq: number | null, focus?: string): void;
   finishDraft(): Promise<SectionDraft | null>;
   saveDraft(input: FinishSectionInput): Promise<Section | null>;
   explainBlock(
@@ -201,6 +204,7 @@ export interface StudySessionApi {
     config?: ConversationConfig,
     onText?: (text: string, fromCache?: boolean) => void,
     refresh?: boolean,
+    focus?: string,
   ): Promise<string>;
   translateSection(
     sectionId: string,

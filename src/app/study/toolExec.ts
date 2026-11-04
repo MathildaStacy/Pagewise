@@ -1,6 +1,7 @@
 import type { Block, JsonValue, Section } from '@core/types';
 import { pageLabel, pageRangeLabel, parseBlockRef } from '@core/ids';
 import { formatBlocks } from '@core/context';
+import { learningSelection } from '@core/learningScope';
 import type { Container } from '../container';
 
 export interface ReadToolResult {
@@ -98,11 +99,34 @@ export async function executeReadTool(
   }
   if (name === 'search_book') {
     const query = requiredString(args, 'query');
-    let hits = await c.repos.blocks.search(bookId, query, 8);
-    if (typeof args.chapter === 'string') {
-      const chapter = args.chapter;
-      hits = hits.filter(hit => hit.section_id?.startsWith(chapter));
-    }
+    const [sections, scope] = await Promise.all([
+      c.repos.sections.tree(bookId),
+      c.repos.sections.learningScope(bookId),
+    ]);
+    const within =
+      typeof args.chapter === 'string'
+        ? chapterSection(sections, args.chapter)
+        : undefined;
+    const roles = learningSelection(sections, scope, book?.title);
+    // Bibliography, index and contents pages repeat terms without explaining them.
+    const hits = (
+      await c.repos.blocks.search(bookId, query, 24, { within: within?.id })
+    )
+      .map((hit, index) => ({
+        hit,
+        index,
+        reference:
+          !!hit.section_id && roles.get(hit.section_id)?.role === 'reference',
+      }))
+      .sort(
+        (a, b) =>
+          Number(a.reference) - Number(b.reference) || a.index - b.index,
+      )
+      .slice(0, 8)
+      .map(item => item.hit);
+    const titles = new Map(
+      sections.map(section => [section.id, section.title]),
+    );
     const blocks = (
       await Promise.all(hits.map(hit => c.repos.blocks.get(bookId, hit.seq)))
     ).filter((block): block is Block => !!block);
@@ -112,10 +136,15 @@ export async function executeReadTool(
           id: hit.ref,
           page: hit.page != null ? hit.page - pageOffset : null,
           section: hit.section_id,
+          section_title: hit.section_id
+            ? titles.get(hit.section_id) ?? null
+            : null,
           snippet: hit.snippet,
         })),
       ),
-      `在全书搜索「${query}」· 找到 ${hits.length} 处`,
+      `在${within ? ` ${within.id} ` : '全书'}搜索「${query}」· 找到 ${
+        hits.length
+      } 处`,
       blocks,
     );
   }
@@ -164,6 +193,20 @@ export function jsonObject(value: unknown): Record<string, JsonValue> | null {
   return value as Record<string, JsonValue>;
 }
 
+/** Accepts "3", "ch3", "第3章" or "3.5 动量因子"; an unknown chapter searches the whole book. */
+function chapterSection(
+  sections: readonly Section[],
+  chapter: string,
+): Section | undefined {
+  const raw = chapter.trim();
+  const id = raw
+    .replace(/^(?:ch(?=\d)|第\s*)/iu, '')
+    .match(/^[\p{L}\p{N}][\w.-]*/u)?.[0];
+  return [raw, id, id && `ch${id}`]
+    .filter((value): value is string => !!value)
+    .map(value => sections.find(section => section.id === value))
+    .find(Boolean);
+}
 function distance(left: string, right: string): number {
   let row = Array.from({ length: right.length + 1 }, (_, i) => i);
   for (let i = 0; i < left.length; i++) {

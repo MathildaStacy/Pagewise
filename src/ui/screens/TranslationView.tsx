@@ -46,6 +46,7 @@ export function TranslationView({
   const s = useStyles(),
     t = useTokens();
   const [expanded, setExpanded] = useState(false);
+  const [picking, setPicking] = useState(false);
   const quote = overlay.quote ?? empty;
   const canExpand = docLength(quote) > 180;
   const source = expanded || !canExpand ? quote : revealDoc(quote, 180);
@@ -56,6 +57,8 @@ export function TranslationView({
   }, [overlay.fromCache, skipReveal]);
   const busy = overlay.streaming || (!overlay.fromCache && reveal.revealing);
   const explain = overlay.kind === 'explain';
+  const sentences = overlay.kind === 'explain' ? overlay.sentences ?? [] : [];
+  const focus = overlay.kind === 'explain' ? overlay.focus ?? null : null;
   const status = overlay.error
     ? explain
       ? '讲解中断'
@@ -98,27 +101,83 @@ export function TranslationView({
             <Text accessibilityRole="header" style={s.sourceLabel}>
               原文
             </Text>
-            {canExpand ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={expanded ? '收起原文' : '展开全部原文'}
-                accessibilityState={{ expanded }}
-                onPress={() => setExpanded(value => !value)}
-                style={({ pressed }) => [s.toggle, pressed && s.pressed]}
-              >
-                <Text style={s.toggleLabel}>
-                  {expanded ? '收起' : '展开全文'}
-                </Text>
-                <Icon
-                  name={expanded ? 'updown' : 'arrowDown'}
-                  size={14}
-                  color={t.color.ink2}
-                />
-              </Pressable>
-            ) : null}
+            <View style={s.tools}>
+              {sentences.length > 1 ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={picking ? '收起逐句' : '选一句只讲这一句'}
+                  accessibilityState={{ expanded: picking }}
+                  onPress={() => setPicking(value => !value)}
+                  style={({ pressed }) => [s.toggle, pressed && s.pressed]}
+                >
+                  <Text style={s.toggleLabel}>
+                    {picking ? '收起逐句' : '只讲一句'}
+                  </Text>
+                </Pressable>
+              ) : null}
+              {canExpand && !picking ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={expanded ? '收起原文' : '展开全部原文'}
+                  accessibilityState={{ expanded }}
+                  onPress={() => setExpanded(value => !value)}
+                  style={({ pressed }) => [s.toggle, pressed && s.pressed]}
+                >
+                  <Text style={s.toggleLabel}>
+                    {expanded ? '收起' : '展开全文'}
+                  </Text>
+                  <Icon
+                    name={expanded ? 'updown' : 'arrowDown'}
+                    size={14}
+                    color={t.color.ink2}
+                  />
+                </Pressable>
+              ) : null}
+            </View>
           </View>
-          <RichView doc={source} typography="book" selectable />
-          {canExpand && !expanded ? <Text style={s.ellipsis}>…</Text> : null}
+          {picking ? (
+            <View style={s.sentences}>
+              <Text style={s.hint}>点一句，只讲这一句；整段仍作为上下文</Text>
+              {sentences.map((sentence, index) => (
+                <Pressable
+                  key={`${index}:${sentence.slice(0, 12)}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={`只讲第 ${index + 1} 句`}
+                  accessibilityState={{ selected: focus === index }}
+                  onPress={() => {
+                    setPicking(false);
+                    intents.overlayAction(`focus:${index}`);
+                  }}
+                  style={({ pressed }) => [
+                    s.sentence,
+                    focus === index && s.sentenceOn,
+                    pressed && s.pressed,
+                  ]}
+                >
+                  <Text style={s.sentenceText}>{sentence}</Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : (
+            <>
+              <RichView doc={source} typography="book" selectable />
+              {canExpand && !expanded ? (
+                <Text style={s.ellipsis}>…</Text>
+              ) : null}
+            </>
+          )}
+        </View>
+      ) : null}
+      {focus !== null && sentences[focus] ? (
+        <View style={s.focus} testID="explain-focus">
+          <Text style={s.focusText} numberOfLines={3}>
+            只讲这一句：{sentences[focus]}
+          </Text>
+          <Button
+            variant="text"
+            label="讲整段"
+            onPress={() => intents.overlayAction('focus:none')}
+          />
         </View>
       ) : null}
       <View
@@ -233,6 +292,32 @@ const useStyles = makeStyles(t => ({
     borderRadius: t.shape.sm,
   },
   toggleLabel: { ...t.type.caption, color: t.color.ink2 },
+  tools: { flexDirection: 'row', alignItems: 'center', flexShrink: 1 },
+  sentences: { gap: 4 },
+  hint: { ...t.type.caption, color: t.color.ink2, paddingBottom: 4 },
+  sentence: {
+    minHeight: 48,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: t.shape.sm,
+    borderLeftWidth: 3,
+    borderLeftColor: t.color.surfaceAlt,
+  },
+  sentenceOn: {
+    backgroundColor: t.color.accentBg,
+    borderLeftColor: t.color.accent,
+  },
+  sentenceText: { ...t.type.body, color: t.color.ink },
+  focus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingLeft: 12,
+    borderRadius: t.shape.md,
+    backgroundColor: t.color.accentBg,
+  },
+  focusText: { ...t.type.caption, color: t.color.accentInk, flex: 1 },
   pressed: { backgroundColor: t.color.pressed },
   ellipsis: { ...t.type.body, color: t.color.ink3 },
   translation: { gap: 8 },

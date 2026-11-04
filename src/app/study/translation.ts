@@ -99,3 +99,30 @@ export function translationChunks(
   flush();
   return chunks;
 }
+
+const clip = (text: string, size: number) => {
+  const chars = Array.from(text.trim());
+  return chars.length > size
+    ? `…${chars.slice(-size).join('')}`
+    : chars.join('');
+};
+/**
+ * The previous passage and its translation keep terms and references consistent
+ * across a section; it is reference material, never part of the answer.
+ */
+export function translationBackground(
+  section: string,
+  previous?: { source: string; answer: string | null },
+): string | undefined {
+  if (!section.trim() && !previous?.answer) return undefined;
+  return `<reference>\n${
+    section.trim() ? `本段所在小节：${section.trim()}\n` : ''
+  }${
+    previous?.answer
+      ? `上一段原文：${clip(previous.source, 600)}\n上一段译文：${clip(
+          previous.answer,
+          600,
+        )}\n`
+      : ''
+  }以上只用于保持术语、称呼和指代与前文一致，不要翻译或输出这些内容；只翻译 input.block。\n</reference>`;
+}

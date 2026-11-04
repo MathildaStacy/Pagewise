@@ -359,6 +359,17 @@ it('keeps source-owned alignment when a model changes paragraph count, preserves
     onPassages,
   );
   expect(stream).toHaveBeenCalledTimes(3);
+  // Later passages see the previous source and translation as reference; the input stays last.
+  const references = stream.mock.calls.map(call =>
+    call[1].contextBlocks.map(block => block.text).join('\n'),
+  );
+  expect(references[0]).toContain('本段所在小节');
+  expect(references[0]).not.toContain('上一段原文');
+  expect(references[1]).toContain('上一段原文：First paragraph.');
+  expect(references[1]).toContain('上一段译文：第一段。');
+  expect(stream.mock.calls[1][1].contextBlocks.at(-1)!.text).toMatch(
+    /^<input>/,
+  );
   const parts = onPassages.mock.calls.at(-1)![0];
   expect(parts.map(part => part.block.seq)).toEqual([1, 2, 3, 4]);
   expect(parts[0]).toMatchObject({

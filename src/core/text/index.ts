@@ -52,3 +52,44 @@ export function stableStringify(value: JsonValue): string {
     '}'
   );
 }
+
+const abbreviation =
+  /(?:\bal|\bFig|\bEq|\be\.g|\bi\.e|\bvs|\bcf|\bNo|\bpp|\bDr|\bMr|\bMs|\bSt|\bInc|\bLtd|\b[A-Z])\.$/u;
+/**
+ * Sentences for picking one to ask about. Chinese and English full stops end a sentence;
+ * math between $ signs, closing quotes and abbreviations such as "et al." stay intact.
+ */
+export function splitSentences(text: string): string[] {
+  const pieces: string[] = [];
+  let start = 0,
+    math = false;
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (char === '$') math = !math;
+    if (math) continue;
+    let end = -1;
+    if ('。！？!?'.includes(char)) end = i + 1;
+    else if (
+      char === '.' &&
+      /\s/u.test(text[i + 1] ?? '') &&
+      /[A-Z“"(\p{Script=Han}]/u.test(text[i + 2] ?? '') &&
+      !abbreviation.test(text.slice(Math.max(start, i - 6), i + 1))
+    )
+      end = i + 1;
+    if (end < 0) continue;
+    while (end < text.length && /[”’」』)）"'\]]/u.test(text[end])) end++;
+    pieces.push(text.slice(start, end).trim());
+    start = end;
+    i = end - 1;
+  }
+  pieces.push(text.slice(start).trim());
+  return pieces.filter(Boolean).reduce<string[]>((list, piece) => {
+    const last = list.at(-1);
+    if (last !== undefined && countCharacters(piece) < 8)
+      list[list.length - 1] = /[\x21-\x7e]$/.test(last)
+        ? `${last} ${piece}`
+        : last + piece;
+    else list.push(piece);
+    return list;
+  }, []);
+}

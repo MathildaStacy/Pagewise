@@ -28,6 +28,24 @@ import type {
   TranslationReadingPassage,
 } from './types';
 
+/** A question about one sentence keeps that sentence in its saved turn. */
+function quoteFocus(message: Message): string | undefined {
+  for (const part of message.parts ?? []) {
+    const text =
+      part && typeof part === 'object' && !Array.isArray(part)
+        ? part.text
+        : undefined;
+    if (typeof text !== 'string' || !text.startsWith('<turn>')) continue;
+    try {
+      const focus = (JSON.parse(text.slice(6, -7)) as { quote_focus?: unknown })
+        .quote_focus;
+      return typeof focus === 'string' && focus ? focus : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+  return undefined;
+}
 export function sectionLabel(section: Section | null | undefined) {
   return section ? sectionName(section) : '正在读取';
 }
@@ -312,7 +330,9 @@ function presentMessage(
             quote:
               message.quote_seq !== null
                 ? `${blockPage(blocks.get(message.quote_seq), raw.book)} · ${
-                    blocks.get(message.quote_seq)?.text.slice(0, 60) ?? ''
+                    quoteFocus(message)
+                      ? `「${quoteFocus(message)!.slice(0, 60)}」`
+                      : blocks.get(message.quote_seq)?.text.slice(0, 60) ?? ''
                   }`
                 : undefined,
           }

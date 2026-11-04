@@ -62,6 +62,8 @@ export interface ContextInput<Ui = never> {
   budget?: number;
   /** Large books show level 3 only within the current chapter. */
   mapDetailLimit?: number;
+  /** Sections being visited off the main line, such as the current detour. */
+  visitingSectionIds?: readonly string[];
   threadId?: number;
 }
 export interface LayerEstimate {
@@ -129,22 +131,27 @@ export function formatBookMap(
   currentSectionId: string,
   detailLimit = 200,
   pageOffset = 0,
+  /** A detour's chapter is expanded too, so its sibling sections stay visible. */
+  alsoSectionIds: readonly string[] = [],
 ): string {
   const byId = new Map(sections.map(section => [section.id, section]));
-  let current = byId.get(currentSectionId);
-  const seen = new Set<string>();
-  while (current?.parent_id && !seen.has(current.id)) {
-    seen.add(current.id);
-    const parent = byId.get(current.parent_id);
-    if (!parent) break;
-    current = parent;
+  const chapterIds = new Set<string>();
+  for (const id of [currentSectionId, ...alsoSectionIds]) {
+    let current = byId.get(id);
+    const seen = new Set<string>();
+    while (current?.parent_id && !seen.has(current.id)) {
+      seen.add(current.id);
+      const parent = byId.get(current.parent_id);
+      if (!parent) break;
+      current = parent;
+    }
+    if (current) chapterIds.add(current.id);
   }
-  const chapterId = current?.id;
   const inChapter = (section: Section) => {
     let node: Section | undefined = section;
     const visited = new Set<string>();
     while (node && !visited.has(node.id)) {
-      if (node.id === chapterId) return true;
+      if (chapterIds.has(node.id)) return true;
       visited.add(node.id);
       node = node.parent_id ? byId.get(node.parent_id) : undefined;
     }
@@ -252,6 +259,14 @@ function summaryText(group: {
     group.sectionId ? ` section="${escapeXml(group.sectionId)}"` : ''
   }>${escapeXml(group.summary ?? '')}</${tag}>`;
 }
+/** Saved user turns already carry their operation; appending it again would repeat <turn>. */
+function carriesTurn(messages: readonly ContextMessage<unknown>[]): boolean {
+  const last = messages.at(-1);
+  return (
+    last?.role === 'user' &&
+    last.parts.some(part => part.t === 'text' && part.text.startsWith('<turn>'))
+  );
+}
 function compressLoaded<Ui>(group: LoadedContext<Ui>): ContextMessage<Ui>[] {
   const text = `<section_summary section="${escapeXml(
     group.sectionId,
@@ -288,6 +303,7 @@ export function buildContext<Ui = never>(
         input.currentSectionId,
         input.mapDetailLimit,
         input.pageOffset,
+        input.visitingSectionIds,
       ),
       cache: true,
     },
@@ -337,6 +353,7 @@ export function buildContext<Ui = never>(
       ...conversation.flatMap(group => group.messages),
     ];
     const last = messages.at(-1);
+    if (carriesTurn(messages)) return messages;
     if (last?.role === 'user' && last !== record) {
       return [
         ...messages.slice(0, -1),
@@ -385,7 +402,9 @@ export function buildContext<Ui = never>(
         name: '最近对话与本轮操作',
         tokens:
           messageTokens(conversation.flatMap(group => group.messages)) +
-          estimateTokens(operation),
+          (carriesTurn(conversation.flatMap(group => group.messages))
+            ? 0
+            : estimateTokens(operation)),
         cached: false,
       },
     ];

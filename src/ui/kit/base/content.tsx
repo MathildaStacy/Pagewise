@@ -310,7 +310,14 @@ const RichBlockView = memo(function RichBlock({
       );
     case 'aux':
       return (
-        <Kit.AuxBlock kind={block.kind} open={block.open}>
+        <Kit.AuxBlock
+          kind={block.kind}
+          open={block.open}
+          preview={copyableText(block.body)
+            .replace(/\$+/g, '')
+            .replace(/\s+/g, ' ')
+            .trim()}
+        >
           <Kit.RichView doc={block.body} onCite={onCite} onFigure={onFigure} />
         </Kit.AuxBlock>
       );
@@ -769,6 +776,7 @@ export function AuxBlock({
   kind,
   children,
   open = true,
+  preview,
 }: KitProps['AuxBlock']) {
   const s = useStyles();
   const t = useTokens();
@@ -803,11 +811,27 @@ export function AuxBlock({
           color={color}
         />
         <Text style={[s.studyLabelText, { color }]}>{label}</Text>
+        <Icon
+          name={expanded ? 'updown' : 'arrowDown'}
+          size={14}
+          color={color}
+        />
       </Pressable>
       {expanded ? (
         <StudyTypography.Provider value="aux">
           {children}
         </StudyTypography.Provider>
+      ) : preview ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`展开${label}：${preview}`}
+          accessibilityState={{ expanded: false }}
+          onPress={() => setExpanded(true)}
+        >
+          <Text style={s.auxPreview} numberOfLines={1}>
+            {preview}
+          </Text>
+        </Pressable>
       ) : null}
     </View>
   );
@@ -1958,6 +1982,11 @@ const useStyles = makeStyles(t => ({
     paddingBottom: t.layout.groupedLists ? 13 : 12,
     paddingHorizontal: t.layout.groupedLists ? 16 : 14,
     ...(t.brand ? { borderRadius: t.shape.md } : {}),
+  },
+  auxPreview: {
+    ...t.type.caption,
+    color: t.color.ink2,
+    paddingTop: 6,
   },
   auxText: {
     ...studyType(t, 16, t.layout.groupedLists ? 25.92 : 28.48),
